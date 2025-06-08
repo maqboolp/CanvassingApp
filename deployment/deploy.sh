@@ -23,7 +23,7 @@ if ! doctl auth list | grep -q "current"; then
 fi
 
 # Set variables
-APP_NAME="hoover-canvassing-app"
+APP_NAME="t4h-canvas"
 REGION="nyc1"
 DB_NAME="hoover-canvassing-db"
 

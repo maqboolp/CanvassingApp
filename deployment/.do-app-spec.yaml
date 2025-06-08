@@ -1,4 +1,4 @@
-name: hoover-canvassing-app
+name: t4h-canvas
 services:
 - name: api
   source_dir: /
@@ -22,9 +22,9 @@ services:
   - key: JwtSettings__Secret
     value: ${JWT_SECRET}
   - key: JwtSettings__Issuer
-    value: https://hoover-canvassing-app.ondigitalocean.app
+    value: https://t4h-canvas.ondigitalocean.app
   - key: JwtSettings__Audience
-    value: https://hoover-canvassing-app.ondigitalocean.app
+    value: https://t4h-canvas.ondigitalocean.app
   - key: JwtSettings__ExpirationMinutes
     value: "480"
 
