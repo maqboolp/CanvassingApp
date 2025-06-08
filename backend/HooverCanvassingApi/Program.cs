@@ -53,7 +53,16 @@ builder.Services.AddCors(options =>
 // Configure Entity Framework
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseNpgsql(connectionString));
+{
+    options.UseNpgsql(connectionString, npgsqlOptions =>
+    {
+        if (builder.Environment.IsProduction())
+        {
+            // Enforce SSL in production
+            npgsqlOptions.RemoteCertificateValidationCallback((sender, certificate, chain, errors) => true);
+        }
+    });
+});
 
 // Configure Identity
 builder.Services.AddIdentity<Volunteer, IdentityRole>(options =>
