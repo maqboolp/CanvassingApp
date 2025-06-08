@@ -51,7 +51,7 @@ static_sites:
   envs:
   - key: REACT_APP_API_URL
     scope: BUILD_TIME
-    value: https://t4h-canvas.ondigitalocean.app
+    value: https://t4h-canvas-2uwxt.ondigitalocean.app
 
 databases:
 - engine: PG
