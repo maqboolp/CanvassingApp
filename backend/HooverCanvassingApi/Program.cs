@@ -132,6 +132,20 @@ app.MapControllers();
 // Health check endpoint
 app.MapGet("/api/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));
 
+// Debug endpoint to list all routes
+app.MapGet("/api/debug/routes", (IServiceProvider services) =>
+{
+    var endpointDataSource = services.GetRequiredService<EndpointDataSource>();
+    var routes = endpointDataSource.Endpoints
+        .OfType<RouteEndpoint>()
+        .Select(e => new { 
+            Pattern = e.RoutePattern.RawText,
+            Methods = e.Metadata.OfType<HttpMethodMetadata>().FirstOrDefault()?.HttpMethods ?? new[] { "Unknown" }
+        })
+        .ToList();
+    return Results.Ok(routes);
+});
+
 // Apply migrations and seed data before running
 using (var scope = app.Services.CreateScope())
 {
