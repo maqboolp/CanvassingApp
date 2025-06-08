@@ -3,7 +3,7 @@ services:
 - name: api
   source_dir: /
   github:
-    repo: your-username/hoover-canvassing-app
+    repo: Tanveer4Hoover/hoover-canvassing-app
     branch: main
   run_command: dotnet HooverCanvassingApi.dll
   environment_slug: dotnet
@@ -47,7 +47,7 @@ static_sites:
   environment_slug: node-js
   envs:
   - key: REACT_APP_API_URL
-    value: ${_self.URL}
+    value: ${api.PUBLIC_URL}
 
 # Route configuration
 routes:
