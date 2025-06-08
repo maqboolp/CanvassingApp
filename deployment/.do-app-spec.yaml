@@ -1,57 +1,66 @@
 name: t4h-canvas
+region: nyc
 services:
 - name: api
+  dockerfile_path: deployment/Dockerfile
   source_dir: /
   github:
     repo: maqboolp/CanvassingApp
     branch: main
-  run_command: dotnet HooverCanvassingApi.dll
-  environment_slug: dotnet
+    deploy_on_push: true
+  http_port: 8080
   instance_count: 1
   instance_size_slug: basic-xxs
-  http_port: 8080
+  routes:
+  - path: /api
   health_check:
     http_path: /health
   envs:
   - key: ASPNETCORE_ENVIRONMENT
+    scope: RUN_TIME
     value: Production
   - key: ASPNETCORE_URLS
+    scope: RUN_TIME
     value: http://+:8080
   - key: ConnectionStrings__DefaultConnection
-    value: ${DATABASE_URL}
+    scope: RUN_TIME
+    value: ${db.DATABASE_URL}
   - key: JwtSettings__Secret
+    scope: RUN_TIME
     value: ${JWT_SECRET}
   - key: JwtSettings__Issuer
+    scope: RUN_TIME
     value: https://t4h-canvas.ondigitalocean.app
   - key: JwtSettings__Audience
+    scope: RUN_TIME
     value: https://t4h-canvas.ondigitalocean.app
   - key: JwtSettings__ExpirationMinutes
+    scope: RUN_TIME
     value: "480"
-
-databases:
-- name: hoover-canvassing-db
-  engine: PG
-  version: "15"
-  size: db-s-dev-database
 
 static_sites:
 - name: frontend
+  dockerfile_path: deployment/Dockerfile.frontend
   source_dir: /frontend
   github:
-    repo: your-username/hoover-canvassing-app
+    repo: maqboolp/CanvassingApp
     branch: main
+    deploy_on_push: true
   build_command: npm run build
-  output_dir: /build
+  output_dir: build
   index_document: index.html
   error_document: index.html
-  environment_slug: node-js
+  catchall_document: index.html
+  routes:
+  - path: /
   envs:
   - key: REACT_APP_API_URL
-    value: ${api.PUBLIC_URL}
+    scope: BUILD_TIME
+    value: https://t4h-canvas.ondigitalocean.app
 
-# Route configuration
-routes:
-- path: /api
-  component: api
-- path: /
-  component: frontend
+databases:
+- engine: PG
+  name: db
+  num_nodes: 1
+  size: db-s-dev-database
+  version: "15"
