@@ -29,10 +29,10 @@ services:
     value: mcgqRD2zQcxJzKHPy58zvZlKlVsmRPUFbr+REjI43dI=
   - key: JwtSettings__Issuer
     scope: RUN_TIME
-    value: https://t4h-canvas.ondigitalocean.app
+    value: https://t4h-canvas-2uwxt.ondigitalocean.app
   - key: JwtSettings__Audience
     scope: RUN_TIME
-    value: https://t4h-canvas.ondigitalocean.app
+    value: https://t4h-canvas-2uwxt.ondigitalocean.app
   - key: JwtSettings__ExpirationMinutes
     scope: RUN_TIME
     value: "480"

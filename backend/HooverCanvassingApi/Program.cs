@@ -42,7 +42,7 @@ builder.Services.AddCors(options =>
         else
         {
             // Production CORS - allow the deployed app domain
-            policy.WithOrigins("https://t4h-canvas.ondigitalocean.app")
+            policy.WithOrigins("https://t4h-canvas-2uwxt.ondigitalocean.app")
                   .AllowAnyHeader()
                   .AllowAnyMethod()
                   .AllowCredentials();
