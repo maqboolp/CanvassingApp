@@ -2,11 +2,10 @@ name: t4h-canvas
 region: nyc
 services:
 - name: api
-  dockerfile_path: deployment/Dockerfile
-  source_dir: /
-  git:
-    repo_clone_url: https://github.com/maqboolp/CanvassingApp.git
-    branch: main
+  image:
+    registry_type: DOCR
+    repository: t4h-canvas-api
+    tag: latest
   http_port: 8080
   instance_count: 1
   instance_size_slug: basic-xxs
@@ -14,6 +13,7 @@ services:
   - path: /api
   health_check:
     http_path: /health
+    timeout_seconds: 10
   envs:
   - key: ASPNETCORE_ENVIRONMENT
     scope: RUN_TIME
@@ -24,9 +24,13 @@ services:
   - key: ConnectionStrings__DefaultConnection
     scope: RUN_TIME
     value: ${db.DATABASE_URL}
+  - key: JWT_SECRET
+    scope: RUN_TIME
+    type: SECRET
+    value: "CHANGE_THIS_TO_A_SECURE_32_CHAR_STRING"
   - key: JwtSettings__Secret
     scope: RUN_TIME
-    value: mcgqRD2zQcxJzKHPy58zvZlKlVsmRPUFbr+REjI43dI=
+    value: ${JWT_SECRET}
   - key: JwtSettings__Issuer
     scope: RUN_TIME
     value: https://t4h-canvas.ondigitalocean.app
@@ -40,10 +44,9 @@ services:
 static_sites:
 - name: frontend
   source_dir: /frontend
-  github:
-    repo: maqboolp/CanvassingApp
+  git:
+    repo_clone_url: https://github.com/maqboolp/CanvassingApp.git
     branch: main
-    deploy_on_push: true
   build_command: npm ci && npm run build
   output_dir: build
   routes:
