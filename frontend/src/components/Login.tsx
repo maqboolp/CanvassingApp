@@ -9,9 +9,11 @@ import {
   CircularProgress,
   Container,
   Card,
-  CardContent
+  CardContent,
+  IconButton,
+  InputAdornment
 } from '@mui/material';
-import { Login as LoginIcon, HowToVote } from '@mui/icons-material';
+import { Login as LoginIcon, HowToVote, Visibility, VisibilityOff } from '@mui/icons-material';
 import { LoginRequest } from '../types';
 
 interface LoginProps {
@@ -23,6 +25,7 @@ interface LoginProps {
 const Login: React.FC<LoginProps> = ({ onLogin, isLoading = false, error }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,12 +89,26 @@ const Login: React.FC<LoginProps> = ({ onLogin, isLoading = false, error }) => {
                 fullWidth
                 name="password"
                 label="Password"
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 id="password"
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={isLoading}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        aria-label="toggle password visibility"
+                        onClick={() => setShowPassword(!showPassword)}
+                        edge="end"
+                        disabled={isLoading}
+                      >
+                        {showPassword ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
               />
               <Button
                 type="submit"
@@ -129,6 +146,9 @@ const Login: React.FC<LoginProps> = ({ onLogin, isLoading = false, error }) => {
                 >
                   alabamavotes.gov
                 </a>
+              </Typography>
+              <Typography variant="caption" align="center" sx={{ mt: 2, color: '#2f1c6a', fontStyle: 'italic' }}>
+                Paid for by Tanveer for Hoover
               </Typography>
             </Box>
           </CardContent>
