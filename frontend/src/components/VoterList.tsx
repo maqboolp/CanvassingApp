@@ -1,0 +1,552 @@
+import React, { useState, useEffect } from 'react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  TablePagination,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Button,
+  Chip,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Typography,
+  Box,
+  CircularProgress,
+  Alert
+} from '@mui/material';
+import {
+  ContactPhone,
+  LocationOn,
+  FilterList,
+  Clear,
+  Person,
+  Phone,
+  Email
+} from '@mui/icons-material';
+import { Voter, VoterFilter, PaginationParams, VoterListResponse, ContactStatus, VoterSupport } from '../types';
+import ContactModal from './ContactModal';
+import { API_BASE_URL } from '../config';
+
+interface VoterListProps {
+  onContactVoter: (voter: Voter) => void;
+}
+
+const VoterList: React.FC<VoterListProps> = ({ onContactVoter }) => {
+  const [voters, setVoters] = useState<Voter[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(25);
+  const [selectedVoter, setSelectedVoter] = useState<Voter | null>(null);
+  const [contactModalOpen, setContactModalOpen] = useState(false);
+  const [filters, setFilters] = useState<VoterFilter>({});
+  const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [useLocation, setUseLocation] = useState(false);
+
+  const [filterInputs, setFilterInputs] = useState({
+    zipCode: '',
+    voteFrequency: '',
+    ageGroup: '',
+    contactStatus: '',
+    searchName: ''
+  });
+
+  useEffect(() => {
+    fetchVoters();
+  }, [page, rowsPerPage, filters, useLocation, location]);
+
+  const openInMaps = (voter: Voter) => {
+    const address = `${voter.addressLine}, ${voter.city}, ${voter.state} ${voter.zip}`;
+    const encodedAddress = encodeURIComponent(address);
+    
+    // Detect if it's iOS/Safari for Apple Maps, otherwise use Google Maps
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    
+    let mapUrl;
+    if (isIOS || isSafari) {
+      // Use Apple Maps for iOS/Safari
+      mapUrl = `maps://maps.apple.com/?q=${encodedAddress}`;
+    } else {
+      // Use Google Maps for other browsers
+      mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
+    }
+    
+    window.open(mapUrl, '_blank');
+  };
+
+  // Set default sorting to ZIP on mount
+  useEffect(() => {
+    setFilters(prev => ({ ...prev, sortBy: 'zip' }));
+  }, []); // Only run once on mount
+
+  const getCurrentLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setLocation({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude
+          });
+          setUseLocation(true);
+          setError(null); // Clear any previous errors
+        },
+        (error) => {
+          console.warn('Geolocation error:', error);
+          // Fallback to ZIP code sorting instead of showing error
+          setUseLocation(false);
+          setLocation(null);
+          // Set sorting to ZIP code as fallback
+          setFilters(prev => ({ ...prev, sortBy: 'zip' }));
+        }
+      );
+    } else {
+      console.warn('Geolocation is not supported by this browser.');
+      // Fallback to ZIP code sorting
+      setUseLocation(false);
+      setLocation(null);
+      setFilters(prev => ({ ...prev, sortBy: 'zip' }));
+    }
+  };
+
+  const fetchVoters = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const queryParams = new URLSearchParams({
+        page: (page + 1).toString(),
+        limit: rowsPerPage.toString(),
+        ...(filters.zipCode && { zipCode: filters.zipCode }),
+        ...(filters.voteFrequency && { voteFrequency: filters.voteFrequency }),
+        ...(filters.ageGroup && { ageGroup: filters.ageGroup }),
+        ...(filters.contactStatus && { contactStatus: filters.contactStatus }),
+        ...(filters.searchName && { searchName: filters.searchName }),
+        ...(filters.sortBy && { sortBy: filters.sortBy }),
+        sortOrder: 'asc',
+        ...(useLocation && location && !filters.zipCode && { 
+          latitude: location.latitude.toString(),
+          longitude: location.longitude.toString(),
+          radiusKm: '5' // 5km radius
+        })
+      });
+
+      const response = await fetch(`${API_BASE_URL}/api/voters?${queryParams}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch voters');
+      }
+
+      const data: VoterListResponse = await response.json();
+      setVoters(data.voters);
+      setTotal(data.total);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch voters');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePageChange = (event: unknown, newPage: number) => {
+    setPage(newPage);
+  };
+
+  const handleRowsPerPageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
+  const handleFilterChange = (field: keyof typeof filterInputs, value: string) => {
+    setFilterInputs(prev => ({ ...prev, [field]: value }));
+  };
+
+  const applyFilters = () => {
+    setFilters({
+      ...filters,
+      zipCode: filterInputs.zipCode || undefined,
+      voteFrequency: filterInputs.voteFrequency as any || undefined,
+      ageGroup: filterInputs.ageGroup as any || undefined,
+      contactStatus: filterInputs.contactStatus as any || undefined,
+      searchName: filterInputs.searchName || undefined
+    });
+    setPage(0);
+  };
+
+  const clearFilters = () => {
+    setFilterInputs({
+      zipCode: '',
+      voteFrequency: '',
+      ageGroup: '',
+      contactStatus: '',
+      searchName: ''
+    });
+    setFilters({});
+    setPage(0);
+  };
+
+  const handleContactClick = (voter: Voter) => {
+    setSelectedVoter(voter);
+    setContactModalOpen(true);
+  };
+
+  const handleContactSubmit = async (status: ContactStatus, notes: string, voterSupport?: VoterSupport) => {
+    if (!selectedVoter) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/contacts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        },
+        body: JSON.stringify({
+          voterId: selectedVoter.lalVoterId,
+          status,
+          voterSupport,
+          notes,
+          location: await getCurrentLocation()
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to log contact');
+      }
+
+      setContactModalOpen(false);
+      setSelectedVoter(null);
+      onContactVoter(selectedVoter);
+      fetchVoters(); // Refresh the list
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to log contact');
+    }
+  };
+
+  const getStatusChipColor = (status?: ContactStatus) => {
+    switch (status) {
+      case 'reached': return 'success';
+      case 'not-home': return 'warning';
+      case 'refused': return 'error';
+      case 'needs-follow-up': return 'info';
+      default: return 'default';
+    }
+  };
+
+  const formatVoteFrequency = (frequency: string) => {
+    switch (frequency) {
+      case 'frequent': return 'Frequent (3+)';
+      case 'infrequent': return 'Infrequent (1-2)';
+      case 'non-voter': return 'Non-voter';
+      default: return frequency;
+    }
+  };
+
+  return (
+    <Paper sx={{ width: '100%', overflow: 'hidden' }}>
+      {/* Filter Controls */}
+      <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
+        <Typography variant="h6" gutterBottom>
+          Voter List ({total} voters)
+          {useLocation && (
+            <Chip 
+              icon={<LocationOn />} 
+              label="Within 5km" 
+              color="success" 
+              size="small" 
+              sx={{ ml: 2 }} 
+            />
+          )}
+        </Typography>
+        
+        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+          <TextField
+            size="small"
+            label="Search Name"
+            value={filterInputs.searchName}
+            onChange={(e) => handleFilterChange('searchName', e.target.value)}
+            sx={{ minWidth: 160 }}
+            placeholder="First or Last Name"
+          />
+          
+          <TextField
+            size="small"
+            label="ZIP Code"
+            value={filterInputs.zipCode}
+            onChange={(e) => handleFilterChange('zipCode', e.target.value)}
+            sx={{ minWidth: 120 }}
+          />
+          
+          <FormControl size="small" sx={{ minWidth: 160 }}>
+            <InputLabel>Vote Frequency</InputLabel>
+            <Select
+              value={filterInputs.voteFrequency}
+              label="Vote Frequency"
+              onChange={(e) => handleFilterChange('voteFrequency', e.target.value)}
+            >
+              <MenuItem value="">All</MenuItem>
+              <MenuItem value="frequent">Frequent (3+)</MenuItem>
+              <MenuItem value="infrequent">Infrequent (1-2)</MenuItem>
+              <MenuItem value="non-voter">Non-voter</MenuItem>
+            </Select>
+          </FormControl>
+          
+          <FormControl size="small" sx={{ minWidth: 120 }}>
+            <InputLabel>Age Group</InputLabel>
+            <Select
+              value={filterInputs.ageGroup}
+              label="Age Group"
+              onChange={(e) => handleFilterChange('ageGroup', e.target.value)}
+            >
+              <MenuItem value="">All</MenuItem>
+              <MenuItem value="18-30">18-30</MenuItem>
+              <MenuItem value="31-50">31-50</MenuItem>
+              <MenuItem value="51+">51+</MenuItem>
+            </Select>
+          </FormControl>
+          
+          <FormControl size="small" sx={{ minWidth: 140 }}>
+            <InputLabel>Contact Status</InputLabel>
+            <Select
+              value={filterInputs.contactStatus}
+              label="Contact Status"
+              onChange={(e) => handleFilterChange('contactStatus', e.target.value)}
+            >
+              <MenuItem value="">All</MenuItem>
+              <MenuItem value="contacted">Contacted</MenuItem>
+              <MenuItem value="not-contacted">Not Contacted</MenuItem>
+            </Select>
+          </FormControl>
+          
+          <Button
+            variant="contained"
+            startIcon={<FilterList />}
+            onClick={applyFilters}
+          >
+            Apply
+          </Button>
+          
+          <Button
+            variant="outlined"
+            startIcon={<Clear />}
+            onClick={clearFilters}
+          >
+            Clear
+          </Button>
+          
+          <Button
+            variant={useLocation ? "contained" : "outlined"}
+            startIcon={<LocationOn />}
+            onClick={useLocation ? () => { setUseLocation(false); setLocation(null); } : getCurrentLocation}
+            color={useLocation ? "success" : "primary"}
+          >
+            {useLocation ? "Turn Off Location" : "Find Nearby"}
+          </Button>
+          
+          {filters.sortBy === 'zip' && !useLocation && (
+            <Chip 
+              icon={<LocationOn />} 
+              label="Sorted by ZIP" 
+              color="info" 
+              size="small" 
+            />
+          )}
+        </Box>
+      </Box>
+
+      {error && (
+        <Alert severity="error" sx={{ m: 2 }}>
+          {error}
+        </Alert>
+      )}
+
+      {/* Voter Table */}
+      <TableContainer sx={{ maxHeight: 600 }}>
+        <Table stickyHeader>
+          <TableHead>
+            <TableRow>
+              <TableCell>Name</TableCell>
+              <TableCell>Address</TableCell>
+              <TableCell>Age</TableCell>
+              <TableCell>Vote Frequency</TableCell>
+              <TableCell>Contact Status</TableCell>
+              <TableCell>Contact Info</TableCell>
+              <TableCell>Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={7} sx={{ textAlign: 'center', py: 4 }}>
+                  <CircularProgress />
+                </TableCell>
+              </TableRow>
+            ) : voters.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} sx={{ textAlign: 'center', py: 4 }}>
+                  No voters found
+                </TableCell>
+              </TableRow>
+            ) : (
+              voters.map((voter) => (
+                <TableRow
+                  key={voter.lalVoterId}
+                  sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
+                >
+                  <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Person fontSize="small" color="action" />
+                      <Box>
+                        <Typography variant="body2" fontWeight="medium">
+                          {voter.firstName} {voter.lastName}
+                        </Typography>
+                        {voter.middleName && (
+                          <Typography variant="caption" color="text.secondary">
+                            {voter.middleName}
+                          </Typography>
+                        )}
+                      </Box>
+                    </Box>
+                  </TableCell>
+                  
+                  <TableCell>
+                    <Box 
+                      sx={{ 
+                        display: 'flex', 
+                        alignItems: 'flex-start', 
+                        gap: 1,
+                        cursor: 'pointer',
+                        '&:hover': {
+                          backgroundColor: 'action.hover',
+                          borderRadius: 1,
+                        },
+                        p: 1,
+                        m: -1
+                      }}
+                      onClick={() => openInMaps(voter)}
+                      title="Click to open in maps for directions"
+                    >
+                      <LocationOn fontSize="small" color="primary" />
+                      <Box>
+                        <Typography variant="body2" color="primary" sx={{ fontWeight: 'medium' }}>
+                          {voter.addressLine}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {voter.city}, {voter.state} {voter.zip}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </TableCell>
+                  
+                  <TableCell>
+                    <Typography variant="body2">
+                      {voter.age}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {voter.gender}
+                    </Typography>
+                  </TableCell>
+                  
+                  <TableCell>
+                    <Chip
+                      label={formatVoteFrequency(voter.voteFrequency)}
+                      size="small"
+                      variant="outlined"
+                    />
+                  </TableCell>
+                  
+                  <TableCell>
+                    {voter.isContacted ? (
+                      <Chip
+                        label={voter.lastContactStatus?.replace('-', ' ') || 'Contacted'}
+                        size="small"
+                        color={getStatusChipColor(voter.lastContactStatus)}
+                      />
+                    ) : (
+                      <Chip
+                        label="Not Contacted"
+                        size="small"
+                        variant="outlined"
+                      />
+                    )}
+                  </TableCell>
+                  
+                  <TableCell>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                      {voter.cellPhone && (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          <Phone fontSize="small" color="action" />
+                          <Typography variant="caption">
+                            {voter.cellPhone}
+                          </Typography>
+                        </Box>
+                      )}
+                      {voter.email && (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          <Email fontSize="small" color="action" />
+                          <Typography variant="caption">
+                            {voter.email}
+                          </Typography>
+                        </Box>
+                      )}
+                    </Box>
+                  </TableCell>
+                  
+                  <TableCell>
+                    <Button
+                      variant="contained"
+                      size="small"
+                      startIcon={<ContactPhone />}
+                      onClick={() => handleContactClick(voter)}
+                      disabled={loading}
+                    >
+                      Contact
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      {/* Pagination */}
+      <TablePagination
+        rowsPerPageOptions={[10, 25, 50, 100]}
+        component="div"
+        count={total}
+        rowsPerPage={rowsPerPage}
+        page={page}
+        onPageChange={handlePageChange}
+        onRowsPerPageChange={handleRowsPerPageChange}
+      />
+
+      {/* Contact Modal */}
+      <ContactModal
+        open={contactModalOpen}
+        voter={selectedVoter}
+        onClose={() => {
+          setContactModalOpen(false);
+          setSelectedVoter(null);
+        }}
+        onSubmit={handleContactSubmit}
+      />
+    </Paper>
+  );
+};
+
+export default VoterList;

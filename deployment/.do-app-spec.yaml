@@ -1,0 +1,57 @@
+name: hoover-canvassing-app
+services:
+- name: api
+  source_dir: /
+  github:
+    repo: your-username/hoover-canvassing-app
+    branch: main
+  run_command: dotnet HooverCanvassingApi.dll
+  environment_slug: dotnet
+  instance_count: 1
+  instance_size_slug: basic-xxs
+  http_port: 8080
+  health_check:
+    http_path: /health
+  envs:
+  - key: ASPNETCORE_ENVIRONMENT
+    value: Production
+  - key: ASPNETCORE_URLS
+    value: http://+:8080
+  - key: ConnectionStrings__DefaultConnection
+    value: ${DATABASE_URL}
+  - key: JwtSettings__Secret
+    value: ${JWT_SECRET}
+  - key: JwtSettings__Issuer
+    value: https://hoover-canvassing-app.ondigitalocean.app
+  - key: JwtSettings__Audience
+    value: https://hoover-canvassing-app.ondigitalocean.app
+  - key: JwtSettings__ExpirationMinutes
+    value: "480"
+
+databases:
+- name: hoover-canvassing-db
+  engine: PG
+  version: "15"
+  size: db-s-dev-database
+
+static_sites:
+- name: frontend
+  source_dir: /frontend
+  github:
+    repo: your-username/hoover-canvassing-app
+    branch: main
+  build_command: npm run build
+  output_dir: /build
+  index_document: index.html
+  error_document: index.html
+  environment_slug: node-js
+  envs:
+  - key: REACT_APP_API_URL
+    value: ${_self.URL}
+
+# Route configuration
+routes:
+- path: /api
+  component: api
+- path: /
+  component: frontend

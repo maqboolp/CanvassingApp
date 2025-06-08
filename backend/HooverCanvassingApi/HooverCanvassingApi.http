@@ -1,0 +1,6 @@
+@HooverCanvassingApi_HostAddress = http://localhost:5131
+
+GET {{HooverCanvassingApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
