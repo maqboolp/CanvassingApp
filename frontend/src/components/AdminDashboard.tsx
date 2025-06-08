@@ -42,7 +42,8 @@ import {
   LocationOn,
   Lock
 } from '@mui/icons-material';
-import { AuthUser } from '../types';
+import { AuthUser, Voter, ContactStatus, VoterSupport } from '../types';
+import VoterList from './VoterList';
 import { API_BASE_URL } from '../config';
 
 interface AdminDashboardProps {
@@ -115,7 +116,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
       fetchAnalytics();
     } else if (currentTab === 1) {
       fetchVolunteers();
-    } else if (currentTab === 2 && user.role === 'superadmin') {
+    } else if (currentTab === 3 && user.role === 'superadmin') {
       fetchGeocodingStatus();
     }
   }, [currentTab, user.role]);
@@ -469,6 +470,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
         <Tabs value={currentTab} onChange={handleTabChange} aria-label="admin tabs">
           <Tab label="Analytics" icon={<Analytics />} />
           <Tab label="Users" icon={<People />} />
+          <Tab label="Voters" icon={<HowToVote />} />
           {user.role === 'superadmin' && (
             <Tab label="Data Management" icon={<Upload />} />
           )}
@@ -743,14 +745,22 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
           )}
         </TabPanel>
 
+        {/* Voters Tab */}
+        <TabPanel value={currentTab} index={2}>
+          <Typography variant="h5" gutterBottom>
+            Voter Management
+          </Typography>
+          <VoterList onContactVoter={() => {}} user={user} />
+        </TabPanel>
+
         {/* Data Management Tab - Only for SuperAdmins */}
         {user.role === 'superadmin' && (
-          <TabPanel value={currentTab} index={2}>
+          <TabPanel value={currentTab} index={3}>
           <Typography variant="h5" gutterBottom>
             Data Management
           </Typography>
           
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3, mb: 4 }}>
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
@@ -832,6 +842,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
           <Typography variant="body2" color="text.secondary" paragraph>
             Select a CSV file with voter data. The file should include columns for voter ID, names, addresses, and other voter information.
           </Typography>
+          
+          {importLoading && (
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="body2" gutterBottom>
+                Importing voters...
+              </Typography>
+              <CircularProgress size={24} sx={{ mr: 1 }} />
+              <Typography variant="caption" color="text.secondary">
+                This may take a few moments depending on file size
+              </Typography>
+            </Box>
+          )}
+          
           <TextField
             type="file"
             fullWidth
@@ -860,6 +883,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
             label="Enable geocoding (slower but adds coordinates for location-based features)"
             sx={{ mt: 2 }}
           />
+          {enableGeocoding && (
+            <Alert severity="warning" sx={{ mt: 1 }}>
+              Geocoding will significantly slow down the import process as it looks up coordinates for each address.
+            </Alert>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => {

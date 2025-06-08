@@ -443,7 +443,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         )}
 
         {/* Voter List */}
-        <VoterList onContactVoter={handleContactVoter} />
+        <VoterList onContactVoter={handleContactVoter} user={user} />
       </Container>
 
       {/* Change Password Dialog */}

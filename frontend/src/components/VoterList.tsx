@@ -34,15 +34,16 @@ import {
   Phone,
   Email
 } from '@mui/icons-material';
-import { Voter, VoterFilter, PaginationParams, VoterListResponse, ContactStatus, VoterSupport } from '../types';
+import { Voter, VoterFilter, PaginationParams, VoterListResponse, ContactStatus, VoterSupport, AuthUser } from '../types';
 import ContactModal from './ContactModal';
 import { API_BASE_URL } from '../config';
 
 interface VoterListProps {
   onContactVoter: (voter: Voter) => void;
+  user?: AuthUser;
 }
 
-const VoterList: React.FC<VoterListProps> = ({ onContactVoter }) => {
+const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
   const [voters, setVoters] = useState<Voter[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -143,9 +144,10 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter }) => {
         })
       });
 
+      const token = user?.token || localStorage.getItem('auth_token');
       const response = await fetch(`${API_BASE_URL}/api/voters?${queryParams}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+          'Authorization': `Bearer ${token}`
         }
       });
 
@@ -209,11 +211,12 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter }) => {
     if (!selectedVoter) return;
 
     try {
+      const token = user?.token || localStorage.getItem('auth_token');
       const response = await fetch(`${API_BASE_URL}/api/contacts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           voterId: selectedVoter.lalVoterId,
