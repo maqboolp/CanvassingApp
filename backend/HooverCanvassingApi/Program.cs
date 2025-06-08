@@ -127,16 +127,10 @@ app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Serve static files (React build)
-app.UseStaticFiles();
-
 app.MapControllers();
 
 // Health check endpoint
-app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));
-
-// Fallback to index.html for SPA routing (must be last)
-app.MapFallbackToFile("index.html");
+app.MapGet("/api/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));
 
 // Apply migrations and seed data before running
 using (var scope = app.Services.CreateScope())
