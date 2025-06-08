@@ -32,11 +32,8 @@ import {
   Clear,
   Person,
   Phone,
-  Email,
-  ExpandMore,
-  ExpandLess
+  Email
 } from '@mui/icons-material';
-import { useTheme, useMediaQuery, Card, CardContent, Collapse } from '@mui/material';
 import { Voter, VoterFilter, PaginationParams, VoterListResponse, ContactStatus, VoterSupport, AuthUser } from '../types';
 import ContactModal from './ContactModal';
 import { API_BASE_URL } from '../config';
@@ -54,9 +51,6 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [selectedVoter, setSelectedVoter] = useState<Voter | null>(null);
-  const [showMobileFilters, setShowMobileFilters] = useState(false);
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [contactModalOpen, setContactModalOpen] = useState(false);
   const [filters, setFilters] = useState<VoterFilter>({});
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -282,117 +276,7 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
           )}
         </Typography>
         
-        {isMobile ? (
-          <>
-            <Button
-              variant="outlined"
-              startIcon={showMobileFilters ? <ExpandLess /> : <ExpandMore />}
-              onClick={() => setShowMobileFilters(!showMobileFilters)}
-              fullWidth
-              sx={{ mb: 1 }}
-            >
-              {showMobileFilters ? 'Hide Filters' : 'Show Filters'}
-            </Button>
-            <Collapse in={showMobileFilters}>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <TextField
-                  size="small"
-                  label="Search Name"
-                  value={filterInputs.searchName}
-                  onChange={(e) => handleFilterChange('searchName', e.target.value)}
-                  fullWidth
-                  placeholder="First or Last Name"
-                />
-                
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                  <TextField
-                    size="small"
-                    label="ZIP Code"
-                    value={filterInputs.zipCode}
-                    onChange={(e) => handleFilterChange('zipCode', e.target.value)}
-                    sx={{ flex: 1 }}
-                  />
-                  
-                  <FormControl size="small" sx={{ flex: 1 }}>
-                    <InputLabel>Age Group</InputLabel>
-                    <Select
-                      value={filterInputs.ageGroup}
-                      label="Age Group"
-                      onChange={(e) => handleFilterChange('ageGroup', e.target.value)}
-                    >
-                      <MenuItem value="">All</MenuItem>
-                      <MenuItem value="18-30">18-30</MenuItem>
-                      <MenuItem value="31-50">31-50</MenuItem>
-                      <MenuItem value="51+">51+</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Box>
-                
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                  <FormControl size="small" sx={{ flex: 1 }}>
-                    <InputLabel>Vote Frequency</InputLabel>
-                    <Select
-                      value={filterInputs.voteFrequency}
-                      label="Vote Frequency"
-                      onChange={(e) => handleFilterChange('voteFrequency', e.target.value)}
-                    >
-                      <MenuItem value="">All</MenuItem>
-                      <MenuItem value="frequent">Frequent (3+)</MenuItem>
-                      <MenuItem value="infrequent">Infrequent (1-2)</MenuItem>
-                      <MenuItem value="non-voter">Non-voter</MenuItem>
-                    </Select>
-                  </FormControl>
-                  
-                  <FormControl size="small" sx={{ flex: 1 }}>
-                    <InputLabel>Contact Status</InputLabel>
-                    <Select
-                      value={filterInputs.contactStatus}
-                      label="Contact Status"
-                      onChange={(e) => handleFilterChange('contactStatus', e.target.value)}
-                    >
-                      <MenuItem value="">All</MenuItem>
-                      <MenuItem value="contacted">Contacted</MenuItem>
-                      <MenuItem value="not-contacted">Not Contacted</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Box>
-                
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                  <Button
-                    variant="contained"
-                    startIcon={<FilterList />}
-                    onClick={applyFilters}
-                    fullWidth
-                    sx={{ flex: 1 }}
-                  >
-                    Apply
-                  </Button>
-                  
-                  <Button
-                    variant="outlined"
-                    startIcon={<Clear />}
-                    onClick={clearFilters}
-                    fullWidth
-                    sx={{ flex: 1 }}
-                  >
-                    Clear
-                  </Button>
-                </Box>
-                
-                <Button
-                  variant={useLocation ? "contained" : "outlined"}
-                  startIcon={<LocationOn />}
-                  onClick={useLocation ? () => { setUseLocation(false); setLocation(null); } : getCurrentLocation}
-                  color={useLocation ? "success" : "primary"}
-                  fullWidth
-                >
-                  {useLocation ? "Turn Off Location" : "Find Nearby"}
-                </Button>
-              </Box>
-            </Collapse>
-          </>
-        ) : (
-          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
           <TextField
             size="small"
             label="Search Name"
@@ -485,7 +369,6 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
             />
           )}
         </Box>
-        )}
       </Box>
 
       {error && (
@@ -494,10 +377,8 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
         </Alert>
       )}
 
-      {/* Responsive Voter Display */}
-      {isMobile ? (
-        /* Mobile Card View */
-        <Box sx={{ p: 2 }}>
+      {/* Voter Table */}
+      <TableContainer sx={{ maxHeight: 600 }}>
         <Table stickyHeader>
           <TableHead>
             <TableRow>
