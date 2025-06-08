@@ -139,23 +139,20 @@ app.UseStaticFiles();
 app.MapFallbackToFile("index.html");
 
 // Apply migrations and seed data before running
-if (app.Environment.IsDevelopment())
+using (var scope = app.Services.CreateScope())
 {
-    using (var scope = app.Services.CreateScope())
+    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    try
     {
-        var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        try
-        {
-            await dbContext.Database.MigrateAsync();
-            Console.WriteLine("Database migrations applied successfully.");
-            
-            // Seed initial data
-            await SeedData.InitializeAsync(app.Services);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error during startup: {ex.Message}");
-        }
+        await dbContext.Database.MigrateAsync();
+        Console.WriteLine("Database migrations applied successfully.");
+        
+        // Seed initial data (roles and default users)
+        await SeedData.InitializeAsync(app.Services);
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error during startup: {ex.Message}");
     }
 }
 
