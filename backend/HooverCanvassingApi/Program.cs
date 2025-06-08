@@ -122,6 +122,15 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// Add request logging middleware
+app.Use(async (context, next) =>
+{
+    Console.WriteLine($"REQUEST: {context.Request.Method} {context.Request.Path} from {context.Request.Headers["User-Agent"].FirstOrDefault()}");
+    await next();
+    Console.WriteLine($"RESPONSE: {context.Response.StatusCode}");
+});
+
 app.UseCors();
 
 app.UseAuthentication();
@@ -131,6 +140,9 @@ app.MapControllers();
 
 // Health check endpoint
 app.MapGet("/api/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));
+
+// Test POST endpoint
+app.MapPost("/api/test", (dynamic body) => Results.Ok(new { message = "POST works!", received = body }));
 
 // Debug endpoint to list all routes
 app.MapGet("/api/debug/routes", (IServiceProvider services) =>
