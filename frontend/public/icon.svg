@@ -1,0 +1,25 @@
+<svg width="192" height="192" viewBox="0 0 192 192" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Circle -->
+  <circle cx="96" cy="96" r="96" fill="#673de6"/>
+  
+  <!-- Inner circle for contrast -->
+  <circle cx="96" cy="96" r="84" fill="#8c85ff"/>
+  
+  <!-- T4H Text -->
+  <text x="96" y="75" font-family="Arial, sans-serif" font-size="32" font-weight="bold" text-anchor="middle" fill="white">T4H</text>
+  
+  <!-- Canvas/Door icon representation -->
+  <rect x="70" y="105" width="52" height="35" rx="4" fill="white" opacity="0.9"/>
+  <rect x="75" y="110" width="8" height="8" rx="1" fill="#673de6"/>
+  <rect x="87" y="110" width="8" height="8" rx="1" fill="#673de6"/>
+  <rect x="99" y="110" width="8" height="8" rx="1" fill="#673de6"/>
+  <rect x="111" y="110" width="8" height="8" rx="1" fill="#673de6"/>
+  
+  <rect x="75" y="122" width="8" height="8" rx="1" fill="#673de6"/>
+  <rect x="87" y="122" width="8" height="8" rx="1" fill="#673de6"/>
+  <rect x="99" y="122" width="8" height="8" rx="1" fill="#673de6"/>
+  <rect x="111" y="122" width="8" height="8" rx="1" fill="#673de6"/>
+  
+  <!-- Small door handle -->
+  <circle cx="115" cy="126" r="2" fill="#fc5185"/>
+</svg>
