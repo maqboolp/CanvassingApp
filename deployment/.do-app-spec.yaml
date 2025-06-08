@@ -3,7 +3,7 @@ services:
 - name: api
   source_dir: /
   github:
-    repo: Tanveer4Hoover/hoover-canvassing-app
+    repo: maqboolp/CanvassingApp
     branch: main
   run_command: dotnet HooverCanvassingApi.dll
   environment_slug: dotnet
