@@ -69,11 +69,15 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const [leaderboardTab, setLeaderboardTab] = useState(0);
   const [avatarInfoDialog, setAvatarInfoDialog] = useState(false);
   const [avatarInfo, setAvatarInfo] = useState<any>(null);
+  const [debugStats, setDebugStats] = useState<any>(null);
 
   useEffect(() => {
     fetchStats();
     fetchLeaderboard();
     getCurrentLocation();
+    if (user.role === 'admin' || user.role === 'superadmin') {
+      fetchDebugStats();
+    }
   }, []);
 
   const fetchStats = async () => {
@@ -107,6 +111,24 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       }
     } catch (error) {
       console.error('Failed to fetch leaderboard:', error);
+    }
+  };
+
+  const fetchDebugStats = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/voters/debug-stats`, {
+        headers: {
+          'Authorization': `Bearer ${user.token}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Debug stats:', data);
+        setDebugStats(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch debug stats:', error);
     }
   };
 
@@ -422,6 +444,24 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             </CardContent>
           </Card>
         </Box>
+
+        {/* Debug Stats Card (Admin/SuperAdmin only) */}
+        {debugStats && (user.role === 'admin' || user.role === 'superadmin') && (
+          <Alert severity="info" sx={{ mb: 3 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              🔍 Debug Info (Admin Only)
+            </Typography>
+            <Typography variant="body2">
+              Total voters: {debugStats.totalVoters} | 
+              With coordinates: {debugStats.votersWithCoordinates} | 
+              Uncontacted: {debugStats.uncontactedVoters} | 
+              Uncontacted with coords: {debugStats.uncontactedVotersWithCoordinates}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {debugStats.message}
+            </Typography>
+          </Alert>
+        )}
 
         {/* Nearest Voter Card */}
         {nearestVoter && (
