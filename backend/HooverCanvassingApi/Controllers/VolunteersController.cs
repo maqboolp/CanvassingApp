@@ -42,6 +42,7 @@ namespace HooverCanvassingApi.Controllers
 
                 // Weekly leaderboard
                 var weeklyLeaderboard = await _context.Volunteers
+                    .Include(v => v.Contacts)
                     .Where(v => v.IsActive)
                     .Select(v => new LeaderboardEntry
                     {
@@ -57,6 +58,7 @@ namespace HooverCanvassingApi.Controllers
 
                 // Monthly leaderboard
                 var monthlyLeaderboard = await _context.Volunteers
+                    .Include(v => v.Contacts)
                     .Where(v => v.IsActive)
                     .Select(v => new LeaderboardEntry
                     {
