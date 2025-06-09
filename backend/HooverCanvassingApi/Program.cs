@@ -75,7 +75,11 @@ string BuildConnectionString()
 }
 
 var connectionString = BuildConnectionString();
-Console.WriteLine($"Connection string components - Server: {Environment.GetEnvironmentVariable("DB_SERVER")?.Substring(0, Math.Min(20, Environment.GetEnvironmentVariable("DB_SERVER")?.Length ?? 0))}...");
+Console.WriteLine($"DB_SERVER: {(Environment.GetEnvironmentVariable("DB_SERVER") != null ? "SET" : "NOT SET")}");
+Console.WriteLine($"DB_PORT: {Environment.GetEnvironmentVariable("DB_PORT")}");
+Console.WriteLine($"DB_NAME: {Environment.GetEnvironmentVariable("DB_NAME")}");
+Console.WriteLine($"DB_USER: {Environment.GetEnvironmentVariable("DB_USER")}");
+Console.WriteLine($"DB_PASSWORD: {(Environment.GetEnvironmentVariable("DB_PASSWORD") != null ? "SET" : "NOT SET")}");
 Console.WriteLine($"Connection string built: {connectionString?.Substring(0, Math.Min(50, connectionString?.Length ?? 0))}...");
 Console.WriteLine($"Connection String Length: {connectionString?.Length}");
 Console.WriteLine($"Contains sslmode=require: {connectionString?.Contains("sslmode=require")}");
@@ -83,14 +87,6 @@ Console.WriteLine($"Contains sslmode=require: {connectionString?.Contains("sslmo
 if (string.IsNullOrEmpty(connectionString))
 {
     Console.WriteLine("WARNING: Could not build connection string!");
-    Console.WriteLine("Available DB environment variables:");
-    foreach (DictionaryEntry env in Environment.GetEnvironmentVariables())
-    {
-        if (env.Key.ToString()?.StartsWith("DB_") == true)
-        {
-            Console.WriteLine($"{env.Key} = {(env.Value?.ToString()?.Length > 0 ? "SET" : "NOT SET")}");
-        }
-    }
 }
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
