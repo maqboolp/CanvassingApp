@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using HooverCanvassingApi.Models;
 
@@ -72,7 +73,8 @@ namespace HooverCanvassingApi.Controllers
                     FirstName = user.FirstName,
                     LastName = user.LastName,
                     Role = user.Role.ToString().ToLower(),
-                    Token = token
+                    Token = token,
+                    AvatarUrl = GetGravatarUrl(user.Email!)
                 };
 
                 _logger.LogInformation("User {Email} logged in successfully", request.Email);
@@ -154,7 +156,8 @@ namespace HooverCanvassingApi.Controllers
                     FirstName = user.FirstName,
                     LastName = user.LastName,
                     Role = user.Role.ToString().ToLower(),
-                    Token = token
+                    Token = token,
+                    AvatarUrl = GetGravatarUrl(user.Email)
                 };
 
                 _logger.LogInformation("New user {Email} registered successfully", request.Email);
@@ -351,6 +354,43 @@ namespace HooverCanvassingApi.Controllers
             }
         }
 
+        [HttpGet("avatar-info")]
+        [Authorize]
+        public async Task<ActionResult> GetAvatarInfo()
+        {
+            try
+            {
+                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(currentUserId))
+                {
+                    return Unauthorized();
+                }
+
+                var user = await _userManager.FindByIdAsync(currentUserId);
+                if (user == null)
+                {
+                    return NotFound(new { error = "User not found" });
+                }
+
+                return Ok(new
+                {
+                    email = user.Email,
+                    avatarUrl = GetGravatarUrl(user.Email!),
+                    gravatarInfo = new
+                    {
+                        message = "To change your avatar, create or update your Gravatar account at gravatar.com using your email address.",
+                        gravatarUrl = "https://gravatar.com",
+                        emailUsed = user.Email
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting avatar info for user {UserId}", User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+                return StatusCode(500, new { error = "Failed to get avatar info" });
+            }
+        }
+
         [HttpPost("change-password")]
         [Authorize]
         public async Task<ActionResult<ApiResponse<string>>> ChangePassword([FromBody] ChangePasswordRequest request)
@@ -419,6 +459,15 @@ namespace HooverCanvassingApi.Controllers
             }
         }
 
+        private string GetGravatarUrl(string email, int size = 80)
+        {
+            using var md5 = MD5.Create();
+            var emailBytes = Encoding.UTF8.GetBytes(email.Trim().ToLowerInvariant());
+            var hashBytes = md5.ComputeHash(emailBytes);
+            var hash = Convert.ToHexString(hashBytes).ToLowerInvariant();
+            return $"https://www.gravatar.com/avatar/{hash}?s={size}&d=identicon&r=pg";
+        }
+
         private async Task<string> GenerateJwtToken(Volunteer user)
         {
             var jwtSettings = _configuration.GetSection("JwtSettings");
@@ -482,6 +531,7 @@ namespace HooverCanvassingApi.Controllers
         public string LastName { get; set; } = string.Empty;
         public string Role { get; set; } = string.Empty;
         public string Token { get; set; } = string.Empty;
+        public string AvatarUrl { get; set; } = string.Empty;
     }
 
     public class ChangePasswordRequest

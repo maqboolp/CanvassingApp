@@ -168,6 +168,7 @@ namespace HooverCanvassingApi.Controllers
 
         [HttpGet("voter-contact-history")]
         [Authorize(Roles = "Admin,SuperAdmin")]
+        // Fixed expression tree null propagating operator issue
         public async Task<ActionResult> GetVoterContactHistory(
             [FromQuery] int page = 1,
             [FromQuery] int limit = 25,
