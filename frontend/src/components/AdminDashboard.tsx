@@ -40,10 +40,12 @@ import {
   Assignment,
   GetApp,
   LocationOn,
-  Lock
+  Lock,
+  History
 } from '@mui/icons-material';
 import { AuthUser, Voter, ContactStatus, VoterSupport } from '../types';
 import VoterList from './VoterList';
+import VoterContactHistory from './VoterContactHistory';
 import { API_BASE_URL } from '../config';
 
 interface AdminDashboardProps {
@@ -116,7 +118,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
       fetchAnalytics();
     } else if (currentTab === 1) {
       fetchVolunteers();
-    } else if (currentTab === 3 && user.role === 'superadmin') {
+    } else if (currentTab === 4 && user.role === 'superadmin') {
       fetchGeocodingStatus();
     }
   }, [currentTab, user.role]);
@@ -471,6 +473,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
           <Tab label="Analytics" icon={<Analytics />} />
           <Tab label="Users" icon={<People />} />
           <Tab label="Voters" icon={<HowToVote />} />
+          <Tab label="Contact History" icon={<History />} />
           {user.role === 'superadmin' && (
             <Tab label="Data Management" icon={<Upload />} />
           )}
@@ -753,9 +756,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
           <VoterList onContactVoter={() => {}} user={user} />
         </TabPanel>
 
+        {/* Contact History Tab */}
+        <TabPanel value={currentTab} index={3}>
+          <VoterContactHistory user={user} />
+        </TabPanel>
+
         {/* Data Management Tab - Only for SuperAdmins */}
         {user.role === 'superadmin' && (
-          <TabPanel value={currentTab} index={3}>
+          <TabPanel value={currentTab} index={4}>
           <Typography variant="h5" gutterBottom>
             Data Management
           </Typography>

@@ -165,6 +165,87 @@ namespace HooverCanvassingApi.Controllers
             }
         }
 
+        [HttpGet("voter-contact-history")]
+        [Authorize(Roles = "Admin,SuperAdmin")]
+        public async Task<ActionResult> GetVoterContactHistory(
+            [FromQuery] int page = 1,
+            [FromQuery] int limit = 25,
+            [FromQuery] string? search = null,
+            [FromQuery] string? volunteerId = null,
+            [FromQuery] string? startDate = null,
+            [FromQuery] string? endDate = null)
+        {
+            try
+            {
+                var query = _context.Contacts
+                    .Include(c => c.Voter)
+                    .Include(c => c.Volunteer)
+                    .AsQueryable();
+
+                // Apply search filter
+                if (!string.IsNullOrEmpty(search))
+                {
+                    query = query.Where(c => 
+                        c.Voter.FirstName.Contains(search) ||
+                        c.Voter.LastName.Contains(search) ||
+                        c.VoterId.Contains(search));
+                }
+
+                // Apply volunteer filter
+                if (!string.IsNullOrEmpty(volunteerId))
+                {
+                    query = query.Where(c => c.VolunteerId == volunteerId);
+                }
+
+                // Apply date range filters
+                if (!string.IsNullOrEmpty(startDate) && DateTime.TryParse(startDate, out var start))
+                {
+                    query = query.Where(c => c.Timestamp.Date >= start.Date);
+                }
+
+                if (!string.IsNullOrEmpty(endDate) && DateTime.TryParse(endDate, out var end))
+                {
+                    query = query.Where(c => c.Timestamp.Date <= end.Date);
+                }
+
+                var total = await query.CountAsync();
+
+                var contacts = await query
+                    .OrderByDescending(c => c.Timestamp)
+                    .Skip((page - 1) * limit)
+                    .Take(limit)
+                    .Select(c => new
+                    {
+                        Id = c.Id,
+                        VoterId = c.VoterId,
+                        VoterName = $"{c.Voter.FirstName} {c.Voter.LastName}",
+                        VoterAddress = $"{c.Voter.AddressLine}, {c.Voter.City}, {c.Voter.State} {c.Voter.Zip}",
+                        VolunteerId = c.VolunteerId,
+                        VolunteerName = $"{c.Volunteer.FirstName} {c.Volunteer.LastName}",
+                        ContactDate = c.Timestamp,
+                        Status = c.Status.ToString().ToLower().Replace("home", "-home").Replace("followup", "follow-up"),
+                        VoterSupport = c.VoterSupport?.ToString().ToLower(),
+                        Notes = c.Notes
+                    })
+                    .ToListAsync();
+
+                var totalPages = (int)Math.Ceiling((double)total / limit);
+
+                return Ok(new
+                {
+                    Contacts = contacts,
+                    Total = total,
+                    Page = page,
+                    TotalPages = totalPages
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving voter contact history");
+                return StatusCode(500, new { error = "Failed to retrieve voter contact history" });
+            }
+        }
+
         [HttpGet("geocoding-status")]
         [Authorize(Roles = "SuperAdmin")]
         public async Task<ActionResult> GetGeocodingStatus()
