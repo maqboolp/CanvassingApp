@@ -5,6 +5,7 @@ using HooverCanvassingApi.Data;
 using HooverCanvassingApi.Models;
 using HooverCanvassingApi.Services;
 using System.Security.Claims;
+using HooverCanvassingApi;
 
 namespace HooverCanvassingApi.Controllers
 {
@@ -294,6 +295,39 @@ namespace HooverCanvassingApi.Controllers
             }
             
             return csv.ToString();
+        }
+
+        [HttpPost("initialize-database")]
+        [AllowAnonymous] // Temporary - remove after initial setup
+        public async Task<IActionResult> InitializeDatabase()
+        {
+            try
+            {
+                // Run migrations
+                await _context.Database.MigrateAsync();
+                
+                // Initialize seed data
+                await SeedData.InitializeAsync(HttpContext.RequestServices);
+                
+                return Ok(new { 
+                    success = true, 
+                    message = "Database initialized successfully",
+                    data = new {
+                        migrationsApplied = true,
+                        seedDataCreated = true
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error initializing database");
+                return StatusCode(500, new { 
+                    success = false, 
+                    error = "Failed to initialize database",
+                    message = ex.Message,
+                    details = ex.ToString()
+                });
+            }
         }
     }
 
