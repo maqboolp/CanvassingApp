@@ -355,6 +355,45 @@ namespace HooverCanvassingApi.Controllers
         {
             return degrees * Math.PI / 180;
         }
+
+        [HttpGet("debug-stats")]
+        public async Task<ActionResult> GetDebugStats()
+        {
+            try
+            {
+                var currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value;
+                
+                // Only allow admin/superadmin to access debug stats
+                if (currentUserRole != "Admin" && currentUserRole != "SuperAdmin")
+                {
+                    return Forbid();
+                }
+
+                var totalVoters = await _context.Voters.CountAsync();
+                var votersWithCoords = await _context.Voters
+                    .Where(v => v.Latitude.HasValue && v.Longitude.HasValue)
+                    .CountAsync();
+                var uncontactedVoters = await _context.Voters
+                    .Where(v => !v.IsContacted)
+                    .CountAsync();
+                var uncontactedWithCoords = await _context.Voters
+                    .Where(v => !v.IsContacted && v.Latitude.HasValue && v.Longitude.HasValue)
+                    .CountAsync();
+
+                return Ok(new {
+                    totalVoters,
+                    votersWithCoordinates = votersWithCoords,
+                    uncontactedVoters,
+                    uncontactedVotersWithCoordinates = uncontactedWithCoords,
+                    message = "Debug stats for troubleshooting nearest voter issue"
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting debug stats");
+                return StatusCode(500, new { error = "Failed to get debug stats" });
+            }
+        }
     }
 
     public class VoterDto
