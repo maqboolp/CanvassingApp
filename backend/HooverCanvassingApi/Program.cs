@@ -57,6 +57,8 @@ builder.Configuration.AddEnvironmentVariables();
 // Configure Entity Framework
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 Console.WriteLine($"Connection string from config: {connectionString?.Substring(0, Math.Min(50, connectionString?.Length ?? 0))}...");
+Console.WriteLine($"Connection String Length: {connectionString?.Length}");
+Console.WriteLine($"Contains sslmode=require: {connectionString?.Contains("sslmode=require")}");
 
 if (string.IsNullOrEmpty(connectionString))
 {
