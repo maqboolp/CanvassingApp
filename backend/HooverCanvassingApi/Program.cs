@@ -51,7 +51,9 @@ builder.Services.AddCors(options =>
 });
 
 // Configure Entity Framework
-var connectionString = builder.Configuration["CUSTOM_DATABASE_CONNECTION"] ?? builder.Configuration.GetConnectionString("DefaultConnection");
+var customConnection = Environment.GetEnvironmentVariable("CUSTOM_DATABASE_CONNECTION");
+var connectionString = customConnection ?? builder.Configuration.GetConnectionString("DefaultConnection");
+Console.WriteLine($"Environment variable CUSTOM_DATABASE_CONNECTION: {customConnection?.Substring(0, Math.Min(50, customConnection?.Length ?? 0))}...");
 Console.WriteLine($"Using connection string: {connectionString?.Substring(0, Math.Min(50, connectionString?.Length ?? 0))}...");
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
