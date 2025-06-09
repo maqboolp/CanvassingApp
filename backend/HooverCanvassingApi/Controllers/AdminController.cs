@@ -97,10 +97,10 @@ namespace HooverCanvassingApi.Controllers
                     TotalContacted = totalContacted,
                     ContactStatusBreakdown = new ContactStatusBreakdownDto
                     {
-                        Reached = contactStatusBreakdown.FirstOrDefault(x => x.Status == ContactStatus.Reached)?.Count ?? 0,
-                        NotHome = contactStatusBreakdown.FirstOrDefault(x => x.Status == ContactStatus.NotHome)?.Count ?? 0,
-                        Refused = contactStatusBreakdown.FirstOrDefault(x => x.Status == ContactStatus.Refused)?.Count ?? 0,
-                        NeedsFollowUp = contactStatusBreakdown.FirstOrDefault(x => x.Status == ContactStatus.NeedsFollowUp)?.Count ?? 0
+                        Reached = contactStatusBreakdown.FirstOrDefault(x => x.Status == ContactStatus.Reached) != null ? contactStatusBreakdown.FirstOrDefault(x => x.Status == ContactStatus.Reached).Count : 0,
+                        NotHome = contactStatusBreakdown.FirstOrDefault(x => x.Status == ContactStatus.NotHome) != null ? contactStatusBreakdown.FirstOrDefault(x => x.Status == ContactStatus.NotHome).Count : 0,
+                        Refused = contactStatusBreakdown.FirstOrDefault(x => x.Status == ContactStatus.Refused) != null ? contactStatusBreakdown.FirstOrDefault(x => x.Status == ContactStatus.Refused).Count : 0,
+                        NeedsFollowUp = contactStatusBreakdown.FirstOrDefault(x => x.Status == ContactStatus.NeedsFollowUp) != null ? contactStatusBreakdown.FirstOrDefault(x => x.Status == ContactStatus.NeedsFollowUp).Count : 0
                     },
                     VolunteerActivity = volunteerActivity,
                     ContactsByZip = contactsByZip
@@ -329,10 +329,10 @@ namespace HooverCanvassingApi.Controllers
                 TotalContacted = totalContacted,
                 ContactStatusBreakdown = new ContactStatusBreakdownDto
                 {
-                    Reached = contactStatusBreakdown.FirstOrDefault(x => x.Status == ContactStatus.Reached)?.Count ?? 0,
-                    NotHome = contactStatusBreakdown.FirstOrDefault(x => x.Status == ContactStatus.NotHome)?.Count ?? 0,
-                    Refused = contactStatusBreakdown.FirstOrDefault(x => x.Status == ContactStatus.Refused)?.Count ?? 0,
-                    NeedsFollowUp = contactStatusBreakdown.FirstOrDefault(x => x.Status == ContactStatus.NeedsFollowUp)?.Count ?? 0
+                    Reached = contactStatusBreakdown.FirstOrDefault(x => x.Status == ContactStatus.Reached) != null ? contactStatusBreakdown.FirstOrDefault(x => x.Status == ContactStatus.Reached).Count : 0,
+                    NotHome = contactStatusBreakdown.FirstOrDefault(x => x.Status == ContactStatus.NotHome) != null ? contactStatusBreakdown.FirstOrDefault(x => x.Status == ContactStatus.NotHome).Count : 0,
+                    Refused = contactStatusBreakdown.FirstOrDefault(x => x.Status == ContactStatus.Refused) != null ? contactStatusBreakdown.FirstOrDefault(x => x.Status == ContactStatus.Refused).Count : 0,
+                    NeedsFollowUp = contactStatusBreakdown.FirstOrDefault(x => x.Status == ContactStatus.NeedsFollowUp) != null ? contactStatusBreakdown.FirstOrDefault(x => x.Status == ContactStatus.NeedsFollowUp).Count : 0
                 },
                 VolunteerActivity = volunteerActivity,
                 ContactsByZip = contactsByZip
