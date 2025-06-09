@@ -258,6 +258,10 @@ namespace HooverCanvassingApi.Controllers
             try
             {
                 var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value;
+                _logger.LogInformation("GetNearestVoter called by user {UserId} with role {Role} at location {Lat},{Lng}", 
+                    currentUserId, currentUserRole, latitude, longitude);
+                
                 if (string.IsNullOrEmpty(currentUserId))
                 {
                     return Unauthorized();
@@ -269,6 +273,9 @@ namespace HooverCanvassingApi.Controllers
                                v.Latitude.HasValue &&
                                v.Longitude.HasValue)
                     .ToListAsync();
+
+                _logger.LogInformation("Found {Count} uncontacted voters with coordinates for user {UserId}", 
+                    voters.Count, currentUserId);
 
                 if (!voters.Any())
                 {
@@ -288,8 +295,13 @@ namespace HooverCanvassingApi.Controllers
 
                 if (votersWithDistance == null)
                 {
+                    _logger.LogInformation("No uncontacted voters found within {Distance}km for user {UserId}", 
+                        maxDistanceKm, currentUserId);
                     return NotFound(new { message = $"No uncontacted voters found within {maxDistanceKm}km" });
                 }
+
+                _logger.LogInformation("Found nearest voter at distance {Distance}km for user {UserId}", 
+                    votersWithDistance.Distance, currentUserId);
 
                 var voter = votersWithDistance.Voter;
                 var voterDto = new VoterDto
