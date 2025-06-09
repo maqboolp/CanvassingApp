@@ -111,6 +111,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   };
 
   const getCurrentLocation = () => {
+    console.log('Dashboard: Getting current location for user role:', user.role);
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -118,13 +119,16 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             latitude: position.coords.latitude,
             longitude: position.coords.longitude
           };
+          console.log('Dashboard: Got location coordinates:', coords);
           setLocation(coords);
           findNearestVoter(coords);
         },
         (error) => {
-          console.log('Geolocation error:', error);
+          console.log('Dashboard: Geolocation error:', error);
         }
       );
+    } else {
+      console.log('Dashboard: Geolocation not supported');
     }
   };
 
@@ -150,6 +154,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 
   const findNearestVoter = async (coords: { latitude: number; longitude: number }) => {
     try {
+      console.log('Dashboard: Finding nearest voter for coords:', coords, 'user role:', user.role);
       const response = await fetch(
         `${API_BASE_URL}/api/voters/nearest?latitude=${coords.latitude}&longitude=${coords.longitude}`,
         {
@@ -159,15 +164,21 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         }
       );
       
+      console.log('Dashboard: Nearest voter API response status:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log('Dashboard: Nearest voter data received:', data);
         setNearestVoter(data);
       } else if (response.status === 404) {
         // No voters found is a normal case, not an error
+        console.log('Dashboard: No nearest voter found (404)');
         setNearestVoter(null);
+      } else {
+        console.log('Dashboard: Nearest voter API error:', response.status, await response.text());
       }
     } catch (error) {
-      console.error('Failed to find nearest voter:', error);
+      console.error('Dashboard: Failed to find nearest voter:', error);
     }
   };
 
