@@ -54,21 +54,41 @@ builder.Services.AddCors(options =>
 // Add environment variables explicitly
 builder.Configuration.AddEnvironmentVariables();
 
-// Configure Entity Framework
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-Console.WriteLine($"Connection string from config: {connectionString?.Substring(0, Math.Min(50, connectionString?.Length ?? 0))}...");
+// Build connection string from components
+string BuildConnectionString()
+{
+    var server = Environment.GetEnvironmentVariable("DB_SERVER");
+    var port = Environment.GetEnvironmentVariable("DB_PORT");
+    var database = Environment.GetEnvironmentVariable("DB_NAME");
+    var userId = Environment.GetEnvironmentVariable("DB_USER");
+    var password = Environment.GetEnvironmentVariable("DB_PASSWORD");
+    
+    if (string.IsNullOrEmpty(server) || string.IsNullOrEmpty(port) || 
+        string.IsNullOrEmpty(database) || string.IsNullOrEmpty(userId) || 
+        string.IsNullOrEmpty(password))
+    {
+        // Fallback to traditional connection string
+        return builder.Configuration.GetConnectionString("DefaultConnection") ?? "";
+    }
+    
+    return $"postgresql://{userId}:{password}@{server}:{port}/{database}?sslmode=require";
+}
+
+var connectionString = BuildConnectionString();
+Console.WriteLine($"Connection string components - Server: {Environment.GetEnvironmentVariable("DB_SERVER")?.Substring(0, Math.Min(20, Environment.GetEnvironmentVariable("DB_SERVER")?.Length ?? 0))}...");
+Console.WriteLine($"Connection string built: {connectionString?.Substring(0, Math.Min(50, connectionString?.Length ?? 0))}...");
 Console.WriteLine($"Connection String Length: {connectionString?.Length}");
 Console.WriteLine($"Contains sslmode=require: {connectionString?.Contains("sslmode=require")}");
 
 if (string.IsNullOrEmpty(connectionString))
 {
-    Console.WriteLine("WARNING: ConnectionStrings__DefaultConnection not found!");
-    Console.WriteLine("Available environment variables:");
+    Console.WriteLine("WARNING: Could not build connection string!");
+    Console.WriteLine("Available DB environment variables:");
     foreach (DictionaryEntry env in Environment.GetEnvironmentVariables())
     {
-        if (env.Key.ToString()?.Contains("Connection") == true)
+        if (env.Key.ToString()?.StartsWith("DB_") == true)
         {
-            Console.WriteLine($"{env.Key} = {env.Value?.ToString()?.Substring(0, 50)}...");
+            Console.WriteLine($"{env.Key} = {(env.Value?.ToString()?.Length > 0 ? "SET" : "NOT SET")}");
         }
     }
 }
