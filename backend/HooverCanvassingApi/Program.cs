@@ -52,6 +52,7 @@ builder.Services.AddCors(options =>
 
 // Configure Entity Framework
 var connectionString = builder.Configuration["CUSTOM_DATABASE_CONNECTION"] ?? builder.Configuration.GetConnectionString("DefaultConnection");
+Console.WriteLine($"Using connection string: {connectionString?.Substring(0, Math.Min(50, connectionString?.Length ?? 0))}...");
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
     options.UseNpgsql(connectionString, npgsqlOptions =>
@@ -162,6 +163,11 @@ app.MapGet("/api/debug/routes", (IServiceProvider services) =>
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+    var actualConnectionString = configuration["CUSTOM_DATABASE_CONNECTION"] ?? configuration.GetConnectionString("DefaultConnection");
+    
+    Console.WriteLine($"Migration - Using connection string: {actualConnectionString?.Substring(0, Math.Min(50, actualConnectionString?.Length ?? 0))}...");
+    
     try
     {
         await dbContext.Database.MigrateAsync();
@@ -173,6 +179,7 @@ using (var scope = app.Services.CreateScope())
     catch (Exception ex)
     {
         Console.WriteLine($"Error during startup: {ex.Message}");
+        Console.WriteLine($"Full error: {ex}");
     }
 }
 
