@@ -126,15 +126,15 @@ namespace HooverCanvassingApi.Controllers
                     .ToListAsync();
 
                 // Apply distance filtering and sorting in memory if location is provided
+                List<(Voter Voter, double Distance)> votersWithDistance = null;
                 if (latitude.HasValue && longitude.HasValue)
                 {
-                    var votersWithDistance = voters
+                    votersWithDistance = voters
                         .Where(v => v.Latitude.HasValue && v.Longitude.HasValue)
-                        .Select(v => new
-                        {
-                            Voter = v,
-                            Distance = CalculateDistance(latitude.Value, longitude.Value, v.Latitude!.Value, v.Longitude!.Value)
-                        })
+                        .Select(v => (
+                            Voter: v,
+                            Distance: CalculateDistance(latitude.Value, longitude.Value, v.Latitude!.Value, v.Longitude!.Value)
+                        ))
                         .Where(vd => vd.Distance <= radiusKm)
                         .OrderBy(vd => vd.Distance) // Sort by distance from closest to farthest
                         .ToList();
@@ -152,27 +152,39 @@ namespace HooverCanvassingApi.Controllers
 
                 var response = new VoterListResponse
                 {
-                    Voters = voters.Select(v => new VoterDto
+                    Voters = voters.Select(v => 
                     {
-                        LalVoterId = v.LalVoterId,
-                        FirstName = v.FirstName,
-                        MiddleName = v.MiddleName,
-                        LastName = v.LastName,
-                        AddressLine = v.AddressLine,
-                        City = v.City,
-                        State = v.State,
-                        Zip = v.Zip,
-                        Age = v.Age,
-                        Ethnicity = v.Ethnicity,
-                        Gender = v.Gender,
-                        VoteFrequency = v.VoteFrequency.ToString().ToLower(),
-                        CellPhone = v.CellPhone,
-                        Email = v.Email,
-                        Latitude = v.Latitude,
-                        Longitude = v.Longitude,
-                        IsContacted = v.IsContacted,
-                        LastContactStatus = v.LastContactStatus?.ToString().ToLower(),
-                        VoterSupport = v.VoterSupport?.ToString().ToLower()
+                        // Find distance for this voter if location search was used
+                        double? distance = null;
+                        if (votersWithDistance != null && latitude.HasValue && longitude.HasValue)
+                        {
+                            var voterWithDist = votersWithDistance.FirstOrDefault(vd => vd.Voter.LalVoterId == v.LalVoterId);
+                            distance = voterWithDist.Distance;
+                        }
+                        
+                        return new VoterDto
+                        {
+                            LalVoterId = v.LalVoterId,
+                            FirstName = v.FirstName,
+                            MiddleName = v.MiddleName,
+                            LastName = v.LastName,
+                            AddressLine = v.AddressLine,
+                            City = v.City,
+                            State = v.State,
+                            Zip = v.Zip,
+                            Age = v.Age,
+                            Ethnicity = v.Ethnicity,
+                            Gender = v.Gender,
+                            VoteFrequency = v.VoteFrequency.ToString().ToLower(),
+                            CellPhone = v.CellPhone,
+                            Email = v.Email,
+                            Latitude = v.Latitude,
+                            Longitude = v.Longitude,
+                            IsContacted = v.IsContacted,
+                            LastContactStatus = v.LastContactStatus?.ToString().ToLower(),
+                            VoterSupport = v.VoterSupport?.ToString().ToLower(),
+                            DistanceKm = distance
+                        };
                     }).ToList(),
                     Total = total,
                     Page = page,
@@ -354,6 +366,7 @@ namespace HooverCanvassingApi.Controllers
         public bool IsContacted { get; set; }
         public string? LastContactStatus { get; set; }
         public string? VoterSupport { get; set; }
+        public double? DistanceKm { get; set; }
     }
 
     public class VoterListResponse

@@ -40,18 +40,19 @@ namespace HooverCanvassingApi.Controllers
                 var monthStart = new DateTime(today.Year, today.Month, 1);
                 var monthEnd = monthStart.AddMonths(1);
 
-                // Get all active volunteers first
+                // Get all active volunteers and their contacts
                 var volunteers = await _context.Volunteers
                     .Where(v => v.IsActive)
+                    .Include(v => v.Contacts)
                     .ToListAsync();
 
-                // Calculate weekly leaderboard in memory to avoid EF issues
+                // Calculate weekly leaderboard in memory
                 var weeklyLeaderboard = volunteers
                     .Select(v => new LeaderboardEntry
                     {
                         VolunteerId = v.Id,
                         VolunteerName = $"{v.FirstName} {v.LastName}",
-                        ContactCount = _context.Contacts.Count(c => c.VolunteerId == v.Id && c.Timestamp >= weekStart && c.Timestamp < weekEnd),
+                        ContactCount = v.Contacts.Count(c => c.Timestamp >= weekStart && c.Timestamp < weekEnd),
                         IsCurrentUser = v.Id == currentUserId
                     })
                     .OrderByDescending(v => v.ContactCount)
@@ -65,7 +66,7 @@ namespace HooverCanvassingApi.Controllers
                     {
                         VolunteerId = v.Id,
                         VolunteerName = $"{v.FirstName} {v.LastName}",
-                        ContactCount = _context.Contacts.Count(c => c.VolunteerId == v.Id && c.Timestamp >= monthStart && c.Timestamp < monthEnd),
+                        ContactCount = v.Contacts.Count(c => c.Timestamp >= monthStart && c.Timestamp < monthEnd),
                         IsCurrentUser = v.Id == currentUserId
                     })
                     .OrderByDescending(v => v.ContactCount)
