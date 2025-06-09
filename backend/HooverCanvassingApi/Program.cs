@@ -68,6 +68,10 @@ Console.WriteLine($"Connection string from config: {connectionString?.Substring(
 Console.WriteLine($"Connection String Length: {connectionString?.Length}");
 Console.WriteLine($"Connection string available: {!string.IsNullOrEmpty(connectionString)}");
 
+// Check Google API key availability
+var googleApiKey = Environment.GetEnvironmentVariable("GOOGLE_GEOCODING_API_KEY");
+Console.WriteLine($"Google API Key: {(string.IsNullOrEmpty(googleApiKey) ? "MISSING" : "PRESENT")} (Length: {googleApiKey?.Length ?? 0})");
+
 if (string.IsNullOrEmpty(connectionString))
 {
     Console.WriteLine("WARNING: Could not build connection string!");

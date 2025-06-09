@@ -224,6 +224,10 @@ namespace HooverCanvassingApi.Services
             {
                 // Use Google Geocoding API for better accuracy and speed
                 var googleApiKey = Environment.GetEnvironmentVariable("GOOGLE_GEOCODING_API_KEY");
+                _logger.LogInformation("Google API Key check: Key is {Status}, Length: {Length}", 
+                    string.IsNullOrEmpty(googleApiKey) ? "MISSING" : "PRESENT", 
+                    googleApiKey?.Length ?? 0);
+                    
                 if (string.IsNullOrEmpty(googleApiKey))
                 {
                     _logger.LogError("Google Geocoding API key not configured. Set GOOGLE_GEOCODING_API_KEY environment variable.");

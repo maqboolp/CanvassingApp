@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(doctl apps logs:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": []
+  }
+}
