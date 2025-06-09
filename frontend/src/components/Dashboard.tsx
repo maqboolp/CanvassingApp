@@ -19,7 +19,8 @@ import {
   DialogContent,
   DialogActions,
   TextField,
-  CircularProgress
+  CircularProgress,
+  Avatar
 } from '@mui/material';
 import {
   ExitToApp,
@@ -66,6 +67,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const [selectedVoterForContact, setSelectedVoterForContact] = useState<Voter | null>(null);
   const [leaderboard, setLeaderboard] = useState<any>(null);
   const [leaderboardTab, setLeaderboardTab] = useState(0);
+  const [avatarInfoDialog, setAvatarInfoDialog] = useState(false);
+  const [avatarInfo, setAvatarInfo] = useState<any>(null);
 
   useEffect(() => {
     fetchStats();
@@ -233,6 +236,29 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     setContactModalOpen(true);
   };
 
+  const fetchAvatarInfo = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/avatar-info`, {
+        headers: {
+          'Authorization': `Bearer ${user.token}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setAvatarInfo(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch avatar info:', error);
+    }
+  };
+
+  const handleAvatarInfoOpen = () => {
+    fetchAvatarInfo();
+    setAvatarInfoDialog(true);
+    handleMenuClose();
+  };
+
   const handleContactSubmit = async (status: ContactStatus, notes: string, voterSupport?: VoterSupport) => {
     if (!selectedVoterForContact) return;
 
@@ -300,7 +326,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             onClick={handleMenuOpen}
             color="inherit"
           >
-            <AccountCircle />
+            <Avatar 
+              src={user.avatarUrl} 
+              alt={`${user.firstName} ${user.lastName}`}
+              sx={{ width: 32, height: 32 }}
+            />
           </IconButton>
           
           <Menu
@@ -331,6 +361,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             <MenuItem onClick={() => { setChangePasswordDialog(true); handleMenuClose(); }}>
               <Lock sx={{ mr: 1 }} />
               Change Password
+            </MenuItem>
+            <MenuItem onClick={handleAvatarInfoOpen}>
+              <AccountCircle sx={{ mr: 1 }} />
+              Change Avatar
             </MenuItem>
             <MenuItem onClick={onLogout}>
               <ExitToApp sx={{ mr: 1 }} />
@@ -603,6 +637,57 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         {/* Voter List */}
         <VoterList onContactVoter={handleContactVoter} user={user} />
       </Container>
+
+      {/* Avatar Info Dialog */}
+      <Dialog open={avatarInfoDialog} onClose={() => setAvatarInfoDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Change Your Avatar</DialogTitle>
+        <DialogContent>
+          {avatarInfo && (
+            <>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                <Avatar 
+                  src={avatarInfo.avatarUrl} 
+                  alt={`${user.firstName} ${user.lastName}`}
+                  sx={{ width: 80, height: 80, mr: 2 }}
+                />
+                <Box>
+                  <Typography variant="h6">{user.firstName} {user.lastName}</Typography>
+                  <Typography variant="body2" color="text.secondary">{avatarInfo.email}</Typography>
+                </Box>
+              </Box>
+              
+              <Typography variant="body1" paragraph>
+                {avatarInfo.gravatarInfo.message}
+              </Typography>
+              
+              <Typography variant="body2" color="text.secondary" paragraph>
+                Your avatar is automatically generated based on your email address: <strong>{avatarInfo.gravatarInfo.emailUsed}</strong>
+              </Typography>
+              
+              <Button
+                variant="contained"
+                startIcon={<AccountCircle />}
+                href={avatarInfo.gravatarInfo.gravatarUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                fullWidth
+                sx={{ mb: 2 }}
+              >
+                Visit Gravatar.com
+              </Button>
+              
+              <Typography variant="caption" color="text.secondary">
+                After updating your Gravatar, it may take a few minutes for changes to appear. You can refresh the page to see updates sooner.
+              </Typography>
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAvatarInfoDialog(false)}>
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Change Password Dialog */}
       <Dialog open={changePasswordDialog} onClose={() => !passwordChangeLoading && setChangePasswordDialog(false)} maxWidth="sm" fullWidth>

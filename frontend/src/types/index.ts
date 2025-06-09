@@ -115,6 +115,7 @@ export interface AuthUser {
   lastName: string;
   role: 'volunteer' | 'admin' | 'superadmin';
   token: string;
+  avatarUrl: string;
 }
 
 export interface LoginRequest {
