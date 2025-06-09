@@ -20,7 +20,9 @@ import {
   DialogActions,
   TextField,
   CircularProgress,
-  Avatar
+  Avatar,
+  Tabs,
+  Tab
 } from '@mui/material';
 import {
   ExitToApp,
@@ -32,9 +34,7 @@ import {
   Refresh,
   Lock,
   EmojiEvents,
-  Star,
-  Tabs,
-  Tab
+  Star
 } from '@mui/icons-material';
 import { AuthUser, Voter, ContactStatus, VoterSupport } from '../types';
 import VoterList from './VoterList';
