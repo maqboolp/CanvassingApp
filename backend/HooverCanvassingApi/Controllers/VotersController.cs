@@ -125,27 +125,21 @@ namespace HooverCanvassingApi.Controllers
                 var voters = await query
                     .ToListAsync();
 
-                // Apply distance filtering in memory if location is provided
+                // Apply distance filtering and sorting in memory if location is provided
                 if (latitude.HasValue && longitude.HasValue)
                 {
-                    var latRad = latitude.Value * Math.PI / 180;
-                    var lonRad = longitude.Value * Math.PI / 180;
+                    var votersWithDistance = voters
+                        .Where(v => v.Latitude.HasValue && v.Longitude.HasValue)
+                        .Select(v => new
+                        {
+                            Voter = v,
+                            Distance = CalculateDistance(latitude.Value, longitude.Value, v.Latitude!.Value, v.Longitude!.Value)
+                        })
+                        .Where(vd => vd.Distance <= radiusKm)
+                        .OrderBy(vd => vd.Distance) // Sort by distance from closest to farthest
+                        .ToList();
                     
-                    voters = voters.Where(v => 
-                    {
-                        if (!v.Latitude.HasValue || !v.Longitude.HasValue) return false;
-                        
-                        var voterLatRad = v.Latitude.Value * Math.PI / 180;
-                        var voterLonRad = v.Longitude.Value * Math.PI / 180;
-                        var deltaLat = voterLatRad - latRad;
-                        var deltaLon = voterLonRad - lonRad;
-                        var a = Math.Sin(deltaLat / 2) * Math.Sin(deltaLat / 2) +
-                                Math.Cos(latRad) * Math.Cos(voterLatRad) *
-                                Math.Sin(deltaLon / 2) * Math.Sin(deltaLon / 2);
-                        var c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
-                        var distance = 6371 * c; // Earth's radius in km
-                        return distance <= radiusKm;
-                    }).ToList();
+                    voters = votersWithDistance.Select(vd => vd.Voter).ToList();
                 }
 
                 var total = voters.Count;
