@@ -294,7 +294,7 @@ namespace HooverCanvassingApi.Services
             result.ProcessedCount = votersToGeocode.Count;
             _logger.LogInformation("Starting geocoding for {Count} voters without coordinates", votersToGeocode.Count);
 
-            var batchSize = 100;
+            var batchSize = 5;
             var processed = 0;
 
             for (int i = 0; i < votersToGeocode.Count; i += batchSize)
