@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.Server.IIS;
 using System.Text;
+using System.Collections;
 using HooverCanvassingApi.Data;
 using HooverCanvassingApi.Models;
 using HooverCanvassingApi.Services;
@@ -50,11 +51,26 @@ builder.Services.AddCors(options =>
     });
 });
 
+// Add environment variables explicitly
+builder.Configuration.AddEnvironmentVariables();
+
 // Configure Entity Framework
-var customConnection = Environment.GetEnvironmentVariable("CUSTOM_DATABASE_CONNECTION");
-var connectionString = customConnection ?? builder.Configuration.GetConnectionString("DefaultConnection");
-Console.WriteLine($"Environment variable CUSTOM_DATABASE_CONNECTION: {customConnection?.Substring(0, Math.Min(50, customConnection?.Length ?? 0))}...");
-Console.WriteLine($"Using connection string: {connectionString?.Substring(0, Math.Min(50, connectionString?.Length ?? 0))}...");
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+Console.WriteLine($"Connection string from config: {connectionString?.Substring(0, Math.Min(50, connectionString?.Length ?? 0))}...");
+
+if (string.IsNullOrEmpty(connectionString))
+{
+    Console.WriteLine("WARNING: ConnectionStrings__DefaultConnection not found!");
+    Console.WriteLine("Available environment variables:");
+    foreach (DictionaryEntry env in Environment.GetEnvironmentVariables())
+    {
+        if (env.Key.ToString()?.Contains("Connection") == true)
+        {
+            Console.WriteLine($"{env.Key} = {env.Value?.ToString()?.Substring(0, 50)}...");
+        }
+    }
+}
+
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
     options.UseNpgsql(connectionString, npgsqlOptions =>
@@ -165,13 +181,10 @@ app.MapGet("/api/debug/routes", (IServiceProvider services) =>
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
-    var actualConnectionString = configuration["CUSTOM_DATABASE_CONNECTION"] ?? configuration.GetConnectionString("DefaultConnection");
-    
-    Console.WriteLine($"Migration - Using connection string: {actualConnectionString?.Substring(0, Math.Min(50, actualConnectionString?.Length ?? 0))}...");
     
     try
     {
+        Console.WriteLine("Applying database migrations...");
         await dbContext.Database.MigrateAsync();
         Console.WriteLine("Database migrations applied successfully.");
         
