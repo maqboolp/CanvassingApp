@@ -40,37 +40,38 @@ namespace HooverCanvassingApi.Controllers
                 var monthStart = new DateTime(today.Year, today.Month, 1);
                 var monthEnd = monthStart.AddMonths(1);
 
-                // Weekly leaderboard
-                var weeklyLeaderboard = await _context.Volunteers
-                    .Include(v => v.Contacts)
+                // Get all active volunteers first
+                var volunteers = await _context.Volunteers
                     .Where(v => v.IsActive)
-                    .Select(v => new LeaderboardEntry
-                    {
-                        VolunteerId = v.Id,
-                        VolunteerName = $"{v.FirstName} {v.LastName}",
-                        ContactCount = v.Contacts.Count(c => c.Timestamp >= weekStart && c.Timestamp < weekEnd),
-                        IsCurrentUser = v.Id == currentUserId
-                    })
-                    .OrderByDescending(v => v.ContactCount)
-                    .ThenBy(v => v.VolunteerName)
-                    .Take(10)
                     .ToListAsync();
 
-                // Monthly leaderboard
-                var monthlyLeaderboard = await _context.Volunteers
-                    .Include(v => v.Contacts)
-                    .Where(v => v.IsActive)
+                // Calculate weekly leaderboard in memory to avoid EF issues
+                var weeklyLeaderboard = volunteers
                     .Select(v => new LeaderboardEntry
                     {
                         VolunteerId = v.Id,
                         VolunteerName = $"{v.FirstName} {v.LastName}",
-                        ContactCount = v.Contacts.Count(c => c.Timestamp >= monthStart && c.Timestamp < monthEnd),
+                        ContactCount = _context.Contacts.Count(c => c.VolunteerId == v.Id && c.Timestamp >= weekStart && c.Timestamp < weekEnd),
                         IsCurrentUser = v.Id == currentUserId
                     })
                     .OrderByDescending(v => v.ContactCount)
                     .ThenBy(v => v.VolunteerName)
                     .Take(10)
-                    .ToListAsync();
+                    .ToList();
+
+                // Calculate monthly leaderboard in memory
+                var monthlyLeaderboard = volunteers
+                    .Select(v => new LeaderboardEntry
+                    {
+                        VolunteerId = v.Id,
+                        VolunteerName = $"{v.FirstName} {v.LastName}",
+                        ContactCount = _context.Contacts.Count(c => c.VolunteerId == v.Id && c.Timestamp >= monthStart && c.Timestamp < monthEnd),
+                        IsCurrentUser = v.Id == currentUserId
+                    })
+                    .OrderByDescending(v => v.ContactCount)
+                    .ThenBy(v => v.VolunteerName)
+                    .Take(10)
+                    .ToList();
 
                 // Assign positions and badges
                 AssignPositionsAndBadges(weeklyLeaderboard);
