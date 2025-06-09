@@ -51,7 +51,7 @@ builder.Services.AddCors(options =>
 });
 
 // Configure Entity Framework
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+var connectionString = builder.Configuration["CUSTOM_DATABASE_CONNECTION"] ?? builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
     options.UseNpgsql(connectionString, npgsqlOptions =>
