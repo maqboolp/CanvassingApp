@@ -146,7 +146,18 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
           findNearestVoter(coords);
         },
         (error) => {
-          console.log('Dashboard: Geolocation error:', error);
+          console.log('Dashboard: Geolocation error details:', {
+            code: error.code,
+            message: error.message,
+            errorName: error.code === 1 ? 'PERMISSION_DENIED' : 
+                      error.code === 2 ? 'POSITION_UNAVAILABLE' : 
+                      error.code === 3 ? 'TIMEOUT' : 'UNKNOWN'
+          });
+        },
+        {
+          enableHighAccuracy: false,
+          timeout: 10000,
+          maximumAge: 300000 // 5 minutes
         }
       );
     } else {
@@ -460,6 +471,26 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             <Typography variant="caption" color="text.secondary">
               {debugStats.message}
             </Typography>
+          </Alert>
+        )}
+
+        {/* Location Debug Card */}
+        {!nearestVoter && !location && (
+          <Alert severity="warning" sx={{ mb: 3 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              📍 Location needed for nearest voter
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 2 }}>
+              To see your nearest uncontacted voter, we need your location.
+            </Typography>
+            <Button
+              variant="contained"
+              startIcon={<LocationOn />}
+              onClick={getCurrentLocation}
+              size="small"
+            >
+              Enable Location
+            </Button>
           </Alert>
         )}
 
