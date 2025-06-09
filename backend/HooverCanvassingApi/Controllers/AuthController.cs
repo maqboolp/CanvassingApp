@@ -65,7 +65,7 @@ namespace HooverCanvassingApi.Controllers
                     });
                 }
 
-                var token = await GenerateJwtToken(user);
+                var token = GenerateJwtToken(user);
                 var authUser = new AuthUserDto
                 {
                     Id = user.Id,
@@ -468,7 +468,7 @@ namespace HooverCanvassingApi.Controllers
             return $"https://www.gravatar.com/avatar/{hash}?s={size}&d=identicon&r=pg";
         }
 
-        private async Task<string> GenerateJwtToken(Volunteer user)
+        private string GenerateJwtToken(Volunteer user)
         {
             var jwtSettings = _configuration.GetSection("JwtSettings");
             var secret = jwtSettings["Secret"];
