@@ -128,6 +128,7 @@ namespace HooverCanvassingApi.Controllers
                     Email = request.Email,
                     FirstName = request.FirstName,
                     LastName = request.LastName,
+                    PhoneNumber = request.PhoneNumber,
                     Role = VolunteerRole.Volunteer,
                     IsActive = true,
                     CreatedAt = DateTime.UtcNow,
@@ -313,6 +314,7 @@ namespace HooverCanvassingApi.Controllers
                     Email = request.Email,
                     FirstName = request.FirstName,
                     LastName = request.LastName,
+                    PhoneNumber = request.PhoneNumber,
                     Role = VolunteerRole.Admin,
                     IsActive = true,
                     CreatedAt = DateTime.UtcNow,
@@ -469,6 +471,7 @@ namespace HooverCanvassingApi.Controllers
         public string Password { get; set; } = string.Empty;
         public string FirstName { get; set; } = string.Empty;
         public string LastName { get; set; } = string.Empty;
+        public string? PhoneNumber { get; set; }
     }
 
     public class AuthUserDto

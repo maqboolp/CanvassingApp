@@ -91,12 +91,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
     firstName: '',
     lastName: '',
     email: '',
+    phoneNumber: '',
     password: ''
   });
   const [adminForm, setAdminForm] = useState({
     firstName: '',
     lastName: '',
     email: '',
+    phoneNumber: '',
     password: ''
   });
   const [createAdminDialog, setCreateAdminDialog] = useState(false);
@@ -261,7 +263,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
         const result = await response.json();
         setImportResult({ success: `Volunteer ${volunteerForm.firstName} ${volunteerForm.lastName} created successfully!` });
         setCreateVolunteerDialog(false);
-        setVolunteerForm({ firstName: '', lastName: '', email: '', password: '' });
+        setVolunteerForm({ firstName: '', lastName: '', email: '', phoneNumber: '', password: '' });
         // Refresh volunteers list if we're on that tab
         if (currentTab === 1) {
           fetchVolunteers();
@@ -294,7 +296,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
       if (response.ok) {
         setImportResult({ success: 'Admin created successfully!' });
         setCreateAdminDialog(false);
-        setAdminForm({ firstName: '', lastName: '', email: '', password: '' });
+        setAdminForm({ firstName: '', lastName: '', email: '', phoneNumber: '', password: '' });
         // Refresh the volunteers list to show the new admin
         if (currentTab === 1) {
           fetchVolunteers();
@@ -672,6 +674,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                         <TableRow>
                           <TableCell>Name</TableCell>
                           <TableCell>Email</TableCell>
+                          <TableCell>Phone</TableCell>
                           <TableCell>Status</TableCell>
                           <TableCell>Joined</TableCell>
                         </TableRow>
@@ -683,6 +686,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                               {admin.firstName} {admin.lastName}
                             </TableCell>
                             <TableCell>{admin.email}</TableCell>
+                            <TableCell>{admin.phoneNumber || '-'}</TableCell>
                             <TableCell>
                               <span style={{ 
                                 color: admin.isActive ? 'green' : 'red',
@@ -714,6 +718,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                       <TableRow>
                         <TableCell>Name</TableCell>
                         <TableCell>Email</TableCell>
+                        <TableCell>Phone</TableCell>
                         <TableCell>Status</TableCell>
                         <TableCell align="right">Contacts Made</TableCell>
                         <TableCell>Joined</TableCell>
@@ -726,6 +731,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                             {volunteer.firstName} {volunteer.lastName}
                           </TableCell>
                           <TableCell>{volunteer.email}</TableCell>
+                          <TableCell>{volunteer.phoneNumber || '-'}</TableCell>
                           <TableCell>
                             <span style={{ 
                               color: volunteer.isActive ? 'green' : 'red',
@@ -952,6 +958,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
             required
           />
           <TextField
+            label="Phone Number"
+            type="tel"
+            fullWidth
+            margin="normal"
+            value={volunteerForm.phoneNumber}
+            onChange={(e) => setVolunteerForm({ ...volunteerForm, phoneNumber: e.target.value })}
+            disabled={volunteerCreateLoading}
+            placeholder="(555) 123-4567"
+            helperText="Optional - for emergency contact"
+          />
+          <TextField
             label="Password"
             type="password"
             fullWidth
@@ -1012,6 +1029,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
             onChange={(e) => setAdminForm({ ...adminForm, email: e.target.value })}
             disabled={adminCreateLoading}
             required
+          />
+          <TextField
+            label="Phone Number"
+            type="tel"
+            fullWidth
+            margin="normal"
+            value={adminForm.phoneNumber}
+            onChange={(e) => setAdminForm({ ...adminForm, phoneNumber: e.target.value })}
+            disabled={adminCreateLoading}
+            placeholder="(555) 123-4567"
+            helperText="Optional - for emergency contact"
           />
           <TextField
             label="Password"

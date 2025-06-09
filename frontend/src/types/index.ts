@@ -25,6 +25,7 @@ export interface Volunteer {
   email: string;
   firstName: string;
   lastName: string;
+  phoneNumber?: string;
   role: 'volunteer' | 'admin' | 'superadmin';
   isActive: boolean;
   createdAt: Date;
@@ -126,6 +127,7 @@ export interface RegisterRequest {
   password: string;
   firstName: string;
   lastName: string;
+  phoneNumber?: string;
 }
 
 export interface ApiResponse<T> {
