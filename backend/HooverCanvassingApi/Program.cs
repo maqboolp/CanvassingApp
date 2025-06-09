@@ -56,6 +56,14 @@ builder.Configuration.AddEnvironmentVariables();
 
 // Use standard .NET configuration for connection string
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
+// Fix truncated sslmode parameter if needed
+if (!string.IsNullOrEmpty(connectionString) && connectionString.EndsWith("?sslmode"))
+{
+    connectionString += "=require";
+    Console.WriteLine("Fixed truncated sslmode parameter");
+}
+
 Console.WriteLine($"Connection string from config: {connectionString?.Substring(0, Math.Min(50, connectionString?.Length ?? 0))}...");
 Console.WriteLine($"Connection String Length: {connectionString?.Length}");
 Console.WriteLine($"Connection string available: {!string.IsNullOrEmpty(connectionString)}");
