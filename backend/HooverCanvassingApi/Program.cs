@@ -71,7 +71,7 @@ string BuildConnectionString()
         return builder.Configuration.GetConnectionString("DefaultConnection") ?? "";
     }
     
-    return $"postgresql://{userId}:{password}@{server}:{port}/{database}?sslmode=require";
+    return $"postgresql://{userId}:{password}@{server}:{port}/{database}";
 }
 
 var connectionString = BuildConnectionString();
@@ -82,7 +82,7 @@ Console.WriteLine($"DB_USER: {Environment.GetEnvironmentVariable("DB_USER")}");
 Console.WriteLine($"DB_PASSWORD: {(Environment.GetEnvironmentVariable("DB_PASSWORD") != null ? "SET" : "NOT SET")}");
 Console.WriteLine($"Connection string built: {connectionString?.Substring(0, Math.Min(50, connectionString?.Length ?? 0))}...");
 Console.WriteLine($"Connection String Length: {connectionString?.Length}");
-Console.WriteLine($"Contains sslmode=require: {connectionString?.Contains("sslmode=require")}");
+Console.WriteLine($"Connection successful: {!string.IsNullOrEmpty(connectionString)}");
 
 if (string.IsNullOrEmpty(connectionString))
 {
