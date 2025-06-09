@@ -222,62 +222,81 @@ namespace HooverCanvassingApi.Services
         {
             try
             {
-                // Use Nominatim (OpenStreetMap) for free geocoding
+                // Use Google Geocoding API for better accuracy and speed
+                var googleApiKey = Environment.GetEnvironmentVariable("GOOGLE_GEOCODING_API_KEY");
+                if (string.IsNullOrEmpty(googleApiKey))
+                {
+                    _logger.LogError("Google Geocoding API key not configured. Set GOOGLE_GEOCODING_API_KEY environment variable.");
+                    return null;
+                }
+
                 var fullAddress = $"{address}, {city}, {state} {zip}";
                 var encodedAddress = Uri.EscapeDataString(fullAddress);
-                var url = $"https://nominatim.openstreetmap.org/search?q={encodedAddress}&format=json&limit=1";
+                var url = $"https://maps.googleapis.com/maps/api/geocode/json?address={encodedAddress}&key={googleApiKey}";
 
                 _httpClient.DefaultRequestHeaders.Clear();
-                _httpClient.DefaultRequestHeaders.Add("User-Agent", "HooverCanvassingApp/1.0 (tanveer4hoover@gmail.com)");
 
-                _logger.LogDebug("Geocoding address: {FullAddress}", fullAddress);
+                _logger.LogDebug("Geocoding address with Google: {FullAddress}", fullAddress);
 
                 var httpResponse = await _httpClient.GetAsync(url);
                 var response = await httpResponse.Content.ReadAsStringAsync();
                 
-                _logger.LogDebug("Geocoding response status: {StatusCode}", httpResponse.StatusCode);
-                _logger.LogDebug("Geocoding response: {Response}", response);
+                _logger.LogDebug("Google geocoding response status: {StatusCode}", httpResponse.StatusCode);
                 
                 if (!httpResponse.IsSuccessStatusCode)
                 {
-                    _logger.LogError("Geocoding API returned error status {StatusCode}: {Response}", httpResponse.StatusCode, response);
-                    return null;
-                }
-                
-                // Check if response looks like HTML (error page)
-                if (response.TrimStart().StartsWith("<!"))
-                {
-                    _logger.LogError("Geocoding API returned HTML instead of JSON: {Response}", response.Substring(0, Math.Min(200, response.Length)));
+                    _logger.LogError("Google Geocoding API returned error status {StatusCode}: {Response}", httpResponse.StatusCode, response);
                     return null;
                 }
                 
                 using var document = JsonDocument.Parse(response);
-                var results = document.RootElement;
+                var root = document.RootElement;
 
-                if (results.GetArrayLength() > 0)
+                if (root.TryGetProperty("status", out var statusElement))
                 {
-                    var firstResult = results[0];
-                    if (firstResult.TryGetProperty("lat", out var latElement) &&
-                        firstResult.TryGetProperty("lon", out var lonElement) &&
-                        double.TryParse(latElement.GetString(), out var lat) &&
-                        double.TryParse(lonElement.GetString(), out var lon))
+                    var status = statusElement.GetString();
+                    
+                    if (status == "OK" && root.TryGetProperty("results", out var resultsElement) && resultsElement.GetArrayLength() > 0)
                     {
-                        _logger.LogDebug("Successfully geocoded {Address} to {Lat}, {Lon}", fullAddress, lat, lon);
-                        return (lat, lon);
+                        var firstResult = resultsElement[0];
+                        if (firstResult.TryGetProperty("geometry", out var geometry) &&
+                            geometry.TryGetProperty("location", out var location) &&
+                            location.TryGetProperty("lat", out var latElement) &&
+                            location.TryGetProperty("lng", out var lngElement))
+                        {
+                            var lat = latElement.GetDouble();
+                            var lng = lngElement.GetDouble();
+                            
+                            _logger.LogDebug("Successfully geocoded {Address} to {Lat}, {Lng}", fullAddress, lat, lng);
+                            return (lat, lng);
+                        }
+                        else
+                        {
+                            _logger.LogWarning("Google geocoding response missing geometry for address: {Address}", fullAddress);
+                        }
+                    }
+                    else if (status == "ZERO_RESULTS")
+                    {
+                        _logger.LogWarning("No geocoding results found for address: {Address}", fullAddress);
+                    }
+                    else if (status == "OVER_QUERY_LIMIT")
+                    {
+                        _logger.LogError("Google Geocoding API quota exceeded");
+                        return null;
                     }
                     else
                     {
-                        _logger.LogWarning("Geocoding response missing lat/lon for address: {Address}", fullAddress);
+                        _logger.LogWarning("Google geocoding returned status {Status} for address: {Address}", status, fullAddress);
                     }
                 }
                 else
                 {
-                    _logger.LogWarning("No geocoding results found for address: {Address}", fullAddress);
+                    _logger.LogError("Invalid response format from Google Geocoding API: {Response}", response.Substring(0, Math.Min(200, response.Length)));
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error geocoding address: {Address}", $"{address}, {city}, {state} {zip}");
+                _logger.LogError(ex, "Error geocoding address with Google: {Address}", $"{address}, {city}, {state} {zip}");
             }
 
             return null;
@@ -319,8 +338,8 @@ namespace HooverCanvassingApi.Services
 
                         processed++;
 
-                        // Add delay after each request to respect Nominatim rate limits (1 req/sec)
-                        await Task.Delay(1100);
+                        // Add small delay for Google API (can handle ~50 req/sec)
+                        await Task.Delay(50);
 
                         // Progress update every 10 records
                         if (processed % 10 == 0)

@@ -30,6 +30,10 @@ services:
   - key: JwtSettings__ExpirationMinutes
     scope: RUN_TIME
     value: "480"
+  - key: GOOGLE_GEOCODING_API_KEY
+    scope: RUN_TIME
+    value: "AIzaSyBiXbPFOx8ZTYeJf5M_EQgPGmmMFmGadWg"
+    type: SECRET
   git:
     branch: main
     repo_clone_url: https://github.com/maqboolp/CanvassingApp.git
