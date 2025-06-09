@@ -29,7 +29,11 @@ import {
   Analytics,
   LocationOn,
   Refresh,
-  Lock
+  Lock,
+  EmojiEvents,
+  Star,
+  Tabs,
+  Tab
 } from '@mui/icons-material';
 import { AuthUser, Voter, ContactStatus, VoterSupport } from '../types';
 import VoterList from './VoterList';
@@ -60,9 +64,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const [passwordResult, setPasswordResult] = useState<any>(null);
   const [contactModalOpen, setContactModalOpen] = useState(false);
   const [selectedVoterForContact, setSelectedVoterForContact] = useState<Voter | null>(null);
+  const [leaderboard, setLeaderboard] = useState<any>(null);
+  const [leaderboardTab, setLeaderboardTab] = useState(0);
 
   useEffect(() => {
     fetchStats();
+    fetchLeaderboard();
     getCurrentLocation();
   }, []);
 
@@ -80,6 +87,23 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       }
     } catch (error) {
       console.error('Failed to fetch stats:', error);
+    }
+  };
+
+  const fetchLeaderboard = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/volunteers/leaderboard`, {
+        headers: {
+          'Authorization': `Bearer ${user.token}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setLeaderboard(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch leaderboard:', error);
     }
   };
 
@@ -440,6 +464,140 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
           >
             {passwordResult.error || passwordResult.success}
           </Alert>
+        )}
+
+        {/* Leaderboard & Achievements */}
+        {leaderboard && (
+          <Card sx={{ mb: 3 }}>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <EmojiEvents sx={{ mr: 1, color: '#ffd700' }} />
+                <Typography variant="h6">
+                  Leaderboard & Achievements
+                </Typography>
+              </Box>
+
+              {/* User Achievements */}
+              {leaderboard.currentUserAchievements && leaderboard.currentUserAchievements.length > 0 && (
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="subtitle2" sx={{ mb: 1, display: 'flex', alignItems: 'center' }}>
+                    <Star sx={{ mr: 1, fontSize: 16 }} />
+                    Your Achievements
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                    {leaderboard.currentUserAchievements.map((achievement: any, index: number) => (
+                      <Chip
+                        key={index}
+                        icon={<span style={{ fontSize: '16px' }}>{achievement.icon}</span>}
+                        label={`${achievement.name} - ${achievement.description}`}
+                        color="primary"
+                        variant="outlined"
+                        size="small"
+                      />
+                    ))}
+                  </Box>
+                </Box>
+              )}
+
+              {/* Leaderboard Tabs */}
+              <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
+                <Tabs value={leaderboardTab} onChange={(e, newValue) => setLeaderboardTab(newValue)}>
+                  <Tab label="This Week" />
+                  <Tab label="This Month" />
+                </Tabs>
+              </Box>
+
+              {/* Weekly Leaderboard */}
+              {leaderboardTab === 0 && leaderboard.weeklyLeaderboard && (
+                <Box>
+                  <Typography variant="subtitle2" sx={{ mb: 2 }}>
+                    Top Volunteers This Week
+                  </Typography>
+                  {leaderboard.weeklyLeaderboard.slice(0, 5).map((entry: any, index: number) => (
+                    <Box
+                      key={entry.volunteerId}
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        p: 1,
+                        borderRadius: 1,
+                        backgroundColor: entry.isCurrentUser ? 'action.selected' : 'transparent',
+                        border: entry.isCurrentUser ? '1px solid' : 'none',
+                        borderColor: entry.isCurrentUser ? 'primary.main' : 'transparent',
+                        mb: 1
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography variant="body2" sx={{ minWidth: '20px', fontWeight: 'bold' }}>
+                          #{entry.position}
+                        </Typography>
+                        {entry.badge && (
+                          <span style={{ fontSize: '18px' }}>{entry.badge}</span>
+                        )}
+                        <Typography variant="body2" sx={{ fontWeight: entry.isCurrentUser ? 'bold' : 'normal' }}>
+                          {entry.isCurrentUser ? 'You' : entry.volunteerName}
+                        </Typography>
+                      </Box>
+                      <Chip
+                        label={`${entry.contactCount} contacts`}
+                        size="small"
+                        color={entry.isCurrentUser ? 'primary' : 'default'}
+                      />
+                    </Box>
+                  ))}
+                </Box>
+              )}
+
+              {/* Monthly Leaderboard */}
+              {leaderboardTab === 1 && leaderboard.monthlyLeaderboard && (
+                <Box>
+                  <Typography variant="subtitle2" sx={{ mb: 2 }}>
+                    Top Volunteers This Month
+                  </Typography>
+                  {leaderboard.monthlyLeaderboard.slice(0, 5).map((entry: any, index: number) => (
+                    <Box
+                      key={entry.volunteerId}
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        p: 1,
+                        borderRadius: 1,
+                        backgroundColor: entry.isCurrentUser ? 'action.selected' : 'transparent',
+                        border: entry.isCurrentUser ? '1px solid' : 'none',
+                        borderColor: entry.isCurrentUser ? 'primary.main' : 'transparent',
+                        mb: 1
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography variant="body2" sx={{ minWidth: '20px', fontWeight: 'bold' }}>
+                          #{entry.position}
+                        </Typography>
+                        {entry.badge && (
+                          <span style={{ fontSize: '18px' }}>{entry.badge}</span>
+                        )}
+                        <Typography variant="body2" sx={{ fontWeight: entry.isCurrentUser ? 'bold' : 'normal' }}>
+                          {entry.isCurrentUser ? 'You' : entry.volunteerName}
+                        </Typography>
+                      </Box>
+                      <Chip
+                        label={`${entry.contactCount} contacts`}
+                        size="small"
+                        color={entry.isCurrentUser ? 'primary' : 'default'}
+                      />
+                    </Box>
+                  ))}
+                </Box>
+              )}
+
+              <Box sx={{ mt: 2, p: 2, backgroundColor: 'action.hover', borderRadius: 1 }}>
+                <Typography variant="body2" sx={{ fontSize: '12px', textAlign: 'center', color: 'text.secondary' }}>
+                  💝 Top volunteers each month receive lunch gift cards! Keep up the great work!
+                </Typography>
+              </Box>
+            </CardContent>
+          </Card>
         )}
 
         {/* Voter List */}
