@@ -148,7 +148,7 @@ namespace HooverCanvassingApi.Controllers
                     });
                 }
 
-                var token = await GenerateJwtToken(user);
+                var token = GenerateJwtToken(user);
                 var authUser = new AuthUserDto
                 {
                     Id = user.Id,
