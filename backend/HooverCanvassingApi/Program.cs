@@ -54,35 +54,11 @@ builder.Services.AddCors(options =>
 // Add environment variables explicitly
 builder.Configuration.AddEnvironmentVariables();
 
-// Build connection string from components
-string BuildConnectionString()
-{
-    var server = Environment.GetEnvironmentVariable("DB_SERVER");
-    var port = Environment.GetEnvironmentVariable("DB_PORT");
-    var database = Environment.GetEnvironmentVariable("DB_NAME");
-    var userId = Environment.GetEnvironmentVariable("DB_USER");
-    var password = Environment.GetEnvironmentVariable("DB_PASSWORD");
-    
-    if (string.IsNullOrEmpty(server) || string.IsNullOrEmpty(port) || 
-        string.IsNullOrEmpty(database) || string.IsNullOrEmpty(userId) || 
-        string.IsNullOrEmpty(password))
-    {
-        // Fallback to traditional connection string
-        return builder.Configuration.GetConnectionString("DefaultConnection") ?? "";
-    }
-    
-    return $"postgresql://{userId}:{password}@{server}:{port}/{database}";
-}
-
-var connectionString = BuildConnectionString();
-Console.WriteLine($"DB_SERVER: {(Environment.GetEnvironmentVariable("DB_SERVER") != null ? "SET" : "NOT SET")}");
-Console.WriteLine($"DB_PORT: {Environment.GetEnvironmentVariable("DB_PORT")}");
-Console.WriteLine($"DB_NAME: {Environment.GetEnvironmentVariable("DB_NAME")}");
-Console.WriteLine($"DB_USER: {Environment.GetEnvironmentVariable("DB_USER")}");
-Console.WriteLine($"DB_PASSWORD: {(Environment.GetEnvironmentVariable("DB_PASSWORD") != null ? "SET" : "NOT SET")}");
-Console.WriteLine($"Connection string built: {connectionString?.Substring(0, Math.Min(50, connectionString?.Length ?? 0))}...");
+// Use standard .NET configuration for connection string
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+Console.WriteLine($"Connection string from config: {connectionString?.Substring(0, Math.Min(50, connectionString?.Length ?? 0))}...");
 Console.WriteLine($"Connection String Length: {connectionString?.Length}");
-Console.WriteLine($"Connection successful: {!string.IsNullOrEmpty(connectionString)}");
+Console.WriteLine($"Connection string available: {!string.IsNullOrEmpty(connectionString)}");
 
 if (string.IsNullOrEmpty(connectionString))
 {
