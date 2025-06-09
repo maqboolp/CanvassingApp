@@ -225,7 +225,7 @@ namespace HooverCanvassingApi.Controllers
                         VolunteerName = $"{c.Volunteer.FirstName} {c.Volunteer.LastName}",
                         ContactDate = c.Timestamp,
                         Status = c.Status.ToString().ToLower().Replace("home", "-home").Replace("followup", "follow-up"),
-                        VoterSupport = c.VoterSupport?.ToString().ToLower(),
+                        VoterSupport = c.VoterSupport != null ? c.VoterSupport.ToString().ToLower() : null,
                         Notes = c.Notes
                     })
                     .ToListAsync();
