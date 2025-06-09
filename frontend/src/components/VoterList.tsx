@@ -384,6 +384,7 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
             <TableRow>
               <TableCell>Name</TableCell>
               <TableCell>Address</TableCell>
+              <TableCell>Distance</TableCell>
               <TableCell>Age</TableCell>
               <TableCell>Vote Frequency</TableCell>
               <TableCell>Contact Status</TableCell>
@@ -394,7 +395,7 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={7} sx={{ textAlign: 'center', py: 4 }}>
+                <TableCell colSpan={8} sx={{ textAlign: 'center', py: 4 }}>
                   <CircularProgress />
                 </TableCell>
               </TableRow>
@@ -453,6 +454,18 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
                         </Typography>
                       </Box>
                     </Box>
+                  </TableCell>
+                  
+                  <TableCell>
+                    {voter.distanceKm ? (
+                      <Typography variant="body2" color="primary" sx={{ fontWeight: 'medium' }}>
+                        📍 {voter.distanceKm.toFixed(2)} km
+                      </Typography>
+                    ) : (
+                      <Typography variant="caption" color="text.secondary">
+                        -
+                      </Typography>
+                    )}
                   </TableCell>
                   
                   <TableCell>

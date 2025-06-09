@@ -18,6 +18,7 @@ export interface Voter {
   isContacted: boolean;
   lastContactStatus?: ContactStatus;
   voterSupport?: VoterSupport;
+  distanceKm?: number;
 }
 
 export interface Volunteer {

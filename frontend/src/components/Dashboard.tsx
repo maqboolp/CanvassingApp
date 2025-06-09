@@ -53,7 +53,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     contacted: 0,
     contactsToday: 0
   });
-  const [nearestVoter, setNearestVoter] = useState<Voter | null>(null);
+  const [nearestVoter, setNearestVoter] = useState<{ voter: Voter; distance: number } | null>(null);
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [changePasswordDialog, setChangePasswordDialog] = useState(false);
   const [passwordForm, setPasswordForm] = useState({
@@ -161,7 +161,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       
       if (response.ok) {
         const data = await response.json();
-        setNearestVoter(data.voter);
+        setNearestVoter(data);
       } else if (response.status === 404) {
         // No voters found is a normal case, not an error
         setNearestVoter(null);
@@ -184,7 +184,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     fetchStats();
     
     // If this was the nearest voter, find a new one
-    if (nearestVoter && voter.lalVoterId === nearestVoter.lalVoterId && location) {
+    if (nearestVoter && voter.lalVoterId === nearestVoter.voter.lalVoterId && location) {
       findNearestVoter(location);
     }
   };
@@ -433,7 +433,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
               Nearest Uncontacted Voter
             </Typography>
             <Typography variant="body2">
-              <strong>{nearestVoter.firstName} {nearestVoter.lastName}</strong>
+              <strong>{nearestVoter.voter.firstName} {nearestVoter.voter.lastName}</strong>
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              📍 {nearestVoter.distance.toFixed(2)} km away
             </Typography>
             <Box 
               sx={{ 
@@ -449,28 +452,28 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                 mt: 0.5,
                 borderRadius: 1
               }}
-              onClick={() => openInMaps(nearestVoter)}
+              onClick={() => openInMaps(nearestVoter.voter)}
               title="Click to open in maps for directions"
             >
               <LocationOn fontSize="small" color="primary" />
               <Typography variant="body2" color="primary" sx={{ fontWeight: 'medium' }}>
-                {nearestVoter.addressLine}, {nearestVoter.city}, {nearestVoter.state} {nearestVoter.zip}
+                {nearestVoter.voter.addressLine}, {nearestVoter.voter.city}, {nearestVoter.voter.state} {nearestVoter.voter.zip}
               </Typography>
             </Box>
             <Box sx={{ mt: 1 }}>
               <Chip 
-                label={`Age: ${nearestVoter.age}`} 
+                label={`Age: ${nearestVoter.voter.age}`} 
                 size="small" 
                 sx={{ mr: 1 }} 
               />
               <Chip 
-                label={`ZIP: ${nearestVoter.zip}`} 
+                label={`ZIP: ${nearestVoter.voter.zip}`} 
                 size="small" 
                 sx={{ mr: 1 }} 
               />
-              {nearestVoter.cellPhone && (
+              {nearestVoter.voter.cellPhone && (
                 <Chip 
-                  label={nearestVoter.cellPhone} 
+                  label={nearestVoter.voter.cellPhone} 
                   size="small" 
                   color="primary"
                 />
@@ -480,7 +483,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
               <Button
                 variant="contained"
                 startIcon={<ContactPhone />}
-                onClick={() => handleNearestVoterContact(nearestVoter)}
+                onClick={() => handleNearestVoterContact(nearestVoter.voter)}
                 fullWidth
               >
                 Contact Voter
