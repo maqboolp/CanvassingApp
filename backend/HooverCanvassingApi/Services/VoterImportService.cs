@@ -232,8 +232,24 @@ namespace HooverCanvassingApi.Services
 
                 _logger.LogDebug("Geocoding address: {FullAddress}", fullAddress);
 
-                var response = await _httpClient.GetStringAsync(url);
+                var httpResponse = await _httpClient.GetAsync(url);
+                var response = await httpResponse.Content.ReadAsStringAsync();
+                
+                _logger.LogDebug("Geocoding response status: {StatusCode}", httpResponse.StatusCode);
                 _logger.LogDebug("Geocoding response: {Response}", response);
+                
+                if (!httpResponse.IsSuccessStatusCode)
+                {
+                    _logger.LogError("Geocoding API returned error status {StatusCode}: {Response}", httpResponse.StatusCode, response);
+                    return null;
+                }
+                
+                // Check if response looks like HTML (error page)
+                if (response.TrimStart().StartsWith("<!"))
+                {
+                    _logger.LogError("Geocoding API returned HTML instead of JSON: {Response}", response.Substring(0, Math.Min(200, response.Length)));
+                    return null;
+                }
                 
                 using var document = JsonDocument.Parse(response);
                 var results = document.RootElement;
@@ -303,10 +319,12 @@ namespace HooverCanvassingApi.Services
 
                         processed++;
 
-                        // Add delay every 10 records to respect rate limits
+                        // Add delay after each request to respect Nominatim rate limits (1 req/sec)
+                        await Task.Delay(1100);
+
+                        // Progress update every 10 records
                         if (processed % 10 == 0)
                         {
-                            await Task.Delay(1000);
                             _logger.LogInformation("Geocoded {Processed}/{Total} voters ({Percentage:F1}%)", 
                                 processed, votersToGeocode.Count, (double)processed / votersToGeocode.Count * 100);
                         }
