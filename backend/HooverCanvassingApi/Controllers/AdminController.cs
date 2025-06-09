@@ -211,24 +211,25 @@ namespace HooverCanvassingApi.Controllers
 
                 var total = await query.CountAsync();
 
-                var contacts = await query
+                var contactsFromDb = await query
                     .OrderByDescending(c => c.Timestamp)
                     .Skip((page - 1) * limit)
                     .Take(limit)
-                    .Select(c => new
-                    {
-                        Id = c.Id,
-                        VoterId = c.VoterId,
-                        VoterName = $"{c.Voter.FirstName} {c.Voter.LastName}",
-                        VoterAddress = $"{c.Voter.AddressLine}, {c.Voter.City}, {c.Voter.State} {c.Voter.Zip}",
-                        VolunteerId = c.VolunteerId,
-                        VolunteerName = $"{c.Volunteer.FirstName} {c.Volunteer.LastName}",
-                        ContactDate = c.Timestamp,
-                        Status = c.Status.ToString().ToLower().Replace("home", "-home").Replace("followup", "follow-up"),
-                        VoterSupport = c.VoterSupport != null ? c.VoterSupport.ToString().ToLower() : null,
-                        Notes = c.Notes
-                    })
                     .ToListAsync();
+
+                var contacts = contactsFromDb.Select(c => new
+                {
+                    Id = c.Id,
+                    VoterId = c.VoterId,
+                    VoterName = $"{c.Voter.FirstName} {c.Voter.LastName}",
+                    VoterAddress = $"{c.Voter.AddressLine}, {c.Voter.City}, {c.Voter.State} {c.Voter.Zip}",
+                    VolunteerId = c.VolunteerId,
+                    VolunteerName = $"{c.Volunteer.FirstName} {c.Volunteer.LastName}",
+                    ContactDate = c.Timestamp,
+                    Status = c.Status.ToString().ToLower().Replace("home", "-home").Replace("followup", "follow-up"),
+                    VoterSupport = c.VoterSupport?.ToString().ToLower(),
+                    Notes = c.Notes
+                }).ToList();
 
                 var totalPages = (int)Math.Ceiling((double)total / limit);
 
