@@ -496,18 +496,32 @@ namespace HooverCanvassingApi.Controllers
         {
             try
             {
+                _logger.LogInformation("Starting database initialization...");
+                
+                // Get pending migrations
+                var pendingMigrations = await _context.Database.GetPendingMigrationsAsync();
+                _logger.LogInformation("Pending migrations: {PendingMigrations}", string.Join(", ", pendingMigrations));
+                
                 // Run migrations
                 await _context.Database.MigrateAsync();
+                _logger.LogInformation("Database migrations applied successfully");
+                
+                // Get applied migrations
+                var appliedMigrations = await _context.Database.GetAppliedMigrationsAsync();
+                _logger.LogInformation("Applied migrations: {AppliedMigrations}", string.Join(", ", appliedMigrations));
                 
                 // Initialize seed data
                 await SeedData.InitializeAsync(HttpContext.RequestServices);
+                _logger.LogInformation("Seed data initialized successfully");
                 
                 return Ok(new { 
                     success = true, 
                     message = "Database initialized successfully",
                     data = new {
                         migrationsApplied = true,
-                        seedDataCreated = true
+                        seedDataCreated = true,
+                        pendingMigrations = pendingMigrations.ToList(),
+                        appliedMigrations = appliedMigrations.ToList()
                     }
                 });
             }
