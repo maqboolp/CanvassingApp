@@ -600,8 +600,8 @@ namespace HooverCanvassingApi.Controllers
                 var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 var currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value;
                 
-                _logger.LogInformation("Password reset requested by {AdminId} ({Role}) for user {UserId}", 
-                    currentUserId, currentUserRole, request.VolunteerId);
+                _logger.LogInformation("Password reset requested by {AdminId} ({Role}) for user {UserId}. CustomPassword provided: {HasCustomPassword}", 
+                    currentUserId, currentUserRole, request.VolunteerId, !string.IsNullOrEmpty(request.CustomPassword));
 
                 // Find the user to reset
                 var user = await _userManager.FindByIdAsync(request.VolunteerId);
@@ -621,8 +621,11 @@ namespace HooverCanvassingApi.Controllers
                     ? request.CustomPassword 
                     : GenerateTemporaryPassword();
                 
-                _logger.LogInformation("Resetting password for user {UserId}. Using custom password: {UsingCustom}, Password length: {Length}", 
-                    request.VolunteerId, !string.IsNullOrEmpty(request.CustomPassword), newPassword.Length);
+                _logger.LogInformation("Resetting password for user {UserId}. Using custom password: {UsingCustom}, Password length: {Length}, CustomPassword received: '{CustomPassword}'", 
+                    request.VolunteerId, 
+                    !string.IsNullOrEmpty(request.CustomPassword), 
+                    newPassword.Length,
+                    request.CustomPassword ?? "null");
                 
                 // Validate custom password if provided
                 if (!string.IsNullOrEmpty(request.CustomPassword))

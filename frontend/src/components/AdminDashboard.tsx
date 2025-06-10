@@ -494,16 +494,25 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
     setResetPasswordResult(null);
 
     try {
+      const requestBody = {
+        volunteerId: selectedVolunteer.id,
+        customPassword: useCustomPassword ? customPassword : null
+      };
+      
+      console.log('Sending password reset request:', {
+        useCustomPassword,
+        customPasswordLength: customPassword?.length,
+        customPasswordValue: customPassword,
+        requestBody
+      });
+      
       const response = await fetch(`${API_BASE_URL}/api/admin/reset-volunteer-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${user.token}`
         },
-        body: JSON.stringify({
-          volunteerId: selectedVolunteer.id,
-          customPassword: useCustomPassword ? customPassword : null
-        })
+        body: JSON.stringify(requestBody)
       });
 
       const data = await response.json();
