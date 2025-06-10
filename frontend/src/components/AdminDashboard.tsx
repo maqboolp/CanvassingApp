@@ -1008,109 +1008,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                 </Button>
               </Box>
 
-              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 3, mb: 3 }}>
-                <Card>
-                  <CardContent>
-                    <Typography color="textSecondary" gutterBottom>
-                      Total Voters
-                    </Typography>
-                    <Typography variant="h4">
-                      {analytics.totalVoters}
-                    </Typography>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent>
-                    <Typography color="textSecondary" gutterBottom>
-                      Contacted
-                    </Typography>
-                    <Typography variant="h4">
-                      {analytics.totalContacted}
-                    </Typography>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent>
-                    <Typography color="textSecondary" gutterBottom>
-                      Contact Rate
-                    </Typography>
-                    <Typography variant="h4">
-                      {analytics.totalVoters > 0 
-                        ? Math.round((analytics.totalContacted / analytics.totalVoters) * 100)
-                        : 0}%
-                    </Typography>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent>
-                    <Typography color="textSecondary" gutterBottom>
-                      Active Volunteers
-                    </Typography>
-                    <Typography variant="h4">
-                      {analytics.volunteerActivity?.length || 0}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Box>
-
-              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
-                <Card>
-                  <CardContent>
-                    <Typography variant="h6" gutterBottom>
-                      Contact Status Breakdown
-                    </Typography>
-                    <Table size="small">
-                      <TableBody>
-                        <TableRow>
-                          <TableCell>Reached</TableCell>
-                          <TableCell align="right">{analytics.contactStatusBreakdown.reached}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell>Not Home</TableCell>
-                          <TableCell align="right">{analytics.contactStatusBreakdown.notHome}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell>Refused</TableCell>
-                          <TableCell align="right">{analytics.contactStatusBreakdown.refused}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell>Needs Follow-up</TableCell>
-                          <TableCell align="right">{analytics.contactStatusBreakdown.needsFollowUp}</TableCell>
-                        </TableRow>
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent>
-                    <Typography variant="h6" gutterBottom>
-                      Volunteer Activity
-                    </Typography>
-                    <Table size="small">
-                      <TableHead>
-                        <TableRow>
-                          <TableCell>Volunteer</TableCell>
-                          <TableCell align="right">Today</TableCell>
-                          <TableCell align="right">Total</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {analytics.volunteerActivity?.slice(0, 5).map((volunteer: any) => (
-                          <TableRow key={volunteer.volunteerId}>
-                            <TableCell>{volunteer.volunteerName}</TableCell>
-                            <TableCell align="right">{volunteer.contactsToday}</TableCell>
-                            <TableCell align="right">{volunteer.contactsTotal}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
-              </Box>
-
               {/* Leaderboard & Achievements */}
               {leaderboard && (
-                <Card sx={{ mt: 3 }}>
+                <Card sx={{ mb: 3 }}>
                   <CardContent>
                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                       <EmojiEvents sx={{ mr: 1, color: '#ffd700' }} />
@@ -1215,6 +1115,106 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                   </CardContent>
                 </Card>
               )}
+
+              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 3, mb: 3 }}>
+                <Card>
+                  <CardContent>
+                    <Typography color="textSecondary" gutterBottom>
+                      Total Voters
+                    </Typography>
+                    <Typography variant="h4">
+                      {analytics.totalVoters}
+                    </Typography>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent>
+                    <Typography color="textSecondary" gutterBottom>
+                      Contacted
+                    </Typography>
+                    <Typography variant="h4">
+                      {analytics.totalContacted}
+                    </Typography>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent>
+                    <Typography color="textSecondary" gutterBottom>
+                      Contact Rate
+                    </Typography>
+                    <Typography variant="h4">
+                      {analytics.totalVoters > 0 
+                        ? Math.round((analytics.totalContacted / analytics.totalVoters) * 100)
+                        : 0}%
+                    </Typography>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent>
+                    <Typography color="textSecondary" gutterBottom>
+                      Active Volunteers
+                    </Typography>
+                    <Typography variant="h4">
+                      {analytics.volunteerActivity?.length || 0}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Box>
+
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
+                <Card>
+                  <CardContent>
+                    <Typography variant="h6" gutterBottom>
+                      Contact Status Breakdown
+                    </Typography>
+                    <Table size="small">
+                      <TableBody>
+                        <TableRow>
+                          <TableCell>Reached</TableCell>
+                          <TableCell align="right">{analytics.contactStatusBreakdown.reached}</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell>Not Home</TableCell>
+                          <TableCell align="right">{analytics.contactStatusBreakdown.notHome}</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell>Refused</TableCell>
+                          <TableCell align="right">{analytics.contactStatusBreakdown.refused}</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell>Needs Follow-up</TableCell>
+                          <TableCell align="right">{analytics.contactStatusBreakdown.needsFollowUp}</TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent>
+                    <Typography variant="h6" gutterBottom>
+                      Volunteer Activity
+                    </Typography>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Volunteer</TableCell>
+                          <TableCell align="right">Today</TableCell>
+                          <TableCell align="right">Total</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {analytics.volunteerActivity?.slice(0, 5).map((volunteer: any) => (
+                          <TableRow key={volunteer.volunteerId}>
+                            <TableCell>{volunteer.volunteerName}</TableCell>
+                            <TableCell align="right">{volunteer.contactsToday}</TableCell>
+                            <TableCell align="right">{volunteer.contactsTotal}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </Box>
             </>
           ) : (
             <Typography>No analytics data available</Typography>
