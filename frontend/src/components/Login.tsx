@@ -209,7 +209,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, isLoading = false, error }) => {
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Payment fontSize="small" sx={{ color: '#2f1c6a' }} />
                   <Typography variant="body2" sx={{ color: '#2f1c6a' }}>
-                    Venmo: @Tanveer-Patel-Campaign
+                    Venmo: @Tanveer4Hoover
                   </Typography>
                 </Box>
               </Box>

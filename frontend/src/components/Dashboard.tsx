@@ -494,6 +494,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
           </Alert>
         )}
 
+        {/* Nearest Voter Card Debug */}
+        {console.log('Dashboard render - nearestVoter:', nearestVoter, 'location:', location, 'user role:', user.role)}
+        
         {/* Nearest Voter Card */}
         {nearestVoter && (
           <Alert 

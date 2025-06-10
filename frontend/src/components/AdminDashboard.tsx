@@ -28,7 +28,8 @@ import {
   DialogActions,
   TextField,
   FormControlLabel,
-  Checkbox
+  Checkbox,
+  Chip
 } from '@mui/material';
 import {
   ExitToApp,
@@ -42,11 +43,14 @@ import {
   LocationOn,
   Lock,
   History,
-  VpnKey
+  VpnKey,
+  Refresh,
+  ContactPhone
 } from '@mui/icons-material';
 import { AuthUser, Voter, ContactStatus, VoterSupport } from '../types';
 import VoterList from './VoterList';
 import VoterContactHistory from './VoterContactHistory';
+import ContactModal from './ContactModal';
 import { API_BASE_URL } from '../config';
 
 interface AdminDashboardProps {
@@ -119,6 +123,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
     confirmPassword: ''
   });
   const [passwordChangeLoading, setPasswordChangeLoading] = useState(false);
+  const [nearestVoter, setNearestVoter] = useState<{ voter: Voter; distance: number } | null>(null);
+  const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [contactModalOpen, setContactModalOpen] = useState(false);
+  const [selectedVoterForContact, setSelectedVoterForContact] = useState<Voter | null>(null);
 
   useEffect(() => {
     if (currentTab === 0) {
@@ -129,6 +137,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
       fetchGeocodingStatus();
     }
   }, [currentTab, user.role]);
+
+  useEffect(() => {
+    // Get location on mount for nearest voter
+    getCurrentLocation();
+  }, []);
 
   const fetchAnalytics = async () => {
     setLoading(true);
@@ -453,6 +466,126 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
     }
   };
 
+  const getCurrentLocation = () => {
+    console.log('AdminDashboard: Getting current location for user role:', user.role);
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const coords = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude
+          };
+          console.log('AdminDashboard: Got location coordinates:', coords);
+          setLocation(coords);
+          findNearestVoter(coords);
+        },
+        (error) => {
+          console.log('AdminDashboard: Geolocation error details:', {
+            code: error.code,
+            message: error.message,
+            errorName: error.code === 1 ? 'PERMISSION_DENIED' : 
+                      error.code === 2 ? 'POSITION_UNAVAILABLE' : 
+                      error.code === 3 ? 'TIMEOUT' : 'UNKNOWN'
+          });
+        },
+        {
+          enableHighAccuracy: false,
+          timeout: 10000,
+          maximumAge: 300000 // 5 minutes
+        }
+      );
+    } else {
+      console.log('AdminDashboard: Geolocation not supported');
+    }
+  };
+
+  const findNearestVoter = async (coords: { latitude: number; longitude: number }) => {
+    try {
+      console.log('AdminDashboard: Finding nearest voter for coords:', coords, 'user role:', user.role);
+      const response = await fetch(
+        `${API_BASE_URL}/api/voters/nearest?latitude=${coords.latitude}&longitude=${coords.longitude}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${user.token}`
+          }
+        }
+      );
+      
+      console.log('AdminDashboard: Nearest voter API response status:', response.status);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('AdminDashboard: Nearest voter data received:', data);
+        setNearestVoter(data);
+      } else if (response.status === 404) {
+        console.log('AdminDashboard: No nearest voter found (404)');
+        setNearestVoter(null);
+      } else {
+        console.log('AdminDashboard: Nearest voter API error:', response.status, await response.text());
+      }
+    } catch (error) {
+      console.error('AdminDashboard: Failed to find nearest voter:', error);
+    }
+  };
+
+  const openInMaps = (voter: Voter) => {
+    const address = `${voter.addressLine}, ${voter.city}, ${voter.state} ${voter.zip}`;
+    const encodedAddress = encodeURIComponent(address);
+    
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    
+    let mapUrl;
+    if (isIOS || isSafari) {
+      mapUrl = `maps://maps.apple.com/?q=${encodedAddress}`;
+    } else {
+      mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
+    }
+    
+    window.open(mapUrl, '_blank');
+  };
+
+  const handleNearestVoterContact = (voter: Voter) => {
+    setSelectedVoterForContact(voter);
+    setContactModalOpen(true);
+  };
+
+  const handleContactSubmit = async (status: ContactStatus, notes: string, voterSupport?: VoterSupport) => {
+    if (!selectedVoterForContact) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/contacts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.token}`
+        },
+        body: JSON.stringify({
+          voterId: selectedVoterForContact.lalVoterId,
+          status,
+          voterSupport,
+          notes,
+          location: location
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to log contact');
+      }
+
+      setContactModalOpen(false);
+      setSelectedVoterForContact(null);
+      
+      // Refresh stats and find new nearest voter
+      fetchAnalytics();
+      if (location) {
+        findNearestVoter(location);
+      }
+    } catch (err) {
+      console.error('Failed to log contact:', err);
+    }
+  };
+
   return (
     <Box sx={{ flexGrow: 1 }}>
       {/* App Bar */}
@@ -555,6 +688,106 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                 Skipped: {importResult.skippedCount}
               </>
             )}
+          </Alert>
+        )}
+
+        {/* Nearest Voter Card */}
+        {nearestVoter && (
+          <Alert 
+            severity="info" 
+            sx={{ mb: 3 }}
+            action={
+              <Button 
+                color="inherit" 
+                size="small" 
+                onClick={() => location && findNearestVoter(location)}
+                startIcon={<Refresh />}
+              >
+                Refresh
+              </Button>
+            }
+          >
+            <Typography variant="subtitle2" gutterBottom>
+              <LocationOn sx={{ verticalAlign: 'middle', mr: 1 }} />
+              Nearest Uncontacted Voter
+            </Typography>
+            <Typography variant="body2">
+              <strong>{nearestVoter.voter.firstName} {nearestVoter.voter.lastName}</strong>
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              📍 {nearestVoter.distance.toFixed(2)} km away
+            </Typography>
+            <Box 
+              sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 1,
+                cursor: 'pointer',
+                '&:hover': {
+                  backgroundColor: 'action.hover',
+                  borderRadius: 1,
+                },
+                p: 1,
+                mt: 0.5,
+                borderRadius: 1
+              }}
+              onClick={() => openInMaps(nearestVoter.voter)}
+              title="Click to open in maps for directions"
+            >
+              <LocationOn fontSize="small" color="primary" />
+              <Typography variant="body2" color="primary" sx={{ fontWeight: 'medium' }}>
+                {nearestVoter.voter.addressLine}, {nearestVoter.voter.city}, {nearestVoter.voter.state} {nearestVoter.voter.zip}
+              </Typography>
+            </Box>
+            <Box sx={{ mt: 1 }}>
+              <Chip 
+                label={`Age: ${nearestVoter.voter.age}`} 
+                size="small" 
+                sx={{ mr: 1 }} 
+              />
+              <Chip 
+                label={`ZIP: ${nearestVoter.voter.zip}`} 
+                size="small" 
+                sx={{ mr: 1 }} 
+              />
+              {nearestVoter.voter.cellPhone && (
+                <Chip 
+                  label={nearestVoter.voter.cellPhone} 
+                  size="small" 
+                  color="primary"
+                />
+              )}
+            </Box>
+            <Box sx={{ mt: 2 }}>
+              <Button
+                variant="contained"
+                startIcon={<ContactPhone />}
+                onClick={() => handleNearestVoterContact(nearestVoter.voter)}
+                fullWidth
+              >
+                Contact Voter
+              </Button>
+            </Box>
+          </Alert>
+        )}
+
+        {/* Location Enable Card */}
+        {!nearestVoter && !location && (
+          <Alert severity="warning" sx={{ mb: 3 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              📍 Location needed for nearest voter
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 2 }}>
+              To see your nearest uncontacted voter, we need your location.
+            </Typography>
+            <Button
+              variant="contained"
+              startIcon={<LocationOn />}
+              onClick={getCurrentLocation}
+              size="small"
+            >
+              Enable Location
+            </Button>
           </Alert>
         )}
 
@@ -1264,6 +1497,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
           )}
         </DialogActions>
       </Dialog>
+
+      {/* Contact Modal for Nearest Voter */}
+      <ContactModal
+        open={contactModalOpen}
+        voter={selectedVoterForContact}
+        onClose={() => {
+          setContactModalOpen(false);
+          setSelectedVoterForContact(null);
+        }}
+        onSubmit={handleContactSubmit}
+      />
     </Box>
   );
 };
