@@ -52,7 +52,9 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [selectedVoter, setSelectedVoter] = useState<Voter | null>(null);
   const [contactModalOpen, setContactModalOpen] = useState(false);
-  const [filters, setFilters] = useState<VoterFilter>({});
+  const [filters, setFilters] = useState<VoterFilter>({
+    contactStatus: 'not-contacted'
+  });
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [useLocation, setUseLocation] = useState(false);
 
@@ -60,7 +62,7 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
     zipCode: '',
     voteFrequency: '',
     ageGroup: '',
-    contactStatus: '',
+    contactStatus: 'not-contacted',
     searchName: ''
   });
 
@@ -195,10 +197,12 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
       zipCode: '',
       voteFrequency: '',
       ageGroup: '',
-      contactStatus: '',
+      contactStatus: 'not-contacted',
       searchName: ''
     });
-    setFilters({});
+    setFilters({
+      contactStatus: 'not-contacted'
+    });
     setPage(0);
   };
 
