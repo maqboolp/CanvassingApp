@@ -670,6 +670,7 @@ namespace HooverCanvassingApi.Controllers
                 if (!removePasswordResult.Succeeded)
                 {
                     var errors = string.Join(", ", removePasswordResult.Errors.Select(e => e.Description));
+                    _logger.LogError("Failed to remove password for user {UserId}. Errors: {Errors}", user.Id, errors);
                     return BadRequest(new { error = $"Failed to reset password: {errors}" });
                 }
 
@@ -680,6 +681,16 @@ namespace HooverCanvassingApi.Controllers
                     _logger.LogError("Failed to set password. Errors: {Errors}. Password was: '{Password}' (length: {Length})", 
                         errors, newPassword, newPassword.Length);
                     return BadRequest(new { error = $"Failed to set new password: {errors}" });
+                }
+
+                // Verify the password was set correctly by testing login
+                var verifyResult = await _userManager.CheckPasswordAsync(user, newPassword);
+                _logger.LogInformation("Password verification after reset for user {UserId}: Success={Success}", user.Id, verifyResult);
+                
+                if (!verifyResult)
+                {
+                    _logger.LogError("Password verification failed immediately after successful reset for user {UserId}", user.Id);
+                    return BadRequest(new { error = "Password was set but verification failed. Please try again." });
                 }
 
                 _logger.LogInformation("Password reset successfully for user {Email} ({Role}) by SuperAdmin {AdminId}", 

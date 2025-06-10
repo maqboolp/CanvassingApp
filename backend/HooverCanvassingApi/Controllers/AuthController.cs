@@ -40,8 +40,12 @@ namespace HooverCanvassingApi.Controllers
         {
             try
             {
+                _logger.LogInformation("Login attempt for email: {Email}, password length: {PasswordLength}", 
+                    request.Email, request.Password?.Length ?? 0);
+
                 if (string.IsNullOrEmpty(request.Email) || string.IsNullOrEmpty(request.Password))
                 {
+                    _logger.LogWarning("Login failed - missing email or password for {Email}", request.Email);
                     return BadRequest(new ApiResponse<AuthUserDto>
                     {
                         Success = false,
@@ -52,6 +56,7 @@ namespace HooverCanvassingApi.Controllers
                 var user = await _userManager.FindByEmailAsync(request.Email);
                 if (user == null || !user.IsActive)
                 {
+                    _logger.LogWarning("Login failed - user not found or inactive for {Email}", request.Email);
                     return BadRequest(new ApiResponse<AuthUserDto>
                     {
                         Success = false,
@@ -59,9 +64,20 @@ namespace HooverCanvassingApi.Controllers
                     });
                 }
 
+                _logger.LogInformation("User found for {Email}, checking password. User active: {IsActive}", 
+                    request.Email, user.IsActive);
+
+                // Try direct password check first
+                var directPasswordCheck = await _userManager.CheckPasswordAsync(user, request.Password);
+                _logger.LogInformation("Direct password check for {Email}: {Success}", request.Email, directPasswordCheck);
+
                 var result = await _signInManager.CheckPasswordSignInAsync(user, request.Password, false);
+                _logger.LogInformation("SignInManager check for {Email}: Succeeded={Succeeded}, IsLockedOut={IsLockedOut}, IsNotAllowed={IsNotAllowed}, RequiresTwoFactor={RequiresTwoFactor}", 
+                    request.Email, result.Succeeded, result.IsLockedOut, result.IsNotAllowed, result.RequiresTwoFactor);
+
                 if (!result.Succeeded)
                 {
+                    _logger.LogWarning("Login failed for {Email} - SignInManager check failed", request.Email);
                     return BadRequest(new ApiResponse<AuthUserDto>
                     {
                         Success = false,
