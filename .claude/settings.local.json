@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(doctl apps logs:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": []
   }

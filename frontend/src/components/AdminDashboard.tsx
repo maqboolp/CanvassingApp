@@ -41,7 +41,8 @@ import {
   GetApp,
   LocationOn,
   Lock,
-  History
+  History,
+  VpnKey
 } from '@mui/icons-material';
 import { AuthUser, Voter, ContactStatus, VoterSupport } from '../types';
 import VoterList from './VoterList';
@@ -106,6 +107,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
   const [volunteerCreateLoading, setVolunteerCreateLoading] = useState(false);
   const [geocodingStatus, setGeocodingStatus] = useState<any>(null);
   const [geocodingLoading, setGeocodingLoading] = useState(false);
+  const [resetPasswordDialog, setResetPasswordDialog] = useState(false);
+  const [selectedVolunteer, setSelectedVolunteer] = useState<any>(null);
+  const [resetPasswordResult, setResetPasswordResult] = useState<any>(null);
+  const [resetPasswordLoading, setResetPasswordLoading] = useState(false);
   const [geocodingResult, setGeocodingResult] = useState<any>(null);
   const [changePasswordDialog, setChangePasswordDialog] = useState(false);
   const [passwordForm, setPasswordForm] = useState({
@@ -396,6 +401,55 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
       setGeocodingResult({ error: 'Failed to start geocoding: ' + (error as Error).message });
     } finally {
       setGeocodingLoading(false);
+    }
+  };
+
+  const handleResetPassword = (volunteer: any) => {
+    setSelectedVolunteer(volunteer);
+    setResetPasswordDialog(true);
+    setResetPasswordResult(null);
+  };
+
+  const confirmResetPassword = async () => {
+    if (!selectedVolunteer) return;
+
+    setResetPasswordLoading(true);
+    setResetPasswordResult(null);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/admin/reset-volunteer-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.token}`
+        },
+        body: JSON.stringify({
+          volunteerId: selectedVolunteer.id
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setResetPasswordResult({
+          success: true,
+          message: data.message,
+          temporaryPassword: data.temporaryPassword,
+          volunteerEmail: data.volunteerEmail
+        });
+      } else {
+        setResetPasswordResult({
+          success: false,
+          error: data.error || 'Failed to reset password'
+        });
+      }
+    } catch (error) {
+      setResetPasswordResult({
+        success: false,
+        error: 'Network error occurred'
+      });
+    } finally {
+      setResetPasswordLoading(false);
     }
   };
 
@@ -722,6 +776,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                         <TableCell>Status</TableCell>
                         <TableCell align="right">Contacts Made</TableCell>
                         <TableCell>Joined</TableCell>
+                        <TableCell>Actions</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -743,6 +798,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                           <TableCell align="right">{volunteer.contactCount}</TableCell>
                           <TableCell>
                             {new Date(volunteer.createdAt).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              startIcon={<VpnKey />}
+                              onClick={() => handleResetPassword(volunteer)}
+                              disabled={!volunteer.isActive}
+                            >
+                              Reset Password
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -1122,6 +1188,80 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
           >
             {passwordChangeLoading ? 'Changing...' : 'Change Password'}
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Reset Password Dialog */}
+      <Dialog open={resetPasswordDialog} onClose={() => !resetPasswordLoading && setResetPasswordDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Reset Volunteer Password</DialogTitle>
+        <DialogContent>
+          {selectedVolunteer && (
+            <>
+              <Typography variant="body1" paragraph>
+                Are you sure you want to reset the password for:
+              </Typography>
+              <Typography variant="h6" sx={{ mb: 2 }}>
+                {selectedVolunteer.firstName} {selectedVolunteer.lastName}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Email: {selectedVolunteer.email}
+              </Typography>
+              
+              {!resetPasswordResult && (
+                <Alert severity="warning" sx={{ mb: 2 }}>
+                  A new temporary password will be generated. Please share this password securely with the volunteer.
+                </Alert>
+              )}
+
+              {resetPasswordResult && resetPasswordResult.success && (
+                <Alert severity="success" sx={{ mb: 2 }}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Password reset successful!
+                  </Typography>
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    <strong>Temporary Password:</strong> 
+                    <Box component="code" sx={{ 
+                      bgcolor: 'background.paper', 
+                      p: 1, 
+                      borderRadius: 1, 
+                      ml: 1,
+                      fontFamily: 'monospace',
+                      fontSize: '1.1em',
+                      fontWeight: 'bold'
+                    }}>
+                      {resetPasswordResult.temporaryPassword}
+                    </Box>
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Please share this password securely with {selectedVolunteer.firstName}. 
+                    They should change it immediately after logging in.
+                  </Typography>
+                </Alert>
+              )}
+
+              {resetPasswordResult && !resetPasswordResult.success && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  {resetPasswordResult.error}
+                </Alert>
+              )}
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setResetPasswordDialog(false)} disabled={resetPasswordLoading}>
+            {resetPasswordResult?.success ? 'Close' : 'Cancel'}
+          </Button>
+          {!resetPasswordResult?.success && (
+            <Button 
+              onClick={confirmResetPassword} 
+              variant="contained" 
+              color="warning"
+              disabled={resetPasswordLoading}
+              startIcon={resetPasswordLoading ? <CircularProgress size={20} /> : <VpnKey />}
+            >
+              {resetPasswordLoading ? 'Resetting...' : 'Reset Password'}
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
     </Box>

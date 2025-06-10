@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
 using HooverCanvassingApi.Data;
 using HooverCanvassingApi.Models;
 using HooverCanvassingApi.Services;
@@ -17,12 +18,14 @@ namespace HooverCanvassingApi.Controllers
         private readonly ApplicationDbContext _context;
         private readonly VoterImportService _importService;
         private readonly ILogger<AdminController> _logger;
+        private readonly UserManager<Volunteer> _userManager;
 
-        public AdminController(ApplicationDbContext context, VoterImportService importService, ILogger<AdminController> logger)
+        public AdminController(ApplicationDbContext context, VoterImportService importService, ILogger<AdminController> logger, UserManager<Volunteer> userManager)
         {
             _context = context;
             _importService = importService;
             _logger = logger;
+            _userManager = userManager;
         }
 
         [HttpPost("import-voters")]
@@ -413,6 +416,80 @@ namespace HooverCanvassingApi.Controllers
                 });
             }
         }
+
+        [HttpPost("reset-volunteer-password")]
+        public async Task<ActionResult> ResetVolunteerPassword([FromBody] ResetPasswordRequest request)
+        {
+            try
+            {
+                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value;
+                
+                _logger.LogInformation("Password reset requested by {AdminId} ({Role}) for volunteer {VolunteerId}", 
+                    currentUserId, currentUserRole, request.VolunteerId);
+
+                // Find the volunteer to reset
+                var volunteer = await _userManager.FindByIdAsync(request.VolunteerId);
+                if (volunteer == null || !volunteer.IsActive)
+                {
+                    return NotFound(new { error = "Volunteer not found or inactive" });
+                }
+
+                // Only allow admin/superadmin to reset passwords
+                if (currentUserRole != "Admin" && currentUserRole != "SuperAdmin")
+                {
+                    return Forbid();
+                }
+
+                // Generate a new temporary password
+                var newPassword = GenerateTemporaryPassword();
+
+                // Remove current password and set new one
+                var removePasswordResult = await _userManager.RemovePasswordAsync(volunteer);
+                if (!removePasswordResult.Succeeded)
+                {
+                    var errors = string.Join(", ", removePasswordResult.Errors.Select(e => e.Description));
+                    return BadRequest(new { error = $"Failed to reset password: {errors}" });
+                }
+
+                var addPasswordResult = await _userManager.AddPasswordAsync(volunteer, newPassword);
+                if (!addPasswordResult.Succeeded)
+                {
+                    var errors = string.Join(", ", addPasswordResult.Errors.Select(e => e.Description));
+                    return BadRequest(new { error = $"Failed to set new password: {errors}" });
+                }
+
+                _logger.LogInformation("Password reset successfully for volunteer {Email} by admin {AdminId}", 
+                    volunteer.Email, currentUserId);
+
+                return Ok(new { 
+                    success = true,
+                    message = $"Password reset successfully for {volunteer.FirstName} {volunteer.LastName}",
+                    temporaryPassword = newPassword,
+                    volunteerEmail = volunteer.Email
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error resetting volunteer password");
+                return StatusCode(500, new { error = "Failed to reset password" });
+            }
+        }
+
+        private string GenerateTemporaryPassword()
+        {
+            // Generate a secure 12-character temporary password
+            const string chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
+            var random = new Random();
+            var password = new char[12];
+            
+            for (int i = 0; i < 12; i++)
+            {
+                password[i] = chars[random.Next(chars.Length)];
+            }
+            
+            return new string(password);
+        }
     }
 
     public class VolunteerDto
@@ -458,5 +535,10 @@ namespace HooverCanvassingApi.Controllers
         public string ZipCode { get; set; } = string.Empty;
         public int Contacted { get; set; }
         public int Total { get; set; }
+    }
+
+    public class ResetPasswordRequest
+    {
+        public string VolunteerId { get; set; } = string.Empty;
     }
 }
