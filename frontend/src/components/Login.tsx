@@ -50,7 +50,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, isLoading = false, error }) => {
     <Container component="main" maxWidth="sm">
       <Box
         sx={{
-          marginTop: 8,
+          marginTop: { xs: 2, sm: 4 },
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -147,17 +147,6 @@ const Login: React.FC<LoginProps> = ({ onLogin, isLoading = false, error }) => {
               </Typography>
               <Typography variant="body2" align="center" sx={{ color: '#2f1c6a', mt: 0.5 }}>
                 Join the movement for a better Hoover - August 26, 2025 Election
-              </Typography>
-              <Typography variant="body2" align="center" sx={{ mt: 1 }}>
-                <strong>Promote voter registration:</strong>{' '}
-                <a 
-                  href="https://myinfo.alabamavotes.gov/VoterView" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  style={{ color: 'inherit' }}
-                >
-                  alabamavotes.gov
-                </a>
               </Typography>
               <Typography variant="caption" align="center" sx={{ mt: 2, color: '#2f1c6a', fontStyle: 'italic' }}>
                 Paid for by Tanveer for Hoover

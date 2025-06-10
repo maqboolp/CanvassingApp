@@ -51,7 +51,15 @@ import {
   ContactPhone,
   EmojiEvents,
   Star,
-  SwapHoriz
+  SwapHoriz,
+  Language,
+  VideoLibrary,
+  Payment,
+  HowToReg,
+  Phone,
+  Help,
+  OpenInNew,
+  MenuBook
 } from '@mui/icons-material';
 import { AuthUser, Voter, ContactStatus, VoterSupport } from '../types';
 import VoterList from './VoterList';
@@ -144,6 +152,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
   const [selectedVoterForContact, setSelectedVoterForContact] = useState<Voter | null>(null);
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [resourcesDialog, setResourcesDialog] = useState(false);
 
   useEffect(() => {
     if (currentTab === 0) {
@@ -796,6 +805,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
               <Typography variant="body2" color="text.secondary">
                 {user.email}
               </Typography>
+            </MenuItem>
+            <MenuItem onClick={() => { setResourcesDialog(true); handleMenuClose(); }}>
+              <MenuBook sx={{ mr: 1 }} />
+              Volunteer Resources
             </MenuItem>
             <MenuItem onClick={() => { setChangePasswordDialog(true); handleMenuClose(); }}>
               <Lock sx={{ mr: 1 }} />
@@ -2053,6 +2066,119 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
         }}
         onSubmit={handleContactSubmit}
       />
+
+      {/* Resources Dialog */}
+      <Dialog open={resourcesDialog} onClose={() => setResourcesDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Volunteer Resources</DialogTitle>
+        <DialogContent>
+          {/* Campaign Information */}
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: '#2f1c6a' }}>
+              Campaign Information
+            </Typography>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Language fontSize="small" sx={{ color: '#2f1c6a' }} />
+                <a 
+                  href="https://tanveer4hoover.com" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  style={{ color: '#2f1c6a', textDecoration: 'none', fontSize: '14px' }}
+                >
+                  Campaign Website <OpenInNew fontSize="small" sx={{ ml: 0.5, verticalAlign: 'middle' }} />
+                </a>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <VideoLibrary fontSize="small" sx={{ color: '#2f1c6a' }} />
+                <a 
+                  href="https://youtube.com/@tanveer4hoover" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  style={{ color: '#2f1c6a', textDecoration: 'none', fontSize: '14px' }}
+                >
+                  Campaign Videos <OpenInNew fontSize="small" sx={{ ml: 0.5, verticalAlign: 'middle' }} />
+                </a>
+              </Box>
+            </Box>
+          </Box>
+
+          {/* Support the Campaign */}
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: '#2f1c6a' }}>
+              Support the Campaign
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Payment fontSize="small" sx={{ color: '#2f1c6a' }} />
+              <Typography variant="body2" sx={{ color: '#2f1c6a' }}>
+                Venmo: @Tanveer4Hoover
+              </Typography>
+            </Box>
+          </Box>
+
+          {/* Voter Resources */}
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: '#2f1c6a' }}>
+              Voter Resources
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <HowToReg fontSize="small" sx={{ color: '#2f1c6a' }} />
+              <a 
+                href="https://myinfo.alabamavotes.gov/VoterView" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                style={{ color: '#2f1c6a', textDecoration: 'none', fontSize: '14px' }}
+              >
+                Check Voter Registration <OpenInNew fontSize="small" sx={{ ml: 0.5, verticalAlign: 'middle' }} />
+              </a>
+            </Box>
+          </Box>
+
+          {/* Support & Help */}
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: '#2f1c6a' }}>
+              Support & Help
+            </Typography>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Phone fontSize="small" sx={{ color: '#2f1c6a' }} />
+                <Typography variant="body2" sx={{ color: '#2f1c6a' }}>
+                  Volunteer Hotline: (205) 555-VOTE
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Help fontSize="small" sx={{ color: '#2f1c6a' }} />
+                <Typography variant="body2" sx={{ color: '#2f1c6a' }}>
+                  App Support: Email support@tanveer4hoover.com
+                </Typography>
+              </Box>
+            </Box>
+          </Box>
+
+          {/* Quick Tips */}
+          <Box sx={{ 
+            p: 2, 
+            background: 'rgba(47, 28, 106, 0.05)',
+            borderRadius: 2,
+            border: '1px solid rgba(47, 28, 106, 0.1)'
+          }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: '#2f1c6a' }}>
+              Canvassing Quick Tips
+            </Typography>
+            <Typography variant="body2" sx={{ color: '#2f1c6a', fontSize: '12px', lineHeight: 1.4 }}>
+              • Always wear your volunteer badge<br/>
+              • Be respectful and polite<br/>
+              • Don't argue with voters<br/>
+              • Use the app to log all contacts<br/>
+              • Ask for help if you need it
+            </Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setResourcesDialog(false)}>
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
