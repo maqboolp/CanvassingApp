@@ -708,7 +708,7 @@ namespace HooverCanvassingApi.Controllers
         }
 
         [HttpPost("reset-volunteer-password")]
-        [Authorize(Roles = "SuperAdmin")]
+        [Authorize(Roles = "Admin,SuperAdmin")]
         public async Task<ActionResult> ResetVolunteerPassword([FromBody] ResetPasswordRequest request)
         {
             try
@@ -726,10 +726,16 @@ namespace HooverCanvassingApi.Controllers
                     return NotFound(new { error = "User not found or inactive" });
                 }
 
-                // Prevent superadmin from resetting their own password through this endpoint
+                // Prevent users from resetting their own password through this endpoint
                 if (user.Id == currentUserId)
                 {
                     return BadRequest(new { error = "Cannot reset your own password using this method" });
+                }
+
+                // Regular admins can only reset volunteer passwords, not other admin/superadmin passwords
+                if (currentUserRole == "Admin" && (user.Role == VolunteerRole.Admin || user.Role == VolunteerRole.SuperAdmin))
+                {
+                    return Forbid("Admins can only reset volunteer passwords, not other admin or superadmin passwords");
                 }
 
                 // Use custom password if provided, otherwise generate a temporary one
