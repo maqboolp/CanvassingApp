@@ -95,10 +95,16 @@ namespace HooverCanvassingApi.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
+                    b.Property<DateTime?>("LastLoginAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("LastName")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<int>("LoginCount")
+                        .HasColumnType("integer");
 
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("boolean");
