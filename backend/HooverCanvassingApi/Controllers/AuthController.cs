@@ -7,6 +7,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using HooverCanvassingApi.Models;
+using HooverCanvassingApi.Data;
 
 namespace HooverCanvassingApi.Controllers
 {
@@ -18,17 +19,20 @@ namespace HooverCanvassingApi.Controllers
         private readonly SignInManager<Volunteer> _signInManager;
         private readonly IConfiguration _configuration;
         private readonly ILogger<AuthController> _logger;
+        private readonly ApplicationDbContext _context;
 
         public AuthController(
             UserManager<Volunteer> userManager,
             SignInManager<Volunteer> signInManager,
             IConfiguration configuration,
-            ILogger<AuthController> logger)
+            ILogger<AuthController> logger,
+            ApplicationDbContext context)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _configuration = configuration;
             _logger = logger;
+            _context = context;
         }
 
         [HttpPost("login")]
@@ -65,6 +69,11 @@ namespace HooverCanvassingApi.Controllers
                     });
                 }
 
+                // Update login tracking
+                user.LoginCount++;
+                user.LastLoginAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
+
                 var token = GenerateJwtToken(user);
                 var authUser = new AuthUserDto
                 {
@@ -77,7 +86,7 @@ namespace HooverCanvassingApi.Controllers
                     AvatarUrl = GetGravatarUrl(user.Email!)
                 };
 
-                _logger.LogInformation("User {Email} logged in successfully", request.Email);
+                _logger.LogInformation("User {Email} logged in successfully (Login #{LoginCount})", request.Email, user.LoginCount);
 
                 return Ok(new ApiResponse<AuthUserDto>
                 {

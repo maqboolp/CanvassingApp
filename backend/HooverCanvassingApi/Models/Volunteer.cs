@@ -11,6 +11,10 @@ namespace HooverCanvassingApi.Models
         public bool IsActive { get; set; } = true;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         
+        // Login tracking fields
+        public int LoginCount { get; set; } = 0;
+        public DateTime? LastLoginAt { get; set; }
+        
         public ICollection<Contact> Contacts { get; set; } = new List<Contact>();
     }
 

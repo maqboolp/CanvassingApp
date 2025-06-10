@@ -101,6 +101,15 @@ namespace HooverCanvassingApi.Controllers
                     .OrderBy(x => x.ZipCode)
                     .ToListAsync();
 
+                // Calculate login metrics
+                var weekAgo = DateTime.UtcNow.AddDays(-7);
+                var monthAgo = DateTime.UtcNow.AddDays(-30);
+                var allVolunteers = await _context.Volunteers.ToListAsync();
+                
+                var totalLogins = allVolunteers.Sum(v => v.LoginCount);
+                var activeUsersWeek = allVolunteers.Count(v => v.LastLoginAt >= weekAgo);
+                var activeUsersMonth = allVolunteers.Count(v => v.LastLoginAt >= monthAgo);
+
                 var analytics = new AnalyticsDto
                 {
                     TotalVoters = totalVoters,
@@ -113,7 +122,10 @@ namespace HooverCanvassingApi.Controllers
                         NeedsFollowUp = contactStatusBreakdown.FirstOrDefault(x => x.Status == ContactStatus.NeedsFollowUp) != null ? contactStatusBreakdown.FirstOrDefault(x => x.Status == ContactStatus.NeedsFollowUp).Count : 0
                     },
                     VolunteerActivity = volunteerActivityDto,
-                    ContactsByZip = contactsByZip
+                    ContactsByZip = contactsByZip,
+                    TotalLogins = totalLogins,
+                    ActiveUsersWeek = activeUsersWeek,
+                    ActiveUsersMonth = activeUsersMonth
                 };
 
                 return Ok(analytics);
@@ -226,7 +238,9 @@ namespace HooverCanvassingApi.Controllers
                         Role = v.Role.ToString(),
                         IsActive = v.IsActive,
                         CreatedAt = v.CreatedAt,
-                        ContactCount = v.Contacts.Count()
+                        ContactCount = v.Contacts.Count(),
+                        LoginCount = v.LoginCount,
+                        LastLoginAt = v.LastLoginAt
                     })
                     .OrderBy(v => v.LastName)
                     .ToListAsync();
@@ -578,6 +592,7 @@ namespace HooverCanvassingApi.Controllers
         }
 
         [HttpPost("reset-volunteer-password")]
+        [Authorize(Roles = "SuperAdmin")]
         public async Task<ActionResult> ResetVolunteerPassword([FromBody] ResetPasswordRequest request)
         {
             try
@@ -585,48 +600,48 @@ namespace HooverCanvassingApi.Controllers
                 var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 var currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value;
                 
-                _logger.LogInformation("Password reset requested by {AdminId} ({Role}) for volunteer {VolunteerId}", 
+                _logger.LogInformation("Password reset requested by {AdminId} ({Role}) for user {UserId}", 
                     currentUserId, currentUserRole, request.VolunteerId);
 
-                // Find the volunteer to reset
-                var volunteer = await _userManager.FindByIdAsync(request.VolunteerId);
-                if (volunteer == null || !volunteer.IsActive)
+                // Find the user to reset
+                var user = await _userManager.FindByIdAsync(request.VolunteerId);
+                if (user == null || !user.IsActive)
                 {
-                    return NotFound(new { error = "Volunteer not found or inactive" });
+                    return NotFound(new { error = "User not found or inactive" });
                 }
 
-                // Only allow admin/superadmin to reset passwords
-                if (currentUserRole != "Admin" && currentUserRole != "SuperAdmin")
+                // Prevent superadmin from resetting their own password through this endpoint
+                if (user.Id == currentUserId)
                 {
-                    return Forbid();
+                    return BadRequest(new { error = "Cannot reset your own password using this method" });
                 }
 
                 // Generate a new temporary password
                 var newPassword = GenerateTemporaryPassword();
 
                 // Remove current password and set new one
-                var removePasswordResult = await _userManager.RemovePasswordAsync(volunteer);
+                var removePasswordResult = await _userManager.RemovePasswordAsync(user);
                 if (!removePasswordResult.Succeeded)
                 {
                     var errors = string.Join(", ", removePasswordResult.Errors.Select(e => e.Description));
                     return BadRequest(new { error = $"Failed to reset password: {errors}" });
                 }
 
-                var addPasswordResult = await _userManager.AddPasswordAsync(volunteer, newPassword);
+                var addPasswordResult = await _userManager.AddPasswordAsync(user, newPassword);
                 if (!addPasswordResult.Succeeded)
                 {
                     var errors = string.Join(", ", addPasswordResult.Errors.Select(e => e.Description));
                     return BadRequest(new { error = $"Failed to set new password: {errors}" });
                 }
 
-                _logger.LogInformation("Password reset successfully for volunteer {Email} by admin {AdminId}", 
-                    volunteer.Email, currentUserId);
+                _logger.LogInformation("Password reset successfully for user {Email} ({Role}) by SuperAdmin {AdminId}", 
+                    user.Email, user.Role, currentUserId);
 
                 return Ok(new { 
                     success = true,
-                    message = $"Password reset successfully for {volunteer.FirstName} {volunteer.LastName}",
+                    message = $"Password reset successfully for {user.FirstName} {user.LastName}",
                     temporaryPassword = newPassword,
-                    volunteerEmail = volunteer.Email
+                    volunteerEmail = user.Email
                 });
             }
             catch (Exception ex)
@@ -663,6 +678,10 @@ namespace HooverCanvassingApi.Controllers
         public bool IsActive { get; set; }
         public DateTime CreatedAt { get; set; }
         public int ContactCount { get; set; }
+        
+        // Login tracking fields
+        public int LoginCount { get; set; }
+        public DateTime? LastLoginAt { get; set; }
     }
 
     public class AnalyticsDto
@@ -672,6 +691,11 @@ namespace HooverCanvassingApi.Controllers
         public ContactStatusBreakdownDto ContactStatusBreakdown { get; set; } = new();
         public List<VolunteerActivityDto> VolunteerActivity { get; set; } = new();
         public List<ContactsByZipDto> ContactsByZip { get; set; } = new();
+        
+        // Login tracking metrics
+        public int TotalLogins { get; set; }
+        public int ActiveUsersWeek { get; set; }
+        public int ActiveUsersMonth { get; set; }
     }
 
     public class ContactStatusBreakdownDto

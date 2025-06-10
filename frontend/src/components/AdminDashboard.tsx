@@ -1149,6 +1149,74 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
             </Box>
           ) : (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {/* SuperAdmins Table - Only visible to SuperAdmins */}
+              {user.role === 'superadmin' && (
+                <Box>
+                  <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Star fontSize="small" />
+                    Super Administrators ({volunteers.filter(v => v.role === 'SuperAdmin').length})
+                  </Typography>
+                  <TableContainer component={Paper}>
+                    <Table>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Name</TableCell>
+                          <TableCell>Email</TableCell>
+                          <TableCell>Phone</TableCell>
+                          <TableCell>Status</TableCell>
+                          <TableCell align="right">Logins</TableCell>
+                          <TableCell>Last Login</TableCell>
+                          <TableCell>Joined</TableCell>
+                          <TableCell>Actions</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {volunteers.filter(volunteer => volunteer.role === 'SuperAdmin').map((superAdmin) => (
+                          <TableRow key={superAdmin.id}>
+                            <TableCell>
+                              {superAdmin.firstName} {superAdmin.lastName}
+                            </TableCell>
+                            <TableCell>{superAdmin.email}</TableCell>
+                            <TableCell>{superAdmin.phoneNumber || '-'}</TableCell>
+                            <TableCell>
+                              <span style={{ 
+                                color: superAdmin.isActive ? 'green' : 'red',
+                                fontWeight: 'bold' 
+                              }}>
+                                {superAdmin.isActive ? 'Active' : 'Inactive'}
+                              </span>
+                            </TableCell>
+                            <TableCell align="right">
+                              {superAdmin.loginCount || 0}
+                            </TableCell>
+                            <TableCell>
+                              {superAdmin.lastLoginAt 
+                                ? new Date(superAdmin.lastLoginAt).toLocaleDateString() 
+                                : 'Never'}
+                            </TableCell>
+                            <TableCell>
+                              {new Date(superAdmin.createdAt).toLocaleDateString()}
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                startIcon={<VpnKey />}
+                                onClick={() => handleResetPassword(superAdmin)}
+                                disabled={!superAdmin.isActive || superAdmin.id === user.id}
+                                sx={{ mr: 1 }}
+                              >
+                                Reset Password
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </Box>
+              )}
+
               {/* Admins Table - Only visible to SuperAdmins */}
               {user.role === 'superadmin' && (
                 <Box>
@@ -1164,8 +1232,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                           <TableCell>Email</TableCell>
                           <TableCell>Phone</TableCell>
                           <TableCell>Status</TableCell>
+                          <TableCell align="right">Logins</TableCell>
+                          <TableCell>Last Login</TableCell>
                           <TableCell>Joined</TableCell>
-                          {user.role === 'superadmin' && <TableCell>Actions</TableCell>}
+                          <TableCell>Actions</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
@@ -1184,23 +1254,40 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                                 {admin.isActive ? 'Active' : 'Inactive'}
                               </span>
                             </TableCell>
+                            <TableCell align="right">
+                              {admin.loginCount || 0}
+                            </TableCell>
+                            <TableCell>
+                              {admin.lastLoginAt 
+                                ? new Date(admin.lastLoginAt).toLocaleDateString() 
+                                : 'Never'}
+                            </TableCell>
                             <TableCell>
                               {new Date(admin.createdAt).toLocaleDateString()}
                             </TableCell>
-                            {user.role === 'superadmin' && (
-                              <TableCell>
+                            <TableCell>
+                              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                                <Button
+                                  size="small"
+                                  variant="outlined"
+                                  startIcon={<VpnKey />}
+                                  onClick={() => handleResetPassword(admin)}
+                                  disabled={!admin.isActive}
+                                  sx={{ mr: 1 }}
+                                >
+                                  Reset Password
+                                </Button>
                                 <Button
                                   size="small"
                                   variant="outlined"
                                   startIcon={<SwapHoriz />}
                                   onClick={() => handleChangeRole(admin)}
                                   disabled={!admin.isActive}
-                                  sx={{ mr: 1 }}
                                 >
                                   Change Role
                                 </Button>
-                              </TableCell>
-                            )}
+                              </Box>
+                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -1224,6 +1311,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                         <TableCell>Phone</TableCell>
                         <TableCell>Status</TableCell>
                         <TableCell align="right">Contacts Made</TableCell>
+                        <TableCell align="right">Logins</TableCell>
+                        <TableCell>Last Login</TableCell>
                         <TableCell>Joined</TableCell>
                         <TableCell>Actions</TableCell>
                       </TableRow>
@@ -1245,6 +1334,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                             </span>
                           </TableCell>
                           <TableCell align="right">{volunteer.contactCount}</TableCell>
+                          <TableCell align="right">
+                            {volunteer.loginCount || 0}
+                          </TableCell>
+                          <TableCell>
+                            {volunteer.lastLoginAt 
+                              ? new Date(volunteer.lastLoginAt).toLocaleDateString() 
+                              : 'Never'}
+                          </TableCell>
                           <TableCell>
                             {new Date(volunteer.createdAt).toLocaleDateString()}
                           </TableCell>
