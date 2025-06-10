@@ -605,7 +605,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
       },
       {
         enableHighAccuracy: false,
-        timeout: 10000,
+        timeout: 30000, // Increased to 30 seconds
         maximumAge: 300000 // 5 minutes
       }
     );
@@ -919,7 +919,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
             {locationError && (
               <Box sx={{ mt: 2 }}>
                 <Typography variant="body2" color="text.secondary">
-                  💡 Tip: Make sure to allow location permissions when your browser asks, and ensure you're using HTTPS or localhost.
+                  💡 Tip: Make sure to allow location permissions when your browser asks. Location requests may take up to 30 seconds in some cases.
                 </Typography>
               </Box>
             )}
