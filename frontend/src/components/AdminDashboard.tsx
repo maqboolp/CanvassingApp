@@ -29,7 +29,10 @@ import {
   TextField,
   FormControlLabel,
   Checkbox,
-  Chip
+  Chip,
+  FormControl,
+  InputLabel,
+  Select
 } from '@mui/material';
 import {
   ExitToApp,
@@ -47,7 +50,8 @@ import {
   Refresh,
   ContactPhone,
   EmojiEvents,
-  Star
+  Star,
+  SwapHoriz
 } from '@mui/icons-material';
 import { AuthUser, Voter, ContactStatus, VoterSupport } from '../types';
 import VoterList from './VoterList';
@@ -121,6 +125,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
   const [changePasswordDialog, setChangePasswordDialog] = useState(false);
   const [leaderboard, setLeaderboard] = useState<any>(null);
   const [leaderboardTab, setLeaderboardTab] = useState(0);
+  const [changeRoleDialog, setChangeRoleDialog] = useState(false);
+  const [selectedUserForRole, setSelectedUserForRole] = useState<any>(null);
+  const [newRole, setNewRole] = useState('');
+  const [roleChangeLoading, setRoleChangeLoading] = useState(false);
+  const [roleChangeResult, setRoleChangeResult] = useState<any>(null);
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
     newPassword: '',
@@ -485,6 +494,68 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
       });
     } finally {
       setResetPasswordLoading(false);
+    }
+  };
+
+  const handleChangeRole = (volunteer: any) => {
+    setSelectedUserForRole(volunteer);
+    setNewRole(volunteer.role.toLowerCase());
+    setChangeRoleDialog(true);
+    setRoleChangeResult(null);
+  };
+
+  const confirmRoleChange = async () => {
+    if (!selectedUserForRole || !newRole) return;
+
+    setRoleChangeLoading(true);
+    setRoleChangeResult(null);
+
+    try {
+      const roleMapping: { [key: string]: number } = {
+        'volunteer': 0,
+        'admin': 1,
+        'superadmin': 2
+      };
+
+      const response = await fetch(`${API_BASE_URL}/api/admin/change-user-role`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.token}`
+        },
+        body: JSON.stringify({
+          userId: selectedUserForRole.id,
+          newRole: roleMapping[newRole]
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setRoleChangeResult({
+          success: true,
+          message: data.message,
+          oldRole: data.oldRole,
+          newRole: data.newRole,
+          userName: data.userName
+        });
+        // Refresh the volunteers list
+        if (currentTab === 1) {
+          fetchVolunteers();
+        }
+      } else {
+        setRoleChangeResult({
+          success: false,
+          error: data.error || 'Failed to change role'
+        });
+      }
+    } catch (error) {
+      setRoleChangeResult({
+        success: false,
+        error: 'Network error occurred'
+      });
+    } finally {
+      setRoleChangeLoading(false);
     }
   };
 
@@ -1094,6 +1165,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                           <TableCell>Phone</TableCell>
                           <TableCell>Status</TableCell>
                           <TableCell>Joined</TableCell>
+                          {user.role === 'superadmin' && <TableCell>Actions</TableCell>}
                         </TableRow>
                       </TableHead>
                       <TableBody>
@@ -1115,6 +1187,20 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                             <TableCell>
                               {new Date(admin.createdAt).toLocaleDateString()}
                             </TableCell>
+                            {user.role === 'superadmin' && (
+                              <TableCell>
+                                <Button
+                                  size="small"
+                                  variant="outlined"
+                                  startIcon={<SwapHoriz />}
+                                  onClick={() => handleChangeRole(admin)}
+                                  disabled={!admin.isActive}
+                                  sx={{ mr: 1 }}
+                                >
+                                  Change Role
+                                </Button>
+                              </TableCell>
+                            )}
                           </TableRow>
                         ))}
                       </TableBody>
@@ -1163,15 +1249,29 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                             {new Date(volunteer.createdAt).toLocaleDateString()}
                           </TableCell>
                           <TableCell>
-                            <Button
-                              size="small"
-                              variant="outlined"
-                              startIcon={<VpnKey />}
-                              onClick={() => handleResetPassword(volunteer)}
-                              disabled={!volunteer.isActive}
-                            >
-                              Reset Password
-                            </Button>
+                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                startIcon={<VpnKey />}
+                                onClick={() => handleResetPassword(volunteer)}
+                                disabled={!volunteer.isActive}
+                              >
+                                Reset Password
+                              </Button>
+                              {user.role === 'superadmin' && (
+                                <Button
+                                  size="small"
+                                  variant="outlined"
+                                  startIcon={<SwapHoriz />}
+                                  onClick={() => handleChangeRole(volunteer)}
+                                  disabled={!volunteer.isActive}
+                                  color="secondary"
+                                >
+                                  Change Role
+                                </Button>
+                              )}
+                            </Box>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -1623,6 +1723,91 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
               startIcon={resetPasswordLoading ? <CircularProgress size={20} /> : <VpnKey />}
             >
               {resetPasswordLoading ? 'Resetting...' : 'Reset Password'}
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
+
+      {/* Change Role Dialog */}
+      <Dialog open={changeRoleDialog} onClose={() => !roleChangeLoading && setChangeRoleDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Change User Role</DialogTitle>
+        <DialogContent>
+          {selectedUserForRole && (
+            <>
+              <Typography variant="body1" paragraph>
+                Change role for:
+              </Typography>
+              <Typography variant="h6" sx={{ mb: 2 }}>
+                {selectedUserForRole.firstName} {selectedUserForRole.lastName}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Email: {selectedUserForRole.email}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                Current Role: <strong>{selectedUserForRole.role}</strong>
+              </Typography>
+              
+              {!roleChangeResult && (
+                <>
+                  <FormControl fullWidth sx={{ mb: 2 }}>
+                    <InputLabel>New Role</InputLabel>
+                    <Select
+                      value={newRole}
+                      label="New Role"
+                      onChange={(e) => setNewRole(e.target.value)}
+                      disabled={roleChangeLoading}
+                    >
+                      <MenuItem value="volunteer">Volunteer</MenuItem>
+                      <MenuItem value="admin">Admin</MenuItem>
+                      <MenuItem value="superadmin">Super Admin</MenuItem>
+                    </Select>
+                  </FormControl>
+                  
+                  {newRole !== selectedUserForRole.role.toLowerCase() && (
+                    <Alert severity="warning" sx={{ mb: 2 }}>
+                      <Typography variant="body2">
+                        <strong>Warning:</strong> Changing a user's role will immediately affect their access permissions.
+                        {newRole === 'superadmin' && (
+                          <><br/>Super Admin role grants full system access including the ability to manage all users and data.</>
+                        )}
+                      </Typography>
+                    </Alert>
+                  )}
+                </>
+              )}
+
+              {roleChangeResult && roleChangeResult.success && (
+                <Alert severity="success" sx={{ mb: 2 }}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Role changed successfully!
+                  </Typography>
+                  <Typography variant="body2">
+                    {roleChangeResult.userName}'s role has been changed from {roleChangeResult.oldRole} to {roleChangeResult.newRole}.
+                  </Typography>
+                </Alert>
+              )}
+
+              {roleChangeResult && !roleChangeResult.success && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  {roleChangeResult.error}
+                </Alert>
+              )}
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setChangeRoleDialog(false)} disabled={roleChangeLoading}>
+            {roleChangeResult?.success ? 'Close' : 'Cancel'}
+          </Button>
+          {!roleChangeResult?.success && newRole !== selectedUserForRole?.role.toLowerCase() && (
+            <Button 
+              onClick={confirmRoleChange} 
+              variant="contained" 
+              color="warning"
+              disabled={roleChangeLoading}
+              startIcon={roleChangeLoading ? <CircularProgress size={20} /> : <SwapHoriz />}
+            >
+              {roleChangeLoading ? 'Changing...' : 'Change Role'}
             </Button>
           )}
         </DialogActions>

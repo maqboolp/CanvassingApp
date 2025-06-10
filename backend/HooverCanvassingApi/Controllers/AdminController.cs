@@ -509,6 +509,74 @@ namespace HooverCanvassingApi.Controllers
             }
         }
 
+        [HttpPost("change-user-role")]
+        [Authorize(Roles = "SuperAdmin")]
+        public async Task<ActionResult> ChangeUserRole([FromBody] ChangeRoleRequest request)
+        {
+            try
+            {
+                // Validate the request
+                if (string.IsNullOrEmpty(request.UserId) || !Enum.IsDefined(typeof(VolunteerRole), request.NewRole))
+                {
+                    return BadRequest(new { error = "Invalid user ID or role" });
+                }
+
+                // Find the user
+                var user = await _userManager.FindByIdAsync(request.UserId);
+                if (user == null)
+                {
+                    return NotFound(new { error = "User not found" });
+                }
+
+                // Prevent superadmin from demoting themselves
+                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (user.Id == currentUserId && request.NewRole != VolunteerRole.SuperAdmin)
+                {
+                    return BadRequest(new { error = "Cannot change your own role from SuperAdmin" });
+                }
+
+                // Get the user as Volunteer to update role
+                var volunteer = await _context.Volunteers.FindAsync(request.UserId);
+                if (volunteer == null)
+                {
+                    return NotFound(new { error = "Volunteer record not found" });
+                }
+
+                // Store old role for logging
+                var oldRole = volunteer.Role;
+                var oldRoleString = oldRole.ToString();
+                var newRoleString = request.NewRole.ToString();
+
+                // Update the role in the Volunteer entity
+                volunteer.Role = request.NewRole;
+
+                // Update roles in Identity
+                await _userManager.RemoveFromRolesAsync(user, new[] { "Volunteer", "Admin", "SuperAdmin" });
+                await _userManager.AddToRoleAsync(user, newRoleString);
+
+                // Save changes
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Role changed for user {UserId} from {OldRole} to {NewRole} by SuperAdmin {AdminId}", 
+                    user.Id, oldRoleString, newRoleString, currentUserId);
+
+                return Ok(new 
+                { 
+                    message = $"User role changed from {oldRoleString} to {newRoleString} successfully",
+                    userId = user.Id,
+                    userEmail = user.Email,
+                    userName = $"{volunteer.FirstName} {volunteer.LastName}",
+                    oldRole = oldRoleString,
+                    newRole = newRoleString
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error changing user role for user {UserId}", request.UserId);
+                return StatusCode(500, new { error = "Failed to change user role" });
+            }
+        }
+
         [HttpPost("reset-volunteer-password")]
         public async Task<ActionResult> ResetVolunteerPassword([FromBody] ResetPasswordRequest request)
         {
@@ -632,6 +700,12 @@ namespace HooverCanvassingApi.Controllers
     public class ResetPasswordRequest
     {
         public string VolunteerId { get; set; } = string.Empty;
+    }
+
+    public class ChangeRoleRequest
+    {
+        public string UserId { get; set; } = string.Empty;
+        public VolunteerRole NewRole { get; set; }
     }
 
     public class LeaderboardResponse
