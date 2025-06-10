@@ -294,34 +294,6 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
             sx={{ minWidth: 120 }}
           />
           
-          <FormControl size="small" sx={{ minWidth: 160 }}>
-            <InputLabel>Vote Frequency</InputLabel>
-            <Select
-              value={filterInputs.voteFrequency}
-              label="Vote Frequency"
-              onChange={(e) => handleFilterChange('voteFrequency', e.target.value)}
-            >
-              <MenuItem value="">All</MenuItem>
-              <MenuItem value="frequent">Frequent (3+)</MenuItem>
-              <MenuItem value="infrequent">Infrequent (1-2)</MenuItem>
-              <MenuItem value="non-voter">Non-voter</MenuItem>
-            </Select>
-          </FormControl>
-          
-          <FormControl size="small" sx={{ minWidth: 120 }}>
-            <InputLabel>Age Group</InputLabel>
-            <Select
-              value={filterInputs.ageGroup}
-              label="Age Group"
-              onChange={(e) => handleFilterChange('ageGroup', e.target.value)}
-            >
-              <MenuItem value="">All</MenuItem>
-              <MenuItem value="18-30">18-30</MenuItem>
-              <MenuItem value="31-50">31-50</MenuItem>
-              <MenuItem value="51+">51+</MenuItem>
-            </Select>
-          </FormControl>
-          
           <FormControl size="small" sx={{ minWidth: 140 }}>
             <InputLabel>Contact Status</InputLabel>
             <Select
