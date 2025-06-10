@@ -464,12 +464,30 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
     if (!selectedVolunteer) return;
 
     // Validate custom password if using one
-    if (useCustomPassword && customPassword.length < 6) {
-      setResetPasswordResult({
-        success: false,
-        error: 'Password must be at least 6 characters long'
-      });
-      return;
+    if (useCustomPassword) {
+      if (customPassword.length < 6) {
+        setResetPasswordResult({
+          success: false,
+          error: 'Password must be at least 6 characters long'
+        });
+        return;
+      }
+      
+      if (!/\d/.test(customPassword)) {
+        setResetPasswordResult({
+          success: false,
+          error: 'Password must contain at least one digit'
+        });
+        return;
+      }
+      
+      if (!/[a-z]/.test(customPassword)) {
+        setResetPasswordResult({
+          success: false,
+          error: 'Password must contain at least one lowercase letter'
+        });
+        return;
+      }
     }
 
     setResetPasswordLoading(true);
@@ -1850,8 +1868,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                       onChange={(e) => setCustomPassword(e.target.value)}
                       disabled={resetPasswordLoading}
                       required
-                      error={customPassword.length > 0 && customPassword.length < 6}
-                      helperText={customPassword.length > 0 && customPassword.length < 6 ? "Password must be at least 6 characters" : "Enter the new password for this user"}
+                      error={customPassword.length > 0 && (customPassword.length < 6 || !/\d/.test(customPassword) || !/[a-z]/.test(customPassword))}
+                      helperText={
+                        customPassword.length > 0 
+                          ? (customPassword.length < 6 ? "Password must be at least 6 characters" :
+                             !/\d/.test(customPassword) ? "Password must contain at least one digit" :
+                             !/[a-z]/.test(customPassword) ? "Password must contain at least one lowercase letter" :
+                             "Password meets all requirements ✓")
+                          : "Minimum 6 characters with at least one digit and lowercase letter"
+                      }
                       sx={{ mb: 2 }}
                     />
                   ) : (

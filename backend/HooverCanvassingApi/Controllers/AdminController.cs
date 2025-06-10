@@ -622,9 +622,22 @@ namespace HooverCanvassingApi.Controllers
                     : GenerateTemporaryPassword();
                 
                 // Validate custom password if provided
-                if (!string.IsNullOrEmpty(request.CustomPassword) && request.CustomPassword.Length < 6)
+                if (!string.IsNullOrEmpty(request.CustomPassword))
                 {
-                    return BadRequest(new { error = "Password must be at least 6 characters long" });
+                    if (request.CustomPassword.Length < 6)
+                    {
+                        return BadRequest(new { error = "Password must be at least 6 characters long" });
+                    }
+                    
+                    if (!request.CustomPassword.Any(char.IsDigit))
+                    {
+                        return BadRequest(new { error = "Password must contain at least one digit" });
+                    }
+                    
+                    if (!request.CustomPassword.Any(char.IsLower))
+                    {
+                        return BadRequest(new { error = "Password must contain at least one lowercase letter" });
+                    }
                 }
 
                 // Remove current password and set new one
@@ -661,17 +674,29 @@ namespace HooverCanvassingApi.Controllers
 
         private string GenerateTemporaryPassword()
         {
-            // Generate a secure 12-character temporary password
-            const string chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
-            var random = new Random();
-            var password = new char[12];
+            // Generate a secure temporary password that meets requirements
+            const string lowercase = "abcdefghijkmnpqrstuvwxyz";
+            const string uppercase = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+            const string digits = "23456789";
+            const string allChars = lowercase + uppercase + digits;
             
-            for (int i = 0; i < 12; i++)
+            var random = new Random();
+            var password = new List<char>();
+            
+            // Ensure at least one lowercase letter
+            password.Add(lowercase[random.Next(lowercase.Length)]);
+            
+            // Ensure at least one digit
+            password.Add(digits[random.Next(digits.Length)]);
+            
+            // Add remaining characters (6 more for total of 8)
+            for (int i = 0; i < 6; i++)
             {
-                password[i] = chars[random.Next(chars.Length)];
+                password.Add(allChars[random.Next(allChars.Length)]);
             }
             
-            return new string(password);
+            // Shuffle the password
+            return new string(password.OrderBy(x => random.Next()).ToArray());
         }
     }
 
