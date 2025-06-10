@@ -85,10 +85,11 @@ namespace HooverCanvassingApi.Controllers
                     });
                 }
 
-                // Update login tracking
-                user.LoginCount++;
-                user.LastLoginAt = DateTime.UtcNow;
-                await _context.SaveChangesAsync();
+                // Update login tracking (disabled temporarily until columns exist)
+                // TODO: Re-enable after ensuring LoginCount and LastLoginAt columns exist
+                // user.LoginCount++;
+                // user.LastLoginAt = DateTime.UtcNow;
+                // await _context.SaveChangesAsync();
 
                 var token = GenerateJwtToken(user);
                 var authUser = new AuthUserDto
@@ -102,7 +103,7 @@ namespace HooverCanvassingApi.Controllers
                     AvatarUrl = GetGravatarUrl(user.Email!)
                 };
 
-                _logger.LogInformation("User {Email} logged in successfully (Login #{LoginCount})", request.Email, user.LoginCount);
+                _logger.LogInformation("User {Email} logged in successfully", request.Email);
 
                 return Ok(new ApiResponse<AuthUserDto>
                 {
