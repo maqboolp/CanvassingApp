@@ -45,7 +45,9 @@ import {
   History,
   VpnKey,
   Refresh,
-  ContactPhone
+  ContactPhone,
+  EmojiEvents,
+  Star
 } from '@mui/icons-material';
 import { AuthUser, Voter, ContactStatus, VoterSupport } from '../types';
 import VoterList from './VoterList';
@@ -117,6 +119,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
   const [resetPasswordLoading, setResetPasswordLoading] = useState(false);
   const [geocodingResult, setGeocodingResult] = useState<any>(null);
   const [changePasswordDialog, setChangePasswordDialog] = useState(false);
+  const [leaderboard, setLeaderboard] = useState<any>(null);
+  const [leaderboardTab, setLeaderboardTab] = useState(0);
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
     newPassword: '',
@@ -131,6 +135,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
   useEffect(() => {
     if (currentTab === 0) {
       fetchAnalytics();
+      fetchLeaderboard();
     } else if (currentTab === 1) {
       fetchVolunteers();
     } else if (currentTab === 4 && user.role === 'superadmin') {
@@ -160,6 +165,23 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
       console.error('Failed to fetch analytics:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchLeaderboard = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/admin/leaderboard`, {
+        headers: {
+          'Authorization': `Bearer ${user.token}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setLeaderboard(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch leaderboard:', error);
     }
   };
 
@@ -909,6 +931,114 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                   </CardContent>
                 </Card>
               </Box>
+
+              {/* Leaderboard & Achievements */}
+              {leaderboard && (
+                <Card sx={{ mt: 3 }}>
+                  <CardContent>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                      <EmojiEvents sx={{ mr: 1, color: '#ffd700' }} />
+                      <Typography variant="h6">
+                        Leaderboard
+                      </Typography>
+                    </Box>
+
+                    {/* Leaderboard Tabs */}
+                    <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
+                      <Tabs value={leaderboardTab} onChange={(e, newValue) => setLeaderboardTab(newValue)}>
+                        <Tab label="This Week" />
+                        <Tab label="This Month" />
+                      </Tabs>
+                    </Box>
+
+                    {/* Weekly Leaderboard */}
+                    {leaderboardTab === 0 && leaderboard.weeklyLeaderboard && (
+                      <Box>
+                        <Typography variant="subtitle2" sx={{ mb: 2 }}>
+                          Top Volunteers This Week
+                        </Typography>
+                        {leaderboard.weeklyLeaderboard.slice(0, 10).map((entry: any, index: number) => (
+                          <Box
+                            key={entry.volunteerId}
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              p: 1,
+                              borderRadius: 1,
+                              backgroundColor: 'transparent',
+                              mb: 1
+                            }}
+                          >
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Typography variant="body2" sx={{ minWidth: '20px', fontWeight: 'bold' }}>
+                                #{entry.position}
+                              </Typography>
+                              {entry.badge && (
+                                <span style={{ fontSize: '18px' }}>{entry.badge}</span>
+                              )}
+                              <Typography variant="body2">
+                                {entry.volunteerName}
+                              </Typography>
+                            </Box>
+                            <Chip
+                              label={`${entry.contactCount} contacts`}
+                              size="small"
+                              color="default"
+                            />
+                          </Box>
+                        ))}
+                      </Box>
+                    )}
+
+                    {/* Monthly Leaderboard */}
+                    {leaderboardTab === 1 && leaderboard.monthlyLeaderboard && (
+                      <Box>
+                        <Typography variant="subtitle2" sx={{ mb: 2 }}>
+                          Top Volunteers This Month
+                        </Typography>
+                        {leaderboard.monthlyLeaderboard.slice(0, 10).map((entry: any, index: number) => (
+                          <Box
+                            key={entry.volunteerId}
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              p: 1,
+                              borderRadius: 1,
+                              backgroundColor: 'transparent',
+                              mb: 1
+                            }}
+                          >
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Typography variant="body2" sx={{ minWidth: '20px', fontWeight: 'bold' }}>
+                                #{entry.position}
+                              </Typography>
+                              {entry.badge && (
+                                <span style={{ fontSize: '18px' }}>{entry.badge}</span>
+                              )}
+                              <Typography variant="body2">
+                                {entry.volunteerName}
+                              </Typography>
+                            </Box>
+                            <Chip
+                              label={`${entry.contactCount} contacts`}
+                              size="small"
+                              color="default"
+                            />
+                          </Box>
+                        ))}
+                      </Box>
+                    )}
+
+                    <Box sx={{ mt: 2, p: 2, backgroundColor: 'action.hover', borderRadius: 1 }}>
+                      <Typography variant="body2" sx={{ fontSize: '12px', textAlign: 'center', color: 'text.secondary' }}>
+                        💝 Top volunteers each month receive lunch gift cards! Keep up the great work!
+                      </Typography>
+                    </Box>
+                  </CardContent>
+                </Card>
+              )}
             </>
           ) : (
             <Typography>No analytics data available</Typography>

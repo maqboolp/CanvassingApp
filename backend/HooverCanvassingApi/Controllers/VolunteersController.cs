@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using HooverCanvassingApi.Data;
 using System.Security.Claims;
+using static HooverCanvassingApi.Controllers.AdminController;
 
 namespace HooverCanvassingApi.Controllers
 {
@@ -184,27 +185,4 @@ namespace HooverCanvassingApi.Controllers
         public int ContactsToday { get; set; }
     }
 
-    public class LeaderboardResponse
-    {
-        public List<LeaderboardEntry> WeeklyLeaderboard { get; set; } = new();
-        public List<LeaderboardEntry> MonthlyLeaderboard { get; set; } = new();
-        public List<Achievement> CurrentUserAchievements { get; set; } = new();
-    }
-
-    public class LeaderboardEntry
-    {
-        public string VolunteerId { get; set; } = string.Empty;
-        public string VolunteerName { get; set; } = string.Empty;
-        public int ContactCount { get; set; }
-        public int Position { get; set; }
-        public string Badge { get; set; } = string.Empty;
-        public bool IsCurrentUser { get; set; }
-    }
-
-    public class Achievement
-    {
-        public string Name { get; set; } = string.Empty;
-        public string Description { get; set; } = string.Empty;
-        public string Icon { get; set; } = string.Empty;
-    }
 }

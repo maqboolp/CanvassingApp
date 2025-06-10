@@ -72,8 +72,14 @@ namespace HooverCanvassingApi.Controllers
                     .Select(g => new { Status = g.Key, Count = g.Count() })
                     .ToListAsync();
 
+                // Get all active users (volunteers, admins, superadmins) who have made contacts
                 var volunteerActivity = await _context.Volunteers
-                    .Where(v => v.Role == VolunteerRole.Volunteer && v.IsActive)
+                    .Where(v => v.IsActive)
+                    .Include(v => v.Contacts)
+                    .ToListAsync();
+
+                var volunteerActivityDto = volunteerActivity
+                    .Where(v => v.Contacts.Any()) // Only include users who have made contacts
                     .Select(v => new VolunteerActivityDto
                     {
                         VolunteerId = v.Id,
@@ -81,7 +87,8 @@ namespace HooverCanvassingApi.Controllers
                         ContactsToday = v.Contacts.Count(c => c.Timestamp.Date == DateTime.UtcNow.Date),
                         ContactsTotal = v.Contacts.Count()
                     })
-                    .ToListAsync();
+                    .OrderByDescending(v => v.ContactsTotal)
+                    .ToList();
 
                 var contactsByZip = await _context.Voters
                     .GroupBy(v => v.Zip)
@@ -105,7 +112,7 @@ namespace HooverCanvassingApi.Controllers
                         Refused = contactStatusBreakdown.FirstOrDefault(x => x.Status == ContactStatus.Refused) != null ? contactStatusBreakdown.FirstOrDefault(x => x.Status == ContactStatus.Refused).Count : 0,
                         NeedsFollowUp = contactStatusBreakdown.FirstOrDefault(x => x.Status == ContactStatus.NeedsFollowUp) != null ? contactStatusBreakdown.FirstOrDefault(x => x.Status == ContactStatus.NeedsFollowUp).Count : 0
                     },
-                    VolunteerActivity = volunteerActivity,
+                    VolunteerActivity = volunteerActivityDto,
                     ContactsByZip = contactsByZip
                 };
 
@@ -115,6 +122,91 @@ namespace HooverCanvassingApi.Controllers
             {
                 _logger.LogError(ex, "Error retrieving analytics");
                 return StatusCode(500, new { error = "Failed to retrieve analytics" });
+            }
+        }
+
+        [HttpGet("leaderboard")]
+        public async Task<ActionResult<LeaderboardResponse>> GetLeaderboard()
+        {
+            try
+            {
+                // Get this week's date range
+                var today = DateTime.UtcNow.Date;
+                var weekStart = today.AddDays(-(int)today.DayOfWeek);
+                var weekEnd = weekStart.AddDays(7);
+
+                // Get this month's date range
+                var monthStart = new DateTime(today.Year, today.Month, 1);
+                var monthEnd = monthStart.AddMonths(1);
+
+                // Get all active volunteers and their contacts
+                var volunteers = await _context.Volunteers
+                    .Where(v => v.IsActive)
+                    .Include(v => v.Contacts)
+                    .ToListAsync();
+
+                // Calculate weekly leaderboard in memory
+                var weeklyLeaderboard = volunteers
+                    .Select(v => new LeaderboardEntry
+                    {
+                        VolunteerId = v.Id,
+                        VolunteerName = $"{v.FirstName} {v.LastName}",
+                        ContactCount = v.Contacts.Count(c => c.Timestamp >= weekStart && c.Timestamp < weekEnd),
+                        IsCurrentUser = false // Admin view, so no current user highlighting
+                    })
+                    .Where(v => v.ContactCount > 0) // Only show users with contacts
+                    .OrderByDescending(v => v.ContactCount)
+                    .ThenBy(v => v.VolunteerName)
+                    .Take(10)
+                    .ToList();
+
+                // Calculate monthly leaderboard in memory
+                var monthlyLeaderboard = volunteers
+                    .Select(v => new LeaderboardEntry
+                    {
+                        VolunteerId = v.Id,
+                        VolunteerName = $"{v.FirstName} {v.LastName}",
+                        ContactCount = v.Contacts.Count(c => c.Timestamp >= monthStart && c.Timestamp < monthEnd),
+                        IsCurrentUser = false // Admin view, so no current user highlighting
+                    })
+                    .Where(v => v.ContactCount > 0) // Only show users with contacts
+                    .OrderByDescending(v => v.ContactCount)
+                    .ThenBy(v => v.VolunteerName)
+                    .Take(10)
+                    .ToList();
+
+                // Assign positions and badges
+                AssignPositionsAndBadges(weeklyLeaderboard);
+                AssignPositionsAndBadges(monthlyLeaderboard);
+
+                var response = new LeaderboardResponse
+                {
+                    WeeklyLeaderboard = weeklyLeaderboard,
+                    MonthlyLeaderboard = monthlyLeaderboard,
+                    CurrentUserAchievements = new List<Achievement>() // No achievements for admin view
+                };
+
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving admin leaderboard");
+                return StatusCode(500, new { error = "Failed to retrieve leaderboard" });
+            }
+        }
+
+        private void AssignPositionsAndBadges(List<LeaderboardEntry> leaderboard)
+        {
+            for (int i = 0; i < leaderboard.Count; i++)
+            {
+                leaderboard[i].Position = i + 1;
+                leaderboard[i].Badge = (i + 1) switch
+                {
+                    1 => "🥇",
+                    2 => "🥈", 
+                    3 => "🥉",
+                    _ => ""
+                };
             }
         }
 
@@ -540,5 +632,29 @@ namespace HooverCanvassingApi.Controllers
     public class ResetPasswordRequest
     {
         public string VolunteerId { get; set; } = string.Empty;
+    }
+
+    public class LeaderboardResponse
+    {
+        public List<LeaderboardEntry> WeeklyLeaderboard { get; set; } = new();
+        public List<LeaderboardEntry> MonthlyLeaderboard { get; set; } = new();
+        public List<Achievement> CurrentUserAchievements { get; set; } = new();
+    }
+
+    public class LeaderboardEntry
+    {
+        public string VolunteerId { get; set; } = string.Empty;
+        public string VolunteerName { get; set; } = string.Empty;
+        public int ContactCount { get; set; }
+        public int Position { get; set; }
+        public string Badge { get; set; } = string.Empty;
+        public bool IsCurrentUser { get; set; }
+    }
+
+    public class Achievement
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public string Icon { get; set; } = string.Empty;
     }
 }
