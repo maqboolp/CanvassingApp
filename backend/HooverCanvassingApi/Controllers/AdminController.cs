@@ -101,11 +101,14 @@ namespace HooverCanvassingApi.Controllers
                     .OrderBy(x => x.ZipCode)
                     .ToListAsync();
 
-                // Calculate login metrics (disabled temporarily until columns exist)
-                // TODO: Re-enable after ensuring LoginCount and LastLoginAt columns exist
-                var totalLogins = 0; // allVolunteers.Sum(v => v.LoginCount);
-                var activeUsersWeek = 0; // allVolunteers.Count(v => v.LastLoginAt >= weekAgo);
-                var activeUsersMonth = 0; // allVolunteers.Count(v => v.LastLoginAt >= monthAgo);
+                // Calculate login metrics
+                var allVolunteers = await _context.Volunteers.ToListAsync();
+                var weekAgo = DateTime.UtcNow.AddDays(-7);
+                var monthAgo = DateTime.UtcNow.AddDays(-30);
+                
+                var totalLogins = allVolunteers.Sum(v => v.LoginCount);
+                var activeUsersWeek = allVolunteers.Count(v => v.LastLoginAt >= weekAgo);
+                var activeUsersMonth = allVolunteers.Count(v => v.LastLoginAt >= monthAgo);
 
                 var analytics = new AnalyticsDto
                 {
@@ -236,8 +239,8 @@ namespace HooverCanvassingApi.Controllers
                         IsActive = v.IsActive,
                         CreatedAt = v.CreatedAt,
                         ContactCount = v.Contacts.Count(),
-                        LoginCount = 0, // v.LoginCount, // TODO: Re-enable after columns exist
-                        LastLoginAt = null // v.LastLoginAt // TODO: Re-enable after columns exist
+                        LoginCount = v.LoginCount,
+                        LastLoginAt = v.LastLoginAt
                     })
                     .OrderBy(v => v.LastName)
                     .ToListAsync();
