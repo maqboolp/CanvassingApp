@@ -621,6 +621,9 @@ namespace HooverCanvassingApi.Controllers
                     ? request.CustomPassword 
                     : GenerateTemporaryPassword();
                 
+                _logger.LogInformation("Resetting password for user {UserId}. Using custom password: {UsingCustom}, Password length: {Length}", 
+                    request.VolunteerId, !string.IsNullOrEmpty(request.CustomPassword), newPassword.Length);
+                
                 // Validate custom password if provided
                 if (!string.IsNullOrEmpty(request.CustomPassword))
                 {
@@ -639,6 +642,25 @@ namespace HooverCanvassingApi.Controllers
                         return BadRequest(new { error = "Password must contain at least one lowercase letter" });
                     }
                 }
+                
+                // For debugging - let's see what we're actually getting
+                _logger.LogInformation("Password validation passed. Password contains: digits={HasDigits}, lowercase={HasLower}, length={Length}", 
+                    newPassword.Any(char.IsDigit), 
+                    newPassword.Any(char.IsLower), 
+                    newPassword.Length);
+
+                // First validate the password using UserManager's validators
+                var passwordValidators = _userManager.PasswordValidators;
+                foreach (var validator in passwordValidators)
+                {
+                    var validationResult = await validator.ValidateAsync(_userManager, user, newPassword);
+                    if (!validationResult.Succeeded)
+                    {
+                        var errors = string.Join(", ", validationResult.Errors.Select(e => e.Description));
+                        _logger.LogError("Password validation failed before reset. Errors: {Errors}", errors);
+                        return BadRequest(new { error = $"Password validation failed: {errors}" });
+                    }
+                }
 
                 // Remove current password and set new one
                 var removePasswordResult = await _userManager.RemovePasswordAsync(user);
@@ -652,6 +674,8 @@ namespace HooverCanvassingApi.Controllers
                 if (!addPasswordResult.Succeeded)
                 {
                     var errors = string.Join(", ", addPasswordResult.Errors.Select(e => e.Description));
+                    _logger.LogError("Failed to set password. Errors: {Errors}. Password was: '{Password}' (length: {Length})", 
+                        errors, newPassword, newPassword.Length);
                     return BadRequest(new { error = $"Failed to set new password: {errors}" });
                 }
 
