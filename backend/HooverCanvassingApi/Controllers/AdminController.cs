@@ -743,9 +743,10 @@ namespace HooverCanvassingApi.Controllers
                     newPassword.Length,
                     request.CustomPassword ?? "null");
                 
-                // Validate custom password if provided
+                // Validate custom password if provided - using EXACT same rules as Program.cs
                 if (!string.IsNullOrEmpty(request.CustomPassword))
                 {
+                    // These must match exactly with Program.cs identity options
                     if (request.CustomPassword.Length < 6)
                     {
                         return BadRequest(new { error = "Password must be at least 6 characters long" });
@@ -753,13 +754,22 @@ namespace HooverCanvassingApi.Controllers
                     
                     if (!request.CustomPassword.Any(char.IsDigit))
                     {
-                        return BadRequest(new { error = "Password must contain at least one digit" });
+                        return BadRequest(new { error = "Passwords must have at least one digit ('0'-'9')" });
                     }
                     
                     if (!request.CustomPassword.Any(char.IsLower))
                     {
-                        return BadRequest(new { error = "Password must contain at least one lowercase letter" });
+                        return BadRequest(new { error = "Passwords must have at least one lowercase ('a'-'z')" });
                     }
+                    
+                    // Note: RequireUppercase = false, RequireNonAlphanumeric = false in Program.cs
+                    _logger.LogInformation("Custom password validation passed for user {UserId}. Password: digits={HasDigits}, lowercase={HasLower}, uppercase={HasUpper}, special={HasSpecial}, length={Length}", 
+                        request.VolunteerId, 
+                        request.CustomPassword.Any(char.IsDigit),
+                        request.CustomPassword.Any(char.IsLower), 
+                        request.CustomPassword.Any(char.IsUpper),
+                        request.CustomPassword.Any(c => !char.IsLetterOrDigit(c)),
+                        request.CustomPassword.Length);
                 }
                 
                 // For debugging - let's see what we're actually getting
@@ -798,6 +808,13 @@ namespace HooverCanvassingApi.Controllers
                         errors, newPassword, newPassword.Length);
                     return BadRequest(new { error = $"Failed to set new password: {errors}" });
                 }
+                
+                _logger.LogInformation("Password added successfully. Checking user state - PasswordHash null: {IsNull}, Hash length: {Length}", 
+                    user.PasswordHash == null, user.PasswordHash?.Length ?? 0);
+                
+                // Force save to ensure password is persisted
+                await _context.SaveChangesAsync();
+                _logger.LogInformation("Context saved after password reset");
 
                 // Verify the password was set correctly by testing login
                 var verifyResult = await _userManager.CheckPasswordAsync(user, newPassword);
@@ -806,6 +823,18 @@ namespace HooverCanvassingApi.Controllers
                 if (!verifyResult)
                 {
                     _logger.LogError("Password verification failed immediately after successful reset for user {UserId}", user.Id);
+                    
+                    // Try to check password hash directly for debugging
+                    var hasher = _userManager.PasswordHasher;
+                    var verifyHashResult = hasher.VerifyHashedPassword(user, user.PasswordHash, newPassword);
+                    _logger.LogError("Direct hash verification result: {Result} for user {UserId}", verifyHashResult, user.Id);
+                    
+                    // Reload user from database to ensure we have latest data
+                    var freshUser = await _userManager.FindByIdAsync(user.Id);
+                    var freshVerifyResult = await _userManager.CheckPasswordAsync(freshUser, newPassword);
+                    _logger.LogError("Fresh user password check: {Result}. PasswordHash null: {IsNull}, Hash length: {Length}", 
+                        freshVerifyResult, freshUser?.PasswordHash == null, freshUser?.PasswordHash?.Length ?? 0);
+                    
                     return BadRequest(new { error = "Password was set but verification failed. Please try again." });
                 }
 

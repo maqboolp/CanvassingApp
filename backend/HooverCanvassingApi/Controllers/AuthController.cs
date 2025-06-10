@@ -67,9 +67,21 @@ namespace HooverCanvassingApi.Controllers
                 _logger.LogInformation("User found for {Email}, checking password. User active: {IsActive}", 
                     request.Email, user.IsActive);
 
+                // Enhanced debugging for password validation
+                _logger.LogInformation("User found - PasswordHash null: {IsNull}, Hash length: {Length}, Email confirmed: {EmailConfirmed}, Lockout enabled: {LockoutEnabled}", 
+                    user.PasswordHash == null, user.PasswordHash?.Length ?? 0, user.EmailConfirmed, user.LockoutEnabled);
+                
                 // Try direct password check first
                 var directPasswordCheck = await _userManager.CheckPasswordAsync(user, request.Password);
                 _logger.LogInformation("Direct password check for {Email}: {Success}", request.Email, directPasswordCheck);
+                
+                // Also check password hash directly for debugging
+                if (!directPasswordCheck)
+                {
+                    var hasher = _userManager.PasswordHasher;
+                    var hashCheckResult = hasher.VerifyHashedPassword(user, user.PasswordHash, request.Password);
+                    _logger.LogWarning("Direct hash check result for {Email}: {Result}", request.Email, hashCheckResult);
+                }
 
                 var result = await _signInManager.CheckPasswordSignInAsync(user, request.Password, false);
                 _logger.LogInformation("SignInManager check for {Email}: Succeeded={Succeeded}, IsLockedOut={IsLockedOut}, IsNotAllowed={IsNotAllowed}, RequiresTwoFactor={RequiresTwoFactor}", 
