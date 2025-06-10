@@ -140,6 +140,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [contactModalOpen, setContactModalOpen] = useState(false);
   const [selectedVoterForContact, setSelectedVoterForContact] = useState<Voter | null>(null);
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
 
   useEffect(() => {
     if (currentTab === 0) {
@@ -561,35 +563,52 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
 
   const getCurrentLocation = () => {
     console.log('AdminDashboard: Getting current location for user role:', user.role);
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const coords = {
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude
-          };
-          console.log('AdminDashboard: Got location coordinates:', coords);
-          setLocation(coords);
-          findNearestVoter(coords);
-        },
-        (error) => {
-          console.log('AdminDashboard: Geolocation error details:', {
-            code: error.code,
-            message: error.message,
-            errorName: error.code === 1 ? 'PERMISSION_DENIED' : 
-                      error.code === 2 ? 'POSITION_UNAVAILABLE' : 
-                      error.code === 3 ? 'TIMEOUT' : 'UNKNOWN'
-          });
-        },
-        {
-          enableHighAccuracy: false,
-          timeout: 10000,
-          maximumAge: 300000 // 5 minutes
-        }
-      );
-    } else {
+    setLocationLoading(true);
+    setLocationError(null);
+    
+    if (!navigator.geolocation) {
+      setLocationError('Geolocation is not supported by this browser');
+      setLocationLoading(false);
       console.log('AdminDashboard: Geolocation not supported');
+      return;
     }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const coords = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude
+        };
+        console.log('AdminDashboard: Got location coordinates:', coords);
+        setLocation(coords);
+        setLocationLoading(false);
+        findNearestVoter(coords);
+      },
+      (error) => {
+        const errorMessages = {
+          1: 'Location access denied. Please enable location permissions in your browser.',
+          2: 'Location information unavailable. Please check your connection and try again.',
+          3: 'Location request timed out. Please try again.',
+        };
+        
+        const errorMessage = errorMessages[error.code as keyof typeof errorMessages] || 'Unknown location error occurred';
+        setLocationError(errorMessage);
+        setLocationLoading(false);
+        
+        console.log('AdminDashboard: Geolocation error details:', {
+          code: error.code,
+          message: error.message,
+          errorName: error.code === 1 ? 'PERMISSION_DENIED' : 
+                    error.code === 2 ? 'POSITION_UNAVAILABLE' : 
+                    error.code === 3 ? 'TIMEOUT' : 'UNKNOWN'
+        });
+      },
+      {
+        enableHighAccuracy: false,
+        timeout: 10000,
+        maximumAge: 300000 // 5 minutes
+      }
+    );
   };
 
   const findNearestVoter = async (coords: { latitude: number; longitude: number }) => {
@@ -866,21 +885,44 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
 
         {/* Location Enable Card - Only show in Voters tab */}
         {currentTab === 2 && !nearestVoter && !location && (
-          <Alert severity="warning" sx={{ mb: 3 }}>
+          <Alert severity={locationError ? "error" : "warning"} sx={{ mb: 3 }}>
             <Typography variant="subtitle2" gutterBottom>
               📍 Location needed for nearest voter
             </Typography>
             <Typography variant="body2" sx={{ mb: 2 }}>
-              To see your nearest uncontacted voter, we need your location.
+              {locationError || "To see your nearest uncontacted voter, we need your location."}
             </Typography>
-            <Button
-              variant="contained"
-              startIcon={<LocationOn />}
-              onClick={getCurrentLocation}
-              size="small"
-            >
-              Enable Location
-            </Button>
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+              <Button
+                variant="contained"
+                startIcon={locationLoading ? <CircularProgress size={20} color="inherit" /> : <LocationOn />}
+                onClick={getCurrentLocation}
+                size="small"
+                disabled={locationLoading}
+              >
+                {locationLoading ? "Getting Location..." : locationError ? "Try Again" : "Enable Location"}
+              </Button>
+              {locationError && (
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => {
+                    setLocationError(null);
+                    getCurrentLocation();
+                  }}
+                  disabled={locationLoading}
+                >
+                  Retry
+                </Button>
+              )}
+            </Box>
+            {locationError && (
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="body2" color="text.secondary">
+                  💡 Tip: Make sure to allow location permissions when your browser asks, and ensure you're using HTTPS or localhost.
+                </Typography>
+              </Box>
+            )}
           </Alert>
         )}
 
