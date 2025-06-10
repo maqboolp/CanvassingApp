@@ -354,10 +354,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             }} 
           />
           <Box sx={{ flexGrow: 1 }}>
-            <Typography variant="h6" component="div">
+            <Typography variant="h6" component="div" sx={{ color: 'white' }}>
               Canvassing Portal
             </Typography>
-            <Typography variant="body2" sx={{ opacity: 0.8 }}>
+            <Typography variant="body2" sx={{ opacity: 0.8, color: 'white' }}>
               Logged in as {user.firstName} {user.lastName} ({user.role.charAt(0).toUpperCase() + user.role.slice(1)})
             </Typography>
           </Box>

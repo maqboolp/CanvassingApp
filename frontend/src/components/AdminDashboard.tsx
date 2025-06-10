@@ -600,10 +600,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
             }} 
           />
           <Box sx={{ flexGrow: 1 }}>
-            <Typography variant="h6" component="div">
+            <Typography variant="h6" component="div" sx={{ color: 'white' }}>
               Admin Portal
             </Typography>
-            <Typography variant="body2" sx={{ opacity: 0.8 }}>
+            <Typography variant="body2" sx={{ opacity: 0.8, color: 'white' }}>
               Logged in as {user.firstName} {user.lastName} ({user.role === 'superadmin' ? 'Super Admin' : 'Admin'})
             </Typography>
           </Box>
