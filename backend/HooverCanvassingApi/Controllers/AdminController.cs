@@ -490,6 +490,111 @@ namespace HooverCanvassingApi.Controllers
             return csv.ToString();
         }
 
+        [HttpPost("fix-database-schema")]
+        [AllowAnonymous] // Temporary - remove after fixing schema
+        public async Task<IActionResult> FixDatabaseSchema()
+        {
+            try
+            {
+                _logger.LogInformation("Starting database schema fix for login tracking columns...");
+                
+                // Check if columns exist first
+                var checkSql = @"
+                    SELECT column_name 
+                    FROM information_schema.columns 
+                    WHERE table_name = 'AspNetUsers' 
+                    AND column_name IN ('LoginCount', 'LastLoginAt');";
+                
+                var existingColumns = new List<string>();
+                using (var command = _context.Database.GetDbConnection().CreateCommand())
+                {
+                    command.CommandText = checkSql;
+                    await _context.Database.OpenConnectionAsync();
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            existingColumns.Add(reader.GetString(0));
+                        }
+                    }
+                    await _context.Database.CloseConnectionAsync();
+                }
+                
+                _logger.LogInformation("Existing columns: {ExistingColumns}", string.Join(", ", existingColumns));
+                
+                var sqlCommands = new List<string>();
+                
+                if (!existingColumns.Contains("LoginCount"))
+                {
+                    sqlCommands.Add("ALTER TABLE \"AspNetUsers\" ADD COLUMN \"LoginCount\" integer NOT NULL DEFAULT 0;");
+                }
+                
+                if (!existingColumns.Contains("LastLoginAt"))
+                {
+                    sqlCommands.Add("ALTER TABLE \"AspNetUsers\" ADD COLUMN \"LastLoginAt\" timestamp with time zone NULL;");
+                }
+                
+                if (sqlCommands.Any())
+                {
+                    _logger.LogInformation("Executing SQL commands: {Commands}", string.Join("; ", sqlCommands));
+                    
+                    foreach (var sql in sqlCommands)
+                    {
+                        await _context.Database.ExecuteSqlRawAsync(sql);
+                        _logger.LogInformation("Executed: {SQL}", sql);
+                    }
+                }
+                else
+                {
+                    _logger.LogInformation("All required columns already exist");
+                }
+                
+                // Verify columns were added
+                var verifyColumns = new List<string>();
+                using (var command = _context.Database.GetDbConnection().CreateCommand())
+                {
+                    command.CommandText = checkSql;
+                    await _context.Database.OpenConnectionAsync();
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            verifyColumns.Add(reader.GetString(0));
+                        }
+                    }
+                    await _context.Database.CloseConnectionAsync();
+                }
+                
+                var hasLoginCount = verifyColumns.Contains("LoginCount");
+                var hasLastLoginAt = verifyColumns.Contains("LastLoginAt");
+                
+                _logger.LogInformation("After fix - LoginCount exists: {HasLoginCount}, LastLoginAt exists: {HasLastLoginAt}", 
+                    hasLoginCount, hasLastLoginAt);
+                
+                return Ok(new { 
+                    success = true, 
+                    message = "Database schema fix completed",
+                    data = new {
+                        commandsExecuted = sqlCommands.Count,
+                        hasLoginCount = hasLoginCount,
+                        hasLastLoginAt = hasLastLoginAt,
+                        existingColumnsBefore = existingColumns,
+                        existingColumnsAfter = verifyColumns
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fixing database schema");
+                return StatusCode(500, new { 
+                    success = false, 
+                    error = "Failed to fix database schema",
+                    message = ex.Message,
+                    details = ex.ToString()
+                });
+            }
+        }
+
         [HttpPost("initialize-database")]
         [AllowAnonymous] // Temporary - remove after initial setup
         public async Task<IActionResult> InitializeDatabase()
