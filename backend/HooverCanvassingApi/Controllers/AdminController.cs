@@ -791,51 +791,25 @@ namespace HooverCanvassingApi.Controllers
                     }
                 }
 
-                // Remove current password and set new one
-                var removePasswordResult = await _userManager.RemovePasswordAsync(user);
-                if (!removePasswordResult.Succeeded)
+                // Generate a reset token and use it to reset the password
+                var resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
+                var resetResult = await _userManager.ResetPasswordAsync(user, resetToken, newPassword);
+                
+                if (!resetResult.Succeeded)
                 {
-                    var errors = string.Join(", ", removePasswordResult.Errors.Select(e => e.Description));
-                    _logger.LogError("Failed to remove password for user {UserId}. Errors: {Errors}", user.Id, errors);
+                    var errors = string.Join(", ", resetResult.Errors.Select(e => e.Description));
+                    _logger.LogError("Failed to reset password for user {UserId}. Errors: {Errors}", user.Id, errors);
                     return BadRequest(new { error = $"Failed to reset password: {errors}" });
                 }
-
-                var addPasswordResult = await _userManager.AddPasswordAsync(user, newPassword);
-                if (!addPasswordResult.Succeeded)
-                {
-                    var errors = string.Join(", ", addPasswordResult.Errors.Select(e => e.Description));
-                    _logger.LogError("Failed to set password. Errors: {Errors}. Password was: '{Password}' (length: {Length})", 
-                        errors, newPassword, newPassword.Length);
-                    return BadRequest(new { error = $"Failed to set new password: {errors}" });
-                }
                 
-                _logger.LogInformation("Password added successfully. Checking user state - PasswordHash null: {IsNull}, Hash length: {Length}", 
-                    user.PasswordHash == null, user.PasswordHash?.Length ?? 0);
+                _logger.LogInformation("Password reset successfully for user {UserId}. Verifying new password...", user.Id);
                 
-                // Force save to ensure password is persisted
-                await _context.SaveChangesAsync();
-                _logger.LogInformation("Context saved after password reset");
-
-                // Verify the password was set correctly by testing login
+                // Verify the password was set correctly
                 var verifyResult = await _userManager.CheckPasswordAsync(user, newPassword);
-                _logger.LogInformation("Password verification after reset for user {UserId}: Success={Success}", user.Id, verifyResult);
-                
                 if (!verifyResult)
                 {
-                    _logger.LogError("Password verification failed immediately after successful reset for user {UserId}", user.Id);
-                    
-                    // Try to check password hash directly for debugging
-                    var hasher = _userManager.PasswordHasher;
-                    var verifyHashResult = hasher.VerifyHashedPassword(user, user.PasswordHash, newPassword);
-                    _logger.LogError("Direct hash verification result: {Result} for user {UserId}", verifyHashResult, user.Id);
-                    
-                    // Reload user from database to ensure we have latest data
-                    var freshUser = await _userManager.FindByIdAsync(user.Id);
-                    var freshVerifyResult = await _userManager.CheckPasswordAsync(freshUser, newPassword);
-                    _logger.LogError("Fresh user password check: {Result}. PasswordHash null: {IsNull}, Hash length: {Length}", 
-                        freshVerifyResult, freshUser?.PasswordHash == null, freshUser?.PasswordHash?.Length ?? 0);
-                    
-                    return BadRequest(new { error = "Password was set but verification failed. Please try again." });
+                    _logger.LogError("Password verification failed after reset for user {UserId}", user.Id);
+                    return BadRequest(new { error = "Password was reset but verification failed. Please try again." });
                 }
 
                 _logger.LogInformation("Password reset successfully for user {Email} ({Role}) by SuperAdmin {AdminId}", 
