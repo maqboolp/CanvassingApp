@@ -822,7 +822,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
         </Tabs>
       </Box>
 
-      <Container maxWidth="lg" sx={{ mt: 3, mb: 3 }}>
+      <Container 
+        maxWidth={false} 
+        sx={{ 
+          mt: 3, 
+          mb: 3,
+          px: { xs: 1, sm: 2, md: 3 }, // Responsive padding: 8px on mobile, 16px on tablet, 24px on desktop
+          maxWidth: { xs: '100%', lg: '1200px' }, // Full width on mobile, max width on desktop
+          mx: 'auto' // Center the container
+        }}
+      >
         {/* Result Alert */}
         {importResult && (
           <Alert 

@@ -57,6 +57,7 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
   });
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [useLocation, setUseLocation] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 600);
 
   const [filterInputs, setFilterInputs] = useState({
     zipCode: '',
@@ -69,6 +70,15 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
   useEffect(() => {
     fetchVoters();
   }, [page, rowsPerPage, filters, useLocation, location]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 600);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const openInMaps = (voter: Voter) => {
     const address = `${voter.addressLine}, ${voter.city}, ${voter.state} ${voter.zip}`;
@@ -266,8 +276,8 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
   return (
     <Paper sx={{ width: '100%', overflow: 'hidden' }}>
       {/* Filter Controls */}
-      <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-        <Typography variant="h6" gutterBottom>
+      <Box sx={{ p: { xs: 1, sm: 2 }, borderBottom: 1, borderColor: 'divider' }}>
+        <Typography variant="h6" gutterBottom sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
           Voter List ({total} voters)
           {useLocation && (
             <Chip 
@@ -275,18 +285,18 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
               label="Within 5km" 
               color="success" 
               size="small" 
-              sx={{ ml: 2 }} 
+              sx={{ ml: { xs: 1, sm: 2 } }} 
             />
           )}
         </Typography>
         
-        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+        <Box sx={{ display: 'flex', gap: { xs: 1, sm: 2 }, flexWrap: 'wrap', alignItems: 'center' }}>
           <TextField
             size="small"
             label="Search Name"
             value={filterInputs.searchName}
             onChange={(e) => handleFilterChange('searchName', e.target.value)}
-            sx={{ minWidth: 160 }}
+            sx={{ minWidth: { xs: 120, sm: 160 }, flex: { xs: '1 1 auto', sm: 'none' } }}
             placeholder="First or Last Name"
           />
           
@@ -295,10 +305,10 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
             label="ZIP Code"
             value={filterInputs.zipCode}
             onChange={(e) => handleFilterChange('zipCode', e.target.value)}
-            sx={{ minWidth: 120 }}
+            sx={{ minWidth: { xs: 80, sm: 120 }, flex: { xs: '0 1 auto', sm: 'none' } }}
           />
           
-          <FormControl size="small" sx={{ minWidth: 140 }}>
+          <FormControl size="small" sx={{ minWidth: { xs: 100, sm: 140 }, flex: { xs: '1 1 auto', sm: 'none' } }}>
             <InputLabel>Contact Status</InputLabel>
             <Select
               value={filterInputs.contactStatus}
@@ -315,6 +325,8 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
             variant="contained"
             startIcon={<FilterList />}
             onClick={applyFilters}
+            size={isMobile ? "small" : "medium"}
+            sx={{ minWidth: { xs: 'auto', sm: 'auto' } }}
           >
             Apply
           </Button>
@@ -323,6 +335,8 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
             variant="outlined"
             startIcon={<Clear />}
             onClick={clearFilters}
+            size={isMobile ? "small" : "medium"}
+            sx={{ minWidth: { xs: 'auto', sm: 'auto' } }}
           >
             Clear
           </Button>
@@ -332,8 +346,13 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
             startIcon={<LocationOn />}
             onClick={useLocation ? () => { setUseLocation(false); setLocation(null); } : getCurrentLocation}
             color={useLocation ? "success" : "primary"}
+            size={isMobile ? "small" : "medium"}
+            sx={{ minWidth: { xs: 'auto', sm: 'auto' } }}
           >
-            {useLocation ? "Turn Off Location" : "Find Nearby"}
+            {isMobile 
+              ? (useLocation ? "Off" : "Near") 
+              : (useLocation ? "Turn Off Location" : "Find Nearby")
+            }
           </Button>
           
           {filters.sortBy === 'zip' && !useLocation && (
@@ -355,29 +374,29 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
 
       {/* Voter Table */}
       <TableContainer sx={{ maxHeight: 600 }}>
-        <Table stickyHeader>
+        <Table stickyHeader size={isMobile ? "small" : "medium"}>
           <TableHead>
             <TableRow>
               <TableCell>Name</TableCell>
               <TableCell>Address</TableCell>
-              <TableCell>Distance</TableCell>
-              <TableCell>Age</TableCell>
-              <TableCell>Vote Frequency</TableCell>
-              <TableCell>Contact Status</TableCell>
-              <TableCell>Contact Info</TableCell>
+              {!isMobile && <TableCell>Distance</TableCell>}
+              {!isMobile && <TableCell>Age</TableCell>}
+              {!isMobile && <TableCell>Vote Frequency</TableCell>}
+              <TableCell>Status</TableCell>
+              {!isMobile && <TableCell>Contact Info</TableCell>}
               <TableCell>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={8} sx={{ textAlign: 'center', py: 4 }}>
+                <TableCell colSpan={isMobile ? 4 : 8} sx={{ textAlign: 'center', py: 4 }}>
                   <CircularProgress />
                 </TableCell>
               </TableRow>
             ) : voters.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} sx={{ textAlign: 'center', py: 4 }}>
+                <TableCell colSpan={isMobile ? 4 : 8} sx={{ textAlign: 'center', py: 4 }}>
                   No voters found
                 </TableCell>
               </TableRow>
@@ -391,13 +410,25 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <Person fontSize="small" color="action" />
                       <Box>
-                        <Typography variant="body2" fontWeight="medium">
+                        <Typography variant="body2" fontWeight="medium" sx={{ fontSize: isMobile ? '0.875rem' : 'inherit' }}>
                           {voter.firstName} {voter.lastName}
                         </Typography>
-                        {voter.middleName && (
+                        {voter.middleName && !isMobile && (
                           <Typography variant="caption" color="text.secondary">
                             {voter.middleName}
                           </Typography>
+                        )}
+                        {isMobile && (
+                          <>
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                              Age {voter.age} • {voter.gender}
+                            </Typography>
+                            {voter.cellPhone && (
+                              <Typography variant="caption" color="primary" sx={{ display: 'block' }}>
+                                📞 {voter.cellPhone}
+                              </Typography>
+                            )}
+                          </>
                         )}
                       </Box>
                     </Box>
@@ -422,44 +453,55 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
                     >
                       <LocationOn fontSize="small" color="primary" />
                       <Box>
-                        <Typography variant="body2" color="primary" sx={{ fontWeight: 'medium' }}>
+                        <Typography variant="body2" color="primary" sx={{ fontWeight: 'medium', fontSize: isMobile ? '0.8rem' : 'inherit' }}>
                           {voter.addressLine}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
                           {voter.city}, {voter.state} {voter.zip}
                         </Typography>
+                        {isMobile && voter.distanceKm && (
+                          <Typography variant="caption" color="primary" sx={{ display: 'block', fontWeight: 'medium' }}>
+                            📍 {voter.distanceKm.toFixed(2)} km
+                          </Typography>
+                        )}
                       </Box>
                     </Box>
                   </TableCell>
                   
-                  <TableCell>
-                    {voter.distanceKm ? (
-                      <Typography variant="body2" color="primary" sx={{ fontWeight: 'medium' }}>
-                        📍 {voter.distanceKm.toFixed(2)} km
+                  {!isMobile && (
+                    <TableCell>
+                      {voter.distanceKm ? (
+                        <Typography variant="body2" color="primary" sx={{ fontWeight: 'medium' }}>
+                          📍 {voter.distanceKm.toFixed(2)} km
+                        </Typography>
+                      ) : (
+                        <Typography variant="caption" color="text.secondary">
+                          -
+                        </Typography>
+                      )}
+                    </TableCell>
+                  )}
+                  
+                  {!isMobile && (
+                    <TableCell>
+                      <Typography variant="body2">
+                        {voter.age}
                       </Typography>
-                    ) : (
                       <Typography variant="caption" color="text.secondary">
-                        -
+                        {voter.gender}
                       </Typography>
-                    )}
-                  </TableCell>
+                    </TableCell>
+                  )}
                   
-                  <TableCell>
-                    <Typography variant="body2">
-                      {voter.age}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {voter.gender}
-                    </Typography>
-                  </TableCell>
-                  
-                  <TableCell>
-                    <Chip
-                      label={formatVoteFrequency(voter.voteFrequency)}
-                      size="small"
-                      variant="outlined"
-                    />
-                  </TableCell>
+                  {!isMobile && (
+                    <TableCell>
+                      <Chip
+                        label={formatVoteFrequency(voter.voteFrequency)}
+                        size="small"
+                        variant="outlined"
+                      />
+                    </TableCell>
+                  )}
                   
                   <TableCell>
                     {voter.isContacted ? (
@@ -470,43 +512,46 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
                       />
                     ) : (
                       <Chip
-                        label="Not Contacted"
+                        label={isMobile ? "Not Called" : "Not Contacted"}
                         size="small"
                         variant="outlined"
                       />
                     )}
                   </TableCell>
                   
-                  <TableCell>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                      {voter.cellPhone && (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                          <Phone fontSize="small" color="action" />
-                          <Typography variant="caption">
-                            {voter.cellPhone}
-                          </Typography>
-                        </Box>
-                      )}
-                      {voter.email && (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                          <Email fontSize="small" color="action" />
-                          <Typography variant="caption">
-                            {voter.email}
-                          </Typography>
-                        </Box>
-                      )}
-                    </Box>
-                  </TableCell>
+                  {!isMobile && (
+                    <TableCell>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                        {voter.cellPhone && (
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <Phone fontSize="small" color="action" />
+                            <Typography variant="caption">
+                              {voter.cellPhone}
+                            </Typography>
+                          </Box>
+                        )}
+                        {voter.email && (
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <Email fontSize="small" color="action" />
+                            <Typography variant="caption">
+                              {voter.email}
+                            </Typography>
+                          </Box>
+                        )}
+                      </Box>
+                    </TableCell>
+                  )}
                   
                   <TableCell>
                     <Button
                       variant="contained"
                       size="small"
-                      startIcon={<ContactPhone />}
+                      startIcon={isMobile ? undefined : <ContactPhone />}
                       onClick={() => handleContactClick(voter)}
                       disabled={loading}
+                      sx={{ minWidth: isMobile ? '60px' : 'auto' }}
                     >
-                      Contact
+                      {isMobile ? "Call" : "Contact"}
                     </Button>
                   </TableCell>
                 </TableRow>
