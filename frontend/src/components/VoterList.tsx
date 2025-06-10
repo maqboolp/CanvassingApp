@@ -30,7 +30,6 @@ import {
   LocationOn,
   FilterList,
   Clear,
-  Person,
   Phone,
   Email
 } from '@mui/icons-material';
@@ -408,7 +407,6 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
                 >
                   <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Person fontSize="small" color="action" />
                       <Box>
                         <Typography variant="body2" fontWeight="medium" sx={{ fontSize: isMobile ? '0.875rem' : 'inherit' }}>
                           {voter.firstName} {voter.lastName}
