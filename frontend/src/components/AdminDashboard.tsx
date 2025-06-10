@@ -121,6 +121,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
   const [selectedVolunteer, setSelectedVolunteer] = useState<any>(null);
   const [resetPasswordResult, setResetPasswordResult] = useState<any>(null);
   const [resetPasswordLoading, setResetPasswordLoading] = useState(false);
+  const [useCustomPassword, setUseCustomPassword] = useState(false);
+  const [customPassword, setCustomPassword] = useState('');
   const [geocodingResult, setGeocodingResult] = useState<any>(null);
   const [changePasswordDialog, setChangePasswordDialog] = useState(false);
   const [leaderboard, setLeaderboard] = useState<any>(null);
@@ -454,10 +456,21 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
     setSelectedVolunteer(volunteer);
     setResetPasswordDialog(true);
     setResetPasswordResult(null);
+    setUseCustomPassword(false);
+    setCustomPassword('');
   };
 
   const confirmResetPassword = async () => {
     if (!selectedVolunteer) return;
+
+    // Validate custom password if using one
+    if (useCustomPassword && customPassword.length < 6) {
+      setResetPasswordResult({
+        success: false,
+        error: 'Password must be at least 6 characters long'
+      });
+      return;
+    }
 
     setResetPasswordLoading(true);
     setResetPasswordResult(null);
@@ -470,7 +483,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
           'Authorization': `Bearer ${user.token}`
         },
         body: JSON.stringify({
-          volunteerId: selectedVolunteer.id
+          volunteerId: selectedVolunteer.id,
+          customPassword: useCustomPassword ? customPassword : null
         })
       });
 
@@ -1795,7 +1809,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
 
       {/* Reset Password Dialog */}
       <Dialog open={resetPasswordDialog} onClose={() => !resetPasswordLoading && setResetPasswordDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Reset Volunteer Password</DialogTitle>
+        <DialogTitle>Reset User Password</DialogTitle>
         <DialogContent>
           {selectedVolunteer && (
             <>
@@ -1810,9 +1824,42 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
               </Typography>
               
               {!resetPasswordResult && (
-                <Alert severity="warning" sx={{ mb: 2 }}>
-                  A new temporary password will be generated. Please share this password securely with the volunteer.
-                </Alert>
+                <>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={useCustomPassword}
+                        onChange={(e) => {
+                          setUseCustomPassword(e.target.checked);
+                          setCustomPassword('');
+                        }}
+                        disabled={resetPasswordLoading}
+                      />
+                    }
+                    label="Set a specific password"
+                    sx={{ mb: 2 }}
+                  />
+                  
+                  {useCustomPassword ? (
+                    <TextField
+                      label="New Password"
+                      type="password"
+                      fullWidth
+                      margin="normal"
+                      value={customPassword}
+                      onChange={(e) => setCustomPassword(e.target.value)}
+                      disabled={resetPasswordLoading}
+                      required
+                      error={customPassword.length > 0 && customPassword.length < 6}
+                      helperText={customPassword.length > 0 && customPassword.length < 6 ? "Password must be at least 6 characters" : "Enter the new password for this user"}
+                      sx={{ mb: 2 }}
+                    />
+                  ) : (
+                    <Alert severity="warning" sx={{ mb: 2 }}>
+                      A new temporary password will be generated. Please share this password securely with the user.
+                    </Alert>
+                  )}
+                </>
               )}
 
               {resetPasswordResult && resetPasswordResult.success && (
@@ -1821,7 +1868,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                     Password reset successful!
                   </Typography>
                   <Typography variant="body2" sx={{ mb: 1 }}>
-                    <strong>Temporary Password:</strong> 
+                    <strong>{useCustomPassword ? 'New Password:' : 'Temporary Password:'}</strong> 
                     <Box component="code" sx={{ 
                       bgcolor: 'background.paper', 
                       p: 1, 
@@ -1831,12 +1878,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                       fontSize: '1.1em',
                       fontWeight: 'bold'
                     }}>
-                      {resetPasswordResult.temporaryPassword}
+                      {useCustomPassword ? customPassword : resetPasswordResult.temporaryPassword}
                     </Box>
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Please share this password securely with {selectedVolunteer.firstName}. 
-                    They should change it immediately after logging in.
+                    {useCustomPassword 
+                      ? `The password has been set as specified for ${selectedVolunteer.firstName}.`
+                      : `Please share this password securely with ${selectedVolunteer.firstName}. They should change it immediately after logging in.`}
                   </Typography>
                 </Alert>
               )}

@@ -616,8 +616,16 @@ namespace HooverCanvassingApi.Controllers
                     return BadRequest(new { error = "Cannot reset your own password using this method" });
                 }
 
-                // Generate a new temporary password
-                var newPassword = GenerateTemporaryPassword();
+                // Use custom password if provided, otherwise generate a temporary one
+                var newPassword = !string.IsNullOrEmpty(request.CustomPassword) 
+                    ? request.CustomPassword 
+                    : GenerateTemporaryPassword();
+                
+                // Validate custom password if provided
+                if (!string.IsNullOrEmpty(request.CustomPassword) && request.CustomPassword.Length < 6)
+                {
+                    return BadRequest(new { error = "Password must be at least 6 characters long" });
+                }
 
                 // Remove current password and set new one
                 var removePasswordResult = await _userManager.RemovePasswordAsync(user);
@@ -724,6 +732,7 @@ namespace HooverCanvassingApi.Controllers
     public class ResetPasswordRequest
     {
         public string VolunteerId { get; set; } = string.Empty;
+        public string? CustomPassword { get; set; }
     }
 
     public class ChangeRoleRequest
