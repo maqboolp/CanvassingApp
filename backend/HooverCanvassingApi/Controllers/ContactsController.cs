@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using HooverCanvassingApi.Data;
 using HooverCanvassingApi.Models;
+using HooverCanvassingApi.Services;
+using Microsoft.AspNetCore.Identity;
 using System.Security.Claims;
 
 namespace HooverCanvassingApi.Controllers
@@ -14,11 +16,15 @@ namespace HooverCanvassingApi.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<ContactsController> _logger;
+        private readonly IEmailService _emailService;
+        private readonly UserManager<Volunteer> _userManager;
 
-        public ContactsController(ApplicationDbContext context, ILogger<ContactsController> logger)
+        public ContactsController(ApplicationDbContext context, ILogger<ContactsController> logger, IEmailService emailService, UserManager<Volunteer> userManager)
         {
             _context = context;
             _logger = logger;
+            _emailService = emailService;
+            _userManager = userManager;
         }
 
         [HttpPost]
@@ -83,6 +89,9 @@ namespace HooverCanvassingApi.Controllers
                 }
 
                 await _context.SaveChangesAsync();
+
+                // Send notification emails to all super admins
+                await SendContactNotificationToSuperAdmins(contact, voter, currentUserId);
 
                 var contactDto = new ContactDto
                 {
@@ -311,6 +320,70 @@ namespace HooverCanvassingApi.Controllers
             {
                 _logger.LogError(ex, "Error updating contact {ContactId}", id);
                 return StatusCode(500, new { error = "Failed to update contact" });
+            }
+        }
+
+        private async Task SendContactNotificationToSuperAdmins(Contact contact, Voter voter, string volunteerId)
+        {
+            try
+            {
+                // Get all super admins
+                var superAdmins = await _userManager.GetUsersInRoleAsync("SuperAdmin");
+                
+                if (!superAdmins.Any())
+                {
+                    _logger.LogWarning("No super admins found to notify about contact {ContactId}", contact.Id);
+                    return;
+                }
+
+                // Get volunteer details
+                var volunteer = await _userManager.FindByIdAsync(volunteerId);
+                if (volunteer == null)
+                {
+                    _logger.LogError("Volunteer {VolunteerId} not found for contact notification", volunteerId);
+                    return;
+                }
+
+                // Prepare notification data
+                var voterAddress = $"{voter.AddressLine}, {voter.City}, {voter.State} {voter.Zip}";
+                var location = contact.LocationLatitude.HasValue && contact.LocationLongitude.HasValue 
+                    ? $"{contact.LocationLatitude:F6}, {contact.LocationLongitude:F6}"
+                    : null;
+
+                var notificationData = new ContactNotificationData
+                {
+                    VolunteerName = $"{volunteer.FirstName} {volunteer.LastName}",
+                    VolunteerEmail = volunteer.Email!,
+                    VoterName = $"{voter.FirstName} {voter.LastName}",
+                    VoterAddress = voterAddress,
+                    ContactStatus = contact.Status.ToString(),
+                    VoterSupport = contact.VoterSupport?.ToString(),
+                    Notes = contact.Notes,
+                    ContactTime = contact.Timestamp,
+                    Location = location
+                };
+
+                // Send notifications to all super admins
+                var notificationTasks = superAdmins.Select(admin => 
+                    _emailService.SendContactNotificationEmailAsync(admin.Email!, notificationData)
+                ).ToArray();
+
+                var results = await Task.WhenAll(notificationTasks);
+                var successCount = results.Count(r => r);
+                var failureCount = results.Length - successCount;
+
+                _logger.LogInformation("Contact notification sent: {SuccessCount} succeeded, {FailureCount} failed for contact {ContactId}", 
+                    successCount, failureCount, contact.Id);
+
+                if (failureCount > 0)
+                {
+                    _logger.LogWarning("Some contact notification emails failed for contact {ContactId}", contact.Id);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send contact notifications for contact {ContactId}", contact.Id);
+                // Don't throw - we don't want notification failures to break contact creation
             }
         }
     }
