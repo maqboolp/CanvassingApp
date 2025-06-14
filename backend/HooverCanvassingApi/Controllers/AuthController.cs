@@ -577,10 +577,13 @@ namespace HooverCanvassingApi.Controllers
                     var resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
                     var configUrl = _configuration["Frontend:BaseUrl"];
                     var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
-                    var frontendUrl = configUrl ?? 
-                                     (environment == "Production" 
-                                         ? "https://t4h-canvas-2uwxt.ondigitalocean.app" 
-                                         : "http://localhost:3000");
+                    
+                    // Temporary fix: force production URL if we're not in development
+                    var frontendUrl = configUrl;
+                    if (string.IsNullOrEmpty(frontendUrl) || frontendUrl.Contains("localhost"))
+                    {
+                        frontendUrl = "https://t4h-canvas-2uwxt.ondigitalocean.app";
+                    }
                     
                     _logger.LogInformation("Frontend URL config: {ConfigUrl}, Environment: {Environment}, Final URL: {FrontendUrl}", 
                         configUrl, environment, frontendUrl);
