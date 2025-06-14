@@ -19,13 +19,15 @@ namespace HooverCanvassingApi.Controllers
         private readonly VoterImportService _importService;
         private readonly ILogger<AdminController> _logger;
         private readonly UserManager<Volunteer> _userManager;
+        private readonly IEmailService _emailService;
 
-        public AdminController(ApplicationDbContext context, VoterImportService importService, ILogger<AdminController> logger, UserManager<Volunteer> userManager)
+        public AdminController(ApplicationDbContext context, VoterImportService importService, ILogger<AdminController> logger, UserManager<Volunteer> userManager, IEmailService emailService)
         {
             _context = context;
             _importService = importService;
             _logger = logger;
             _userManager = userManager;
+            _emailService = emailService;
         }
 
         [HttpPost("import-voters")]
@@ -865,6 +867,192 @@ namespace HooverCanvassingApi.Controllers
             // Shuffle the password
             return new string(password.OrderBy(x => random.Next()).ToArray());
         }
+
+        [HttpPost("send-engagement-email")]
+        [Authorize(Roles = "Admin,SuperAdmin")]
+        public async Task<ActionResult> SendEngagementEmail([FromBody] EngagementEmailRequest request)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(request.Subject) || string.IsNullOrEmpty(request.Content))
+                {
+                    return BadRequest(new { error = "Subject and content are required" });
+                }
+
+                // Get recipients based on type
+                List<Volunteer> recipients = new();
+                
+                switch (request.RecipientType.ToLower())
+                {
+                    case "selected":
+                        if (request.SelectedUserIds.Count == 0)
+                        {
+                            return BadRequest(new { error = "No users selected" });
+                        }
+                        recipients = await _context.Volunteers
+                            .Where(v => request.SelectedUserIds.Contains(v.Id) && v.IsActive)
+                            .ToListAsync();
+                        break;
+                        
+                    case "all":
+                        recipients = await _context.Volunteers
+                            .Where(v => v.IsActive)
+                            .ToListAsync();
+                        break;
+                        
+                    case "volunteers":
+                        recipients = await _context.Volunteers
+                            .Where(v => v.IsActive && v.Role == VolunteerRole.Volunteer)
+                            .ToListAsync();
+                        break;
+                        
+                    case "admins":
+                        recipients = await _context.Volunteers
+                            .Where(v => v.IsActive && (v.Role == VolunteerRole.Admin || v.Role == VolunteerRole.SuperAdmin))
+                            .ToListAsync();
+                        break;
+                        
+                    default:
+                        return BadRequest(new { error = "Invalid recipient type" });
+                }
+
+                if (recipients.Count == 0)
+                {
+                    return BadRequest(new { error = "No active recipients found" });
+                }
+
+                // Get current user info for the email
+                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var currentUser = await _userManager.FindByIdAsync(currentUserId!);
+                
+                var senderName = currentUser != null ? $"{currentUser.FirstName} {currentUser.LastName}" : "Campaign Team";
+
+                // Create HTML content with campaign branding
+                var htmlContent = GenerateEngagementEmailHtml(request.Subject, request.Content, senderName);
+                var textContent = GenerateEngagementEmailText(request.Content, senderName);
+
+                // Send emails to all recipients
+                int successCount = 0;
+                var failedEmails = new List<string>();
+
+                foreach (var recipient in recipients)
+                {
+                    try
+                    {
+                        var personalizedHtml = htmlContent.Replace("{RecipientName}", recipient.FirstName);
+                        var personalizedText = textContent.Replace("{RecipientName}", recipient.FirstName);
+                        
+                        // Use the existing email service
+                        var emailSent = await _emailService.SendEmailAsync(
+                            recipient.Email!,
+                            request.Subject,
+                            personalizedHtml,
+                            personalizedText
+                        );
+
+                        if (emailSent)
+                        {
+                            successCount++;
+                        }
+                        else
+                        {
+                            failedEmails.Add(recipient.Email!);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to send engagement email to {Email}", recipient.Email);
+                        failedEmails.Add(recipient.Email!);
+                    }
+                }
+
+                _logger.LogInformation("Engagement email sent by {SenderName} ({SenderEmail}) to {SuccessCount}/{TotalCount} recipients. Subject: {Subject}",
+                    senderName, currentUser?.Email, successCount, recipients.Count, request.Subject);
+
+                var response = new
+                {
+                    recipientCount = successCount,
+                    totalAttempted = recipients.Count,
+                    failedCount = failedEmails.Count,
+                    message = failedEmails.Count > 0 
+                        ? $"Email sent to {successCount} recipients. {failedEmails.Count} failed."
+                        : $"Email sent successfully to all {successCount} recipients."
+                };
+
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending engagement email");
+                return StatusCode(500, new { error = "Failed to send engagement email" });
+            }
+        }
+
+        private string GenerateEngagementEmailHtml(string subject, string content, string senderName)
+        {
+            return $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {{ font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f5f5f5; }}
+        .container {{ max-width: 600px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+        .header {{ text-align: center; margin-bottom: 30px; }}
+        .content {{ line-height: 1.6; color: #333; }}
+        .footer {{ margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #666; text-align: center; }}
+        .greeting {{ font-weight: bold; margin-bottom: 15px; }}
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='header'>
+            <h1 style='color: #673ab7; margin: 0;'>Tanveer for Hoover Campaign</h1>
+            <p style='color: #666; margin: 5px 0 0 0;'>Campaign Update</p>
+        </div>
+        
+        <div class='content'>
+            <div class='greeting'>Hello {{RecipientName}},</div>
+            
+            <div style='white-space: pre-wrap;'>{content}</div>
+            
+            <p style='margin-top: 30px;'>Best regards,<br>
+            {senderName}<br>
+            Tanveer for Hoover Campaign Team</p>
+        </div>
+        
+        <div class='footer'>
+            <p>Tanveer Patel for Hoover City Council<br>
+            August 26, 2025 Election<br>
+            Paid for by Tanveer for Hoover</p>
+            
+            <p>This is an automated message from the campaign management system.</p>
+        </div>
+    </div>
+</body>
+</html>";
+        }
+
+        private string GenerateEngagementEmailText(string content, string senderName)
+        {
+            return $@"
+Tanveer for Hoover Campaign - Campaign Update
+
+Hello {{RecipientName}},
+
+{content}
+
+Best regards,
+{senderName}
+Tanveer for Hoover Campaign Team
+
+---
+Tanveer Patel for Hoover City Council
+August 26, 2025 Election
+Paid for by Tanveer for Hoover
+
+This is an automated message from the campaign management system.
+";
+        }
     }
 
     public class VolunteerDto
@@ -932,6 +1120,14 @@ namespace HooverCanvassingApi.Controllers
     {
         public string UserId { get; set; } = string.Empty;
         public VolunteerRole NewRole { get; set; }
+    }
+
+    public class EngagementEmailRequest
+    {
+        public string Subject { get; set; } = string.Empty;
+        public string Content { get; set; } = string.Empty;
+        public string RecipientType { get; set; } = string.Empty; // "selected", "all", "volunteers", "admins"
+        public List<string> SelectedUserIds { get; set; } = new();
     }
 
     public class LeaderboardResponse

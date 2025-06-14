@@ -62,7 +62,8 @@ import {
   OpenInNew,
   MenuBook,
   Visibility,
-  VisibilityOff
+  VisibilityOff,
+  Email
 } from '@mui/icons-material';
 import { AuthUser, Voter, ContactStatus, VoterSupport } from '../types';
 import VoterList from './VoterList';
@@ -160,6 +161,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [resourcesDialog, setResourcesDialog] = useState(false);
+  
+  // Engagement tab state
+  const [emailSubject, setEmailSubject] = useState('');
+  const [emailContent, setEmailContent] = useState('');
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [recipientType, setRecipientType] = useState('selected'); // 'selected' or 'all'
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailResult, setEmailResult] = useState<any>(null);
 
   useEffect(() => {
     if (currentTab === 0) {
@@ -167,7 +176,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
       fetchLeaderboard();
     } else if (currentTab === 1) {
       fetchVolunteers();
-    } else if (currentTab === 4 && user.role === 'superadmin') {
+    } else if (currentTab === 4) {
+      // Engagement tab - fetch volunteers for recipient selection
+      fetchVolunteers();
+    } else if (currentTab === 5 && user.role === 'superadmin') {
       fetchGeocodingStatus();
     }
   }, [currentTab, user.role]);
@@ -765,6 +777,75 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
     }
   };
 
+  const handleSendEngagementEmail = async () => {
+    if (!emailSubject.trim() || !emailContent.trim()) {
+      setEmailResult({ error: 'Subject and content are required' });
+      return;
+    }
+
+    if (recipientType === 'selected' && selectedUsers.length === 0) {
+      setEmailResult({ error: 'Please select at least one recipient' });
+      return;
+    }
+
+    setEmailSending(true);
+    setEmailResult(null);
+
+    try {
+      const requestBody = {
+        subject: emailSubject,
+        content: emailContent,
+        recipientType,
+        selectedUserIds: recipientType === 'selected' ? selectedUsers : []
+      };
+
+      const response = await fetch(`${API_BASE_URL}/api/admin/send-engagement-email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.token}`
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setEmailResult({ 
+          success: `Email sent successfully to ${result.recipientCount} recipient(s)` 
+        });
+        // Clear form on success
+        setEmailSubject('');
+        setEmailContent('');
+        setSelectedUsers([]);
+      } else {
+        const error = await response.json();
+        setEmailResult({ error: error.error || 'Failed to send email' });
+      }
+    } catch (error) {
+      setEmailResult({ error: 'Failed to send email: ' + (error as Error).message });
+    } finally {
+      setEmailSending(false);
+    }
+  };
+
+  const handleUserSelection = (userId: string) => {
+    setSelectedUsers(prev => {
+      if (prev.includes(userId)) {
+        return prev.filter(id => id !== userId);
+      } else {
+        return [...prev, userId];
+      }
+    });
+  };
+
+  const handleSelectAllUsers = () => {
+    if (selectedUsers.length === volunteers.length) {
+      setSelectedUsers([]);
+    } else {
+      setSelectedUsers(volunteers.map(v => v.id));
+    }
+  };
+
   return (
     <Box sx={{ flexGrow: 1 }}>
       {/* App Bar */}
@@ -846,6 +927,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
           <Tab label="Users" icon={<People />} />
           <Tab label="Voters" icon={<HowToVote />} />
           <Tab label="Contact History" icon={<History />} />
+          <Tab label="Engagement" icon={<Email />} />
           {user.role === 'superadmin' && (
             <Tab label="Data Management" icon={<Upload />} />
           )}
@@ -1539,9 +1621,177 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
           <VoterContactHistory user={user} />
         </TabPanel>
 
+        {/* Engagement Tab */}
+        <TabPanel value={currentTab} index={4}>
+          <Typography variant="h5" gutterBottom>
+            User Engagement
+          </Typography>
+          <Typography variant="body2" color="text.secondary" paragraph>
+            Send emails to your volunteers and admins to keep them engaged and informed.
+          </Typography>
+
+          {emailResult && emailResult.success && (
+            <Alert severity="success" sx={{ mb: 2 }}>
+              {emailResult.success}
+            </Alert>
+          )}
+          {emailResult && emailResult.error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {emailResult.error}
+            </Alert>
+          )}
+
+          <Box sx={{ display: 'grid', gap: 3 }}>
+            {/* Email Composition */}
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Compose Email
+                </Typography>
+                
+                <TextField
+                  label="Subject"
+                  fullWidth
+                  margin="normal"
+                  value={emailSubject}
+                  onChange={(e) => setEmailSubject(e.target.value)}
+                  disabled={emailSending}
+                  required
+                  placeholder="Enter email subject..."
+                />
+                
+                <TextField
+                  label="Message"
+                  fullWidth
+                  multiline
+                  rows={8}
+                  margin="normal"
+                  value={emailContent}
+                  onChange={(e) => setEmailContent(e.target.value)}
+                  disabled={emailSending}
+                  required
+                  placeholder="Enter your message here..."
+                  helperText="You can use plain text or basic HTML formatting"
+                />
+              </CardContent>
+            </Card>
+
+            {/* Recipient Selection */}
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Select Recipients
+                </Typography>
+                
+                <FormControl fullWidth sx={{ mb: 2 }}>
+                  <InputLabel>Recipient Type</InputLabel>
+                  <Select
+                    value={recipientType}
+                    label="Recipient Type"
+                    onChange={(e) => {
+                      setRecipientType(e.target.value);
+                      setSelectedUsers([]);
+                    }}
+                    disabled={emailSending}
+                  >
+                    <MenuItem value="selected">Selected Users</MenuItem>
+                    <MenuItem value="all">All Active Users</MenuItem>
+                    <MenuItem value="volunteers">All Volunteers</MenuItem>
+                    <MenuItem value="admins">All Admins</MenuItem>
+                  </Select>
+                </FormControl>
+
+                {recipientType === 'selected' && (
+                  <Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                      <Typography variant="subtitle2">
+                        Select Users ({selectedUsers.length} selected)
+                      </Typography>
+                      <Button
+                        size="small"
+                        onClick={handleSelectAllUsers}
+                        disabled={emailSending}
+                      >
+                        {selectedUsers.length === volunteers.length ? 'Deselect All' : 'Select All'}
+                      </Button>
+                    </Box>
+                    
+                    <TableContainer component={Paper} sx={{ maxHeight: 300 }}>
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow>
+                            <TableCell padding="checkbox"></TableCell>
+                            <TableCell>Name</TableCell>
+                            <TableCell>Email</TableCell>
+                            <TableCell>Role</TableCell>
+                            <TableCell>Status</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {volunteers.map((volunteer) => (
+                            <TableRow key={volunteer.id}>
+                              <TableCell padding="checkbox">
+                                <Checkbox
+                                  checked={selectedUsers.includes(volunteer.id)}
+                                  onChange={() => handleUserSelection(volunteer.id)}
+                                  disabled={emailSending}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                {volunteer.firstName} {volunteer.lastName}
+                              </TableCell>
+                              <TableCell>{volunteer.email}</TableCell>
+                              <TableCell>
+                                <Chip 
+                                  label={volunteer.role} 
+                                  size="small"
+                                  color={volunteer.role === 'SuperAdmin' ? 'error' : volunteer.role === 'Admin' ? 'warning' : 'default'}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Chip 
+                                  label={volunteer.isActive ? 'Active' : 'Inactive'} 
+                                  size="small"
+                                  color={volunteer.isActive ? 'success' : 'default'}
+                                />
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </Box>
+                )}
+
+                {recipientType !== 'selected' && (
+                  <Alert severity="info" sx={{ mt: 2 }}>
+                    {recipientType === 'all' && `Email will be sent to all ${volunteers.filter(v => v.isActive).length} active users.`}
+                    {recipientType === 'volunteers' && `Email will be sent to all ${volunteers.filter(v => v.isActive && v.role === 'Volunteer').length} active volunteers.`}
+                    {recipientType === 'admins' && `Email will be sent to all ${volunteers.filter(v => v.isActive && (v.role === 'Admin' || v.role === 'SuperAdmin')).length} active admins.`}
+                  </Alert>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Send Button */}
+            <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+              <Button
+                variant="contained"
+                size="large"
+                startIcon={emailSending ? <CircularProgress size={20} /> : <Email />}
+                onClick={handleSendEngagementEmail}
+                disabled={emailSending || !emailSubject.trim() || !emailContent.trim()}
+                sx={{ minWidth: 200 }}
+              >
+                {emailSending ? 'Sending...' : 'Send Email'}
+              </Button>
+            </Box>
+          </Box>
+        </TabPanel>
+
         {/* Data Management Tab - Only for SuperAdmins */}
         {user.role === 'superadmin' && (
-          <TabPanel value={currentTab} index={4}>
+          <TabPanel value={currentTab} index={5}>
           <Typography variant="h5" gutterBottom>
             Data Management
           </Typography>
