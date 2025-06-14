@@ -643,6 +643,16 @@ namespace HooverCanvassingApi.Controllers
                 _logger.LogInformation("Found user {Email}, attempting password reset with token...", request.Email);
                 var result = await _userManager.ResetPasswordAsync(user, request.Token, request.NewPassword);
                 
+                // If the token fails, try URL-decoding it (in case of encoding issues)
+                if (!result.Succeeded && result.Errors.Any(e => e.Code == "InvalidToken"))
+                {
+                    _logger.LogInformation("First attempt failed with InvalidToken, trying URL-decoded token...");
+                    var decodedToken = Uri.UnescapeDataString(request.Token);
+                    _logger.LogInformation("Decoded token length: {DecodedLength}, preview: {DecodedPreview}", 
+                        decodedToken.Length, decodedToken.Substring(0, Math.Min(20, decodedToken.Length)) + "...");
+                    result = await _userManager.ResetPasswordAsync(user, decodedToken, request.NewPassword);
+                }
+                
                 if (result.Succeeded)
                 {
                     _logger.LogInformation("Password reset successful for user {Email}", request.Email);
