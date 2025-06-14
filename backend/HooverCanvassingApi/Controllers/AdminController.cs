@@ -494,19 +494,19 @@ namespace HooverCanvassingApi.Controllers
         }
 
         [HttpPost("fix-database-schema")]
-        [AllowAnonymous] // Temporary - remove after fixing schema
+        [Authorize(Roles = "SuperAdmin")]
         public async Task<IActionResult> FixDatabaseSchema()
         {
             try
             {
-                _logger.LogInformation("Starting database schema fix for login tracking columns...");
+                _logger.LogInformation("Starting database schema fix for all missing columns...");
                 
                 // Check if columns exist first
                 var checkSql = @"
                     SELECT column_name 
                     FROM information_schema.columns 
                     WHERE table_name = 'AspNetUsers' 
-                    AND column_name IN ('LoginCount', 'LastLoginAt');";
+                    AND column_name IN ('LoginCount', 'LastLoginAt', 'LastActivity');";
                 
                 var existingColumns = new List<string>();
                 using (var command = _context.Database.GetDbConnection().CreateCommand())
@@ -535,6 +535,11 @@ namespace HooverCanvassingApi.Controllers
                 if (!existingColumns.Contains("LastLoginAt"))
                 {
                     sqlCommands.Add("ALTER TABLE \"AspNetUsers\" ADD COLUMN \"LastLoginAt\" timestamp with time zone NULL;");
+                }
+                
+                if (!existingColumns.Contains("LastActivity"))
+                {
+                    sqlCommands.Add("ALTER TABLE \"AspNetUsers\" ADD COLUMN \"LastActivity\" timestamp with time zone NULL;");
                 }
                 
                 if (sqlCommands.Any())
@@ -570,9 +575,10 @@ namespace HooverCanvassingApi.Controllers
                 
                 var hasLoginCount = verifyColumns.Contains("LoginCount");
                 var hasLastLoginAt = verifyColumns.Contains("LastLoginAt");
+                var hasLastActivity = verifyColumns.Contains("LastActivity");
                 
-                _logger.LogInformation("After fix - LoginCount exists: {HasLoginCount}, LastLoginAt exists: {HasLastLoginAt}", 
-                    hasLoginCount, hasLastLoginAt);
+                _logger.LogInformation("After fix - LoginCount exists: {HasLoginCount}, LastLoginAt exists: {HasLastLoginAt}, LastActivity exists: {HasLastActivity}", 
+                    hasLoginCount, hasLastLoginAt, hasLastActivity);
                 
                 return Ok(new { 
                     success = true, 
@@ -581,6 +587,7 @@ namespace HooverCanvassingApi.Controllers
                         commandsExecuted = sqlCommands.Count,
                         hasLoginCount = hasLoginCount,
                         hasLastLoginAt = hasLastLoginAt,
+                        hasLastActivity = hasLastActivity,
                         existingColumnsBefore = existingColumns,
                         existingColumnsAfter = verifyColumns
                     }
@@ -598,8 +605,38 @@ namespace HooverCanvassingApi.Controllers
             }
         }
 
+        [HttpPost("add-missing-column")]
+        [Authorize(Roles = "SuperAdmin")]
+        public async Task<IActionResult> AddMissingColumn()
+        {
+            try
+            {
+                _logger.LogInformation("Adding missing LastActivity column...");
+                
+                // Directly add the LastActivity column
+                var sql = "ALTER TABLE \"AspNetUsers\" ADD COLUMN IF NOT EXISTS \"LastActivity\" timestamp with time zone NULL;";
+                
+                await _context.Database.ExecuteSqlRawAsync(sql);
+                _logger.LogInformation("Successfully added LastActivity column");
+                
+                return Ok(new { 
+                    success = true, 
+                    message = "LastActivity column added successfully"
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error adding LastActivity column");
+                return StatusCode(500, new { 
+                    success = false, 
+                    error = "Failed to add LastActivity column",
+                    message = ex.Message
+                });
+            }
+        }
+
         [HttpPost("initialize-database")]
-        [AllowAnonymous] // Temporary - remove after initial setup
+        [Authorize(Roles = "SuperAdmin")]
         public async Task<IActionResult> InitializeDatabase()
         {
             try

@@ -178,13 +178,10 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-// Health check endpoint
+// Health check endpoint (public for monitoring)
 app.MapGet("/api/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));
 
-// Test POST endpoint
-app.MapPost("/api/test", (dynamic body) => Results.Ok(new { message = "POST works!", received = body }));
-
-// Debug endpoint to list all routes
+// Debug endpoint to list all routes (SuperAdmin only)
 app.MapGet("/api/debug/routes", (IServiceProvider services) =>
 {
     var endpointDataSource = services.GetRequiredService<EndpointDataSource>();
@@ -196,7 +193,7 @@ app.MapGet("/api/debug/routes", (IServiceProvider services) =>
         })
         .ToList();
     return Results.Ok(routes);
-});
+}).RequireAuthorization(policy => policy.RequireRole("SuperAdmin"));
 
 // Apply migrations and seed data before running
 using (var scope = app.Services.CreateScope())
