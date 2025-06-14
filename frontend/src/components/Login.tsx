@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import QRCode from 'react-qr-code';
 import {
   Paper,
   TextField,
@@ -260,11 +261,20 @@ const Login: React.FC<LoginProps> = ({ onLogin, isLoading = false, error }) => {
                 <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: '#2f1c6a' }}>
                   Support the Campaign
                 </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Payment fontSize="small" sx={{ color: '#2f1c6a' }} />
-                  <Typography variant="body2" sx={{ color: '#2f1c6a' }}>
-                    Venmo: @Tanveer4Hoover
-                  </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Payment fontSize="small" sx={{ color: '#2f1c6a' }} />
+                    <Typography variant="body2" sx={{ color: '#2f1c6a' }}>
+                      Venmo: @tanveerforhoover
+                    </Typography>
+                  </Box>
+                  <Box sx={{ p: 1, bgcolor: 'white', borderRadius: 1, border: '1px solid #e0e0e0' }}>
+                    <QRCode 
+                      value="https://venmo.com/tanveerforhoover" 
+                      size={80}
+                      style={{ height: "auto", maxWidth: "100%", width: "100%" }}
+                    />
+                  </Box>
                 </Box>
               </Box>
 
