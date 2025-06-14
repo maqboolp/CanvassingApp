@@ -1276,6 +1276,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                           <TableCell>Status</TableCell>
                           <TableCell align="right">Logins</TableCell>
                           <TableCell>Last Login</TableCell>
+                          <TableCell>Last Activity</TableCell>
                           <TableCell>Joined</TableCell>
                           <TableCell>Actions</TableCell>
                         </TableRow>
@@ -1302,6 +1303,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                             <TableCell>
                               {superAdmin.lastLoginAt 
                                 ? new Date(superAdmin.lastLoginAt).toLocaleDateString() 
+                                : 'Never'}
+                            </TableCell>
+                            <TableCell>
+                              {superAdmin.lastActivity 
+                                ? new Date(superAdmin.lastActivity).toLocaleString() 
                                 : 'Never'}
                             </TableCell>
                             <TableCell>
@@ -1344,6 +1350,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                           <TableCell>Status</TableCell>
                           <TableCell align="right">Logins</TableCell>
                           <TableCell>Last Login</TableCell>
+                          <TableCell>Last Activity</TableCell>
                           <TableCell>Joined</TableCell>
                           <TableCell>Actions</TableCell>
                         </TableRow>
@@ -1370,6 +1377,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                             <TableCell>
                               {admin.lastLoginAt 
                                 ? new Date(admin.lastLoginAt).toLocaleDateString() 
+                                : 'Never'}
+                            </TableCell>
+                            <TableCell>
+                              {admin.lastActivity 
+                                ? new Date(admin.lastActivity).toLocaleString() 
                                 : 'Never'}
                             </TableCell>
                             <TableCell>
@@ -1423,6 +1435,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                         <TableCell align="right">Contacts Made</TableCell>
                         <TableCell align="right">Logins</TableCell>
                         <TableCell>Last Login</TableCell>
+                        <TableCell>Last Activity</TableCell>
                         <TableCell>Joined</TableCell>
                         <TableCell>Actions</TableCell>
                       </TableRow>
@@ -1450,6 +1463,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                           <TableCell>
                             {volunteer.lastLoginAt 
                               ? new Date(volunteer.lastLoginAt).toLocaleDateString() 
+                              : 'Never'}
+                          </TableCell>
+                          <TableCell>
+                            {volunteer.lastActivity 
+                              ? new Date(volunteer.lastActivity).toLocaleString() 
                               : 'Never'}
                           </TableCell>
                           <TableCell>

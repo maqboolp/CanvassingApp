@@ -98,6 +98,9 @@ namespace HooverCanvassingApi.Migrations
                     b.Property<DateTime?>("LastLoginAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTime?>("LastActivity")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("LastName")
                         .IsRequired()
                         .HasMaxLength(100)

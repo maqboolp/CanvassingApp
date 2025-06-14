@@ -9,6 +9,7 @@ import { authService } from './services/authService';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 import AdminDashboard from './components/AdminDashboard';
+import ResetPassword from './components/ResetPassword';
 
 // Create Material-UI theme matching tanveer4hoover.com
 const theme = createTheme({
@@ -171,6 +172,17 @@ function App() {
                   isLoading={loginLoading}
                   error={loginError}
                 />
+              )
+            }
+          />
+          
+          <Route
+            path="/reset-password"
+            element={
+              user ? (
+                <Navigate to="/" replace />
+              ) : (
+                <ResetPassword />
               )
             }
           />

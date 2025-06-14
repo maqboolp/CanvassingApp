@@ -14,6 +14,7 @@ namespace HooverCanvassingApi.Models
         // Login tracking fields
         public int LoginCount { get; set; } = 0;
         public DateTime? LastLoginAt { get; set; }
+        public DateTime? LastActivity { get; set; }
         
         public ICollection<Contact> Contacts { get; set; } = new List<Contact>();
     }

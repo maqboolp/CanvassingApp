@@ -8,6 +8,7 @@ using System.Security.Cryptography;
 using System.Text;
 using HooverCanvassingApi.Models;
 using HooverCanvassingApi.Data;
+using HooverCanvassingApi.Services;
 
 namespace HooverCanvassingApi.Controllers
 {
@@ -20,19 +21,22 @@ namespace HooverCanvassingApi.Controllers
         private readonly IConfiguration _configuration;
         private readonly ILogger<AuthController> _logger;
         private readonly ApplicationDbContext _context;
+        private readonly IEmailService _emailService;
 
         public AuthController(
             UserManager<Volunteer> userManager,
             SignInManager<Volunteer> signInManager,
             IConfiguration configuration,
             ILogger<AuthController> logger,
-            ApplicationDbContext context)
+            ApplicationDbContext context,
+            IEmailService emailService)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _configuration = configuration;
             _logger = logger;
             _context = context;
+            _emailService = emailService;
         }
 
         [HttpPost("login")]
@@ -100,6 +104,7 @@ namespace HooverCanvassingApi.Controllers
                 // Update login tracking
                 user.LoginCount++;
                 user.LastLoginAt = DateTime.UtcNow;
+                user.LastActivity = DateTime.UtcNow;
                 await _context.SaveChangesAsync();
 
                 var token = GenerateJwtToken(user);
@@ -543,6 +548,128 @@ namespace HooverCanvassingApi.Controllers
             var token = tokenHandler.CreateToken(tokenDescriptor);
             return tokenHandler.WriteToken(token);
         }
+
+        [HttpPost("forgot-password")]
+        public async Task<ActionResult<ApiResponse<object>>> ForgotPassword([FromBody] ForgotPasswordRequest request)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(request.Email))
+                {
+                    return BadRequest(new ApiResponse<object>
+                    {
+                        Success = false,
+                        Error = "Email is required"
+                    });
+                }
+
+                var user = await _userManager.FindByEmailAsync(request.Email);
+                
+                // Always return success to prevent email enumeration attacks
+                var response = new ApiResponse<object>
+                {
+                    Success = true,
+                    Message = "If an account with that email exists, a password reset link has been sent."
+                };
+
+                if (user != null && user.IsActive)
+                {
+                    var resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
+                    var frontendUrl = _configuration["Frontend:BaseUrl"] ?? "http://localhost:3000";
+                    var resetUrl = $"{frontendUrl}/reset-password?token={Uri.EscapeDataString(resetToken)}&email={Uri.EscapeDataString(user.Email!)}";
+
+                    var emailSent = await _emailService.SendPasswordResetEmailAsync(
+                        user.Email!, 
+                        user.FirstName, 
+                        resetToken, 
+                        resetUrl
+                    );
+
+                    if (emailSent)
+                    {
+                        _logger.LogInformation("Password reset email sent to {Email}", request.Email);
+                    }
+                    else
+                    {
+                        _logger.LogError("Failed to send password reset email to {Email}", request.Email);
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning("Password reset requested for non-existent or inactive user: {Email}", request.Email);
+                }
+
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during forgot password request for {Email}", request.Email);
+                return StatusCode(500, new ApiResponse<object>
+                {
+                    Success = false,
+                    Error = "An error occurred while processing your request"
+                });
+            }
+        }
+
+        [HttpPost("reset-password")]
+        public async Task<ActionResult<ApiResponse<object>>> ResetPassword([FromBody] PasswordResetRequest request)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(request.Email) || string.IsNullOrEmpty(request.Token) || string.IsNullOrEmpty(request.NewPassword))
+                {
+                    return BadRequest(new ApiResponse<object>
+                    {
+                        Success = false,
+                        Error = "Email, token, and new password are required"
+                    });
+                }
+
+                var user = await _userManager.FindByEmailAsync(request.Email);
+                if (user == null || !user.IsActive)
+                {
+                    return BadRequest(new ApiResponse<object>
+                    {
+                        Success = false,
+                        Error = "Invalid reset token or user not found"
+                    });
+                }
+
+                var result = await _userManager.ResetPasswordAsync(user, request.Token, request.NewPassword);
+                
+                if (result.Succeeded)
+                {
+                    _logger.LogInformation("Password reset successful for user {Email}", request.Email);
+                    
+                    return Ok(new ApiResponse<object>
+                    {
+                        Success = true,
+                        Message = "Password has been reset successfully"
+                    });
+                }
+                else
+                {
+                    var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                    _logger.LogWarning("Password reset failed for user {Email}: {Errors}", request.Email, errors);
+                    
+                    return BadRequest(new ApiResponse<object>
+                    {
+                        Success = false,
+                        Error = "Failed to reset password. " + errors
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during password reset for {Email}", request.Email);
+                return StatusCode(500, new ApiResponse<object>
+                {
+                    Success = false,
+                    Error = "An error occurred while resetting your password"
+                });
+            }
+        }
     }
 
     public class LoginRequest
@@ -574,6 +701,18 @@ namespace HooverCanvassingApi.Controllers
     public class ChangePasswordRequest
     {
         public string CurrentPassword { get; set; } = string.Empty;
+        public string NewPassword { get; set; } = string.Empty;
+    }
+
+    public class ForgotPasswordRequest
+    {
+        public string Email { get; set; } = string.Empty;
+    }
+
+    public class PasswordResetRequest
+    {
+        public string Email { get; set; } = string.Empty;
+        public string Token { get; set; } = string.Empty;
         public string NewPassword { get; set; } = string.Empty;
     }
 

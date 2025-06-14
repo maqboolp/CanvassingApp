@@ -240,7 +240,8 @@ namespace HooverCanvassingApi.Controllers
                         CreatedAt = v.CreatedAt,
                         ContactCount = v.Contacts.Count(),
                         LoginCount = v.LoginCount,
-                        LastLoginAt = v.LastLoginAt
+                        LastLoginAt = v.LastLoginAt,
+                        LastActivity = v.LastActivity
                     })
                     .OrderBy(v => v.LastName)
                     .ToListAsync();
@@ -881,6 +882,7 @@ namespace HooverCanvassingApi.Controllers
         // Login tracking fields
         public int LoginCount { get; set; }
         public DateTime? LastLoginAt { get; set; }
+        public DateTime? LastActivity { get; set; }
     }
 
     public class AnalyticsDto

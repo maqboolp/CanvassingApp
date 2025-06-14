@@ -161,6 +161,52 @@ class AuthService {
 
     return response;
   }
+
+  async forgotPassword(email: string): Promise<{ success: boolean; message: string }> {
+    const response = await fetch(`${API_BASE_URL}/api/auth/forgot-password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email }),
+    });
+
+    const data: ApiResponse<any> = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to send reset email');
+    }
+
+    return {
+      success: data.success,
+      message: data.message || 'Reset email sent successfully'
+    };
+  }
+
+  async resetPassword(email: string, token: string, newPassword: string): Promise<{ success: boolean; message: string }> {
+    const response = await fetch(`${API_BASE_URL}/api/auth/reset-password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ 
+        email, 
+        token, 
+        newPassword 
+      }),
+    });
+
+    const data: ApiResponse<any> = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to reset password');
+    }
+
+    return {
+      success: data.success,
+      message: data.message || 'Password reset successfully'
+    };
+  }
 }
 
 export const authService = new AuthService();

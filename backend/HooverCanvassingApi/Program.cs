@@ -8,6 +8,7 @@ using System.Collections;
 using HooverCanvassingApi.Data;
 using HooverCanvassingApi.Models;
 using HooverCanvassingApi.Services;
+using HooverCanvassingApi.Middleware;
 using HooverCanvassingApi;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -136,6 +137,10 @@ builder.Services.AddAuthorization();
 builder.Services.AddScoped<VoterImportService>();
 builder.Services.AddHttpClient();
 
+// Configure Email Service
+builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
+builder.Services.AddTransient<IEmailService, EmailService>();
+
 var app = builder.Build();
 
 
@@ -159,6 +164,7 @@ app.Use(async (context, next) =>
 app.UseCors();
 
 app.UseAuthentication();
+app.UseMiddleware<ActivityTrackingMiddleware>();
 app.UseAuthorization();
 
 app.MapControllers();
