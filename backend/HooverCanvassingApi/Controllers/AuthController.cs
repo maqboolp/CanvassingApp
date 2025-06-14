@@ -617,6 +617,9 @@ namespace HooverCanvassingApi.Controllers
         {
             try
             {
+                _logger.LogInformation("Password reset attempt for email: {Email}, token length: {TokenLength}, token preview: {TokenPreview}", 
+                    request.Email, request.Token?.Length ?? 0, request.Token?.Substring(0, Math.Min(20, request.Token?.Length ?? 0)) + "...");
+
                 if (string.IsNullOrEmpty(request.Email) || string.IsNullOrEmpty(request.Token) || string.IsNullOrEmpty(request.NewPassword))
                 {
                     return BadRequest(new ApiResponse<object>
@@ -629,6 +632,7 @@ namespace HooverCanvassingApi.Controllers
                 var user = await _userManager.FindByEmailAsync(request.Email);
                 if (user == null || !user.IsActive)
                 {
+                    _logger.LogWarning("Password reset failed - user not found or inactive for email: {Email}", request.Email);
                     return BadRequest(new ApiResponse<object>
                     {
                         Success = false,
@@ -636,6 +640,7 @@ namespace HooverCanvassingApi.Controllers
                     });
                 }
 
+                _logger.LogInformation("Found user {Email}, attempting password reset with token...", request.Email);
                 var result = await _userManager.ResetPasswordAsync(user, request.Token, request.NewPassword);
                 
                 if (result.Succeeded)
