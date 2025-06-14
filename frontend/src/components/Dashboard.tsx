@@ -22,7 +22,8 @@ import {
   CircularProgress,
   Avatar,
   Tabs,
-  Tab
+  Tab,
+  InputAdornment
 } from '@mui/material';
 import {
   ExitToApp,
@@ -42,7 +43,9 @@ import {
   Phone,
   Help,
   OpenInNew,
-  MenuBook
+  MenuBook,
+  Visibility,
+  VisibilityOff
 } from '@mui/icons-material';
 import { AuthUser, Voter, ContactStatus, VoterSupport } from '../types';
 import VoterList from './VoterList';
@@ -71,6 +74,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     newPassword: '',
     confirmPassword: ''
   });
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordChangeLoading, setPasswordChangeLoading] = useState(false);
   const [passwordResult, setPasswordResult] = useState<any>(null);
   const [contactModalOpen, setContactModalOpen] = useState(false);
@@ -841,17 +847,31 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
           </Typography>
           <TextField
             label="Current Password"
-            type="password"
+            type={showCurrentPassword ? 'text' : 'password'}
             fullWidth
             margin="normal"
             value={passwordForm.currentPassword}
             onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
             disabled={passwordChangeLoading}
             required
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    aria-label="toggle password visibility"
+                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                    edge="end"
+                    disabled={passwordChangeLoading}
+                  >
+                    {showCurrentPassword ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
           />
           <TextField
             label="New Password"
-            type="password"
+            type={showNewPassword ? 'text' : 'password'}
             fullWidth
             margin="normal"
             value={passwordForm.newPassword}
@@ -859,10 +879,24 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             disabled={passwordChangeLoading}
             required
             helperText="Minimum 6 characters"
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    aria-label="toggle password visibility"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    edge="end"
+                    disabled={passwordChangeLoading}
+                  >
+                    {showNewPassword ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
           />
           <TextField
             label="Confirm New Password"
-            type="password"
+            type={showConfirmPassword ? 'text' : 'password'}
             fullWidth
             margin="normal"
             value={passwordForm.confirmPassword}
@@ -871,6 +905,20 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             required
             error={passwordForm.confirmPassword !== '' && passwordForm.newPassword !== passwordForm.confirmPassword}
             helperText={passwordForm.confirmPassword !== '' && passwordForm.newPassword !== passwordForm.confirmPassword ? "Passwords do not match" : ""}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    aria-label="toggle password visibility"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    edge="end"
+                    disabled={passwordChangeLoading}
+                  >
+                    {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
           />
         </DialogContent>
         <DialogActions>

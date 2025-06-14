@@ -32,7 +32,8 @@ import {
   Chip,
   FormControl,
   InputLabel,
-  Select
+  Select,
+  InputAdornment
 } from '@mui/material';
 import {
   ExitToApp,
@@ -59,7 +60,9 @@ import {
   Phone,
   Help,
   OpenInNew,
-  MenuBook
+  MenuBook,
+  Visibility,
+  VisibilityOff
 } from '@mui/icons-material';
 import { AuthUser, Voter, ContactStatus, VoterSupport } from '../types';
 import VoterList from './VoterList';
@@ -113,6 +116,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
     phoneNumber: '',
     password: ''
   });
+  const [showVolunteerPassword, setShowVolunteerPassword] = useState(false);
   const [adminForm, setAdminForm] = useState({
     firstName: '',
     lastName: '',
@@ -120,6 +124,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
     phoneNumber: '',
     password: ''
   });
+  const [showAdminPassword, setShowAdminPassword] = useState(false);
   const [createAdminDialog, setCreateAdminDialog] = useState(false);
   const [adminCreateLoading, setAdminCreateLoading] = useState(false);
   const [volunteerCreateLoading, setVolunteerCreateLoading] = useState(false);
@@ -1701,7 +1706,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
           />
           <TextField
             label="Password"
-            type="password"
+            type={showVolunteerPassword ? 'text' : 'password'}
             fullWidth
             margin="normal"
             value={volunteerForm.password}
@@ -1709,6 +1714,20 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
             disabled={volunteerCreateLoading}
             required
             helperText="Minimum 6 characters with at least one digit and lowercase letter"
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    aria-label="toggle password visibility"
+                    onClick={() => setShowVolunteerPassword(!showVolunteerPassword)}
+                    edge="end"
+                    disabled={volunteerCreateLoading}
+                  >
+                    {showVolunteerPassword ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
           />
         </DialogContent>
         <DialogActions>
@@ -1774,7 +1793,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
           />
           <TextField
             label="Password"
-            type="password"
+            type={showAdminPassword ? 'text' : 'password'}
             fullWidth
             margin="normal"
             value={adminForm.password}
@@ -1782,6 +1801,20 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
             disabled={adminCreateLoading}
             required
             helperText="Minimum 6 characters with at least one digit and lowercase letter"
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    aria-label="toggle password visibility"
+                    onClick={() => setShowAdminPassword(!showAdminPassword)}
+                    edge="end"
+                    disabled={adminCreateLoading}
+                  >
+                    {showAdminPassword ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
           />
         </DialogContent>
         <DialogActions>
