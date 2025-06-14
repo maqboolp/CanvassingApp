@@ -167,6 +167,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [resourcesDialog, setResourcesDialog] = useState(false);
+  const [toggleStatusLoading, setToggleStatusLoading] = useState<string | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState(false);
+  const [actionToConfirm, setActionToConfirm] = useState<any>(null);
   
   // Engagement tab state
   const [emailSubject, setEmailSubject] = useState('');
@@ -834,6 +837,54 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
     }
   };
 
+  const handleToggleUserStatus = async (targetUser: any) => {
+    const action = targetUser.isActive ? 'deactivate' : 'activate';
+    const actionText = targetUser.isActive ? 'Deactivate' : 'Activate';
+    
+    setActionToConfirm({
+      type: 'toggle-status',
+      user: targetUser,
+      action,
+      actionText,
+      message: `Are you sure you want to ${action} ${targetUser.firstName} ${targetUser.lastName}?`
+    });
+    setConfirmDialog(true);
+  };
+
+  const executeToggleStatus = async (targetUser: any) => {
+    setToggleStatusLoading(targetUser.id);
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/admin/toggle-user-status`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.token}`
+        },
+        body: JSON.stringify({
+          userId: targetUser.id
+        })
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        // Refresh volunteers list to show updated status
+        await fetchVolunteers();
+        
+        // Show success message
+        const action = targetUser.isActive ? 'deactivated' : 'activated';
+        alert(`User ${targetUser.firstName} ${targetUser.lastName} has been ${action} successfully.`);
+      } else {
+        const error = await response.json();
+        alert(`Failed to toggle user status: ${error.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      alert(`Failed to toggle user status: ${(error as Error).message}`);
+    } finally {
+      setToggleStatusLoading(null);
+    }
+  };
+
   const handleUserSelection = (userId: string) => {
     setSelectedUsers(prev => {
       if (prev.includes(userId)) {
@@ -1421,12 +1472,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                             <TableCell>{superAdmin.email}</TableCell>
                             <TableCell>{superAdmin.phoneNumber || '-'}</TableCell>
                             <TableCell>
-                              <span style={{ 
-                                color: superAdmin.isActive ? 'green' : 'red',
-                                fontWeight: 'bold' 
-                              }}>
-                                {superAdmin.isActive ? 'Active' : 'Inactive'}
-                              </span>
+                              <Chip 
+                                label={superAdmin.isActive ? 'Active' : 'Inactive'}
+                                color={superAdmin.isActive ? 'success' : 'error'}
+                                size="small"
+                                variant="outlined"
+                              />
                             </TableCell>
                             <TableCell align="right">
                               {superAdmin.loginCount || 0}
@@ -1445,16 +1496,29 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                               {new Date(superAdmin.createdAt).toLocaleDateString()}
                             </TableCell>
                             <TableCell>
-                              <Button
-                                size="small"
-                                variant="outlined"
-                                startIcon={<VpnKey />}
-                                onClick={() => handleResetPassword(superAdmin)}
-                                disabled={!superAdmin.isActive || superAdmin.id === user.id}
-                                sx={{ mr: 1 }}
-                              >
-                                Reset Password
-                              </Button>
+                              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                                <Button
+                                  size="small"
+                                  variant="outlined"
+                                  startIcon={<VpnKey />}
+                                  onClick={() => handleResetPassword(superAdmin)}
+                                  disabled={!superAdmin.isActive || superAdmin.id === user.id}
+                                >
+                                  Reset Password
+                                </Button>
+                                {user.role === 'superadmin' && superAdmin.id !== user.id && (
+                                  <Button
+                                    size="small"
+                                    variant="outlined"
+                                    color={superAdmin.isActive ? 'error' : 'success'}
+                                    onClick={() => handleToggleUserStatus(superAdmin)}
+                                    disabled={toggleStatusLoading === superAdmin.id}
+                                    startIcon={toggleStatusLoading === superAdmin.id ? <CircularProgress size={16} /> : null}
+                                  >
+                                    {superAdmin.isActive ? 'Deactivate' : 'Activate'}
+                                  </Button>
+                                )}
+                              </Box>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -1495,12 +1559,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                             <TableCell>{admin.email}</TableCell>
                             <TableCell>{admin.phoneNumber || '-'}</TableCell>
                             <TableCell>
-                              <span style={{ 
-                                color: admin.isActive ? 'green' : 'red',
-                                fontWeight: 'bold' 
-                              }}>
-                                {admin.isActive ? 'Active' : 'Inactive'}
-                              </span>
+                              <Chip 
+                                label={admin.isActive ? 'Active' : 'Inactive'}
+                                color={admin.isActive ? 'success' : 'error'}
+                                size="small"
+                                variant="outlined"
+                              />
                             </TableCell>
                             <TableCell align="right">
                               {admin.loginCount || 0}
@@ -1526,7 +1590,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                                   startIcon={<VpnKey />}
                                   onClick={() => handleResetPassword(admin)}
                                   disabled={!admin.isActive}
-                                  sx={{ mr: 1 }}
                                 >
                                   Reset Password
                                 </Button>
@@ -1539,6 +1602,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                                 >
                                   Change Role
                                 </Button>
+                                {user.role === 'superadmin' && (
+                                  <Button
+                                    size="small"
+                                    variant="outlined"
+                                    color={admin.isActive ? 'error' : 'success'}
+                                    onClick={() => handleToggleUserStatus(admin)}
+                                    disabled={toggleStatusLoading === admin.id}
+                                    startIcon={toggleStatusLoading === admin.id ? <CircularProgress size={16} /> : null}
+                                  >
+                                    {admin.isActive ? 'Deactivate' : 'Activate'}
+                                  </Button>
+                                )}
                               </Box>
                             </TableCell>
                           </TableRow>
@@ -1580,12 +1655,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                           <TableCell>{volunteer.email}</TableCell>
                           <TableCell>{volunteer.phoneNumber || '-'}</TableCell>
                           <TableCell>
-                            <span style={{ 
-                              color: volunteer.isActive ? 'green' : 'red',
-                              fontWeight: 'bold' 
-                            }}>
-                              {volunteer.isActive ? 'Active' : 'Inactive'}
-                            </span>
+                            <Chip 
+                              label={volunteer.isActive ? 'Active' : 'Inactive'}
+                              color={volunteer.isActive ? 'success' : 'error'}
+                              size="small"
+                              variant="outlined"
+                            />
                           </TableCell>
                           <TableCell align="right">{volunteer.contactCount}</TableCell>
                           <TableCell align="right">
@@ -1627,6 +1702,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                                   Change Role
                                 </Button>
                               )}
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                color={volunteer.isActive ? 'error' : 'success'}
+                                onClick={() => handleToggleUserStatus(volunteer)}
+                                disabled={toggleStatusLoading === volunteer.id}
+                                startIcon={toggleStatusLoading === volunteer.id ? <CircularProgress size={16} /> : null}
+                              >
+                                {volunteer.isActive ? 'Deactivate' : 'Activate'}
+                              </Button>
                             </Box>
                           </TableCell>
                         </TableRow>
@@ -2555,6 +2640,33 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
         <DialogActions>
           <Button onClick={() => setResourcesDialog(false)}>
             Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Confirmation Dialog */}
+      <Dialog open={confirmDialog} onClose={() => setConfirmDialog(false)}>
+        <DialogTitle>Confirm Action</DialogTitle>
+        <DialogContent>
+          <Typography>
+            {actionToConfirm?.message}
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmDialog(false)}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={() => {
+              setConfirmDialog(false);
+              if (actionToConfirm?.type === 'toggle-status') {
+                executeToggleStatus(actionToConfirm.user);
+              }
+            }}
+            variant="contained"
+            color={actionToConfirm?.action === 'deactivate' ? 'error' : 'success'}
+          >
+            {actionToConfirm?.actionText}
           </Button>
         </DialogActions>
       </Dialog>

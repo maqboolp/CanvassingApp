@@ -905,6 +905,70 @@ namespace HooverCanvassingApi.Controllers
             return new string(password.OrderBy(x => random.Next()).ToArray());
         }
 
+        [HttpPost("toggle-user-status")]
+        [Authorize(Roles = "Admin,SuperAdmin")]
+        public async Task<ActionResult> ToggleUserStatus([FromBody] ToggleUserStatusRequest request)
+        {
+            try
+            {
+                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value;
+                
+                if (string.IsNullOrEmpty(request.UserId))
+                {
+                    return BadRequest(new { error = "User ID is required" });
+                }
+
+                // Find the target user
+                var targetUser = await _userManager.FindByIdAsync(request.UserId);
+                if (targetUser == null)
+                {
+                    return NotFound(new { error = "User not found" });
+                }
+
+                // Permission checks
+                if (targetUser.Id == currentUserId)
+                {
+                    return BadRequest(new { error = "Cannot change your own status" });
+                }
+
+                // Regular admins can only deactivate volunteers, not other admins/superadmins
+                if (currentUserRole == "Admin" && (targetUser.Role == VolunteerRole.Admin || targetUser.Role == VolunteerRole.SuperAdmin))
+                {
+                    return Forbid("Admins can only activate/deactivate volunteers, not other admins or superadmins");
+                }
+
+                // Toggle the user's active status
+                var oldStatus = targetUser.IsActive;
+                targetUser.IsActive = !targetUser.IsActive;
+                
+                var result = await _userManager.UpdateAsync(targetUser);
+                if (!result.Succeeded)
+                {
+                    var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                    return BadRequest(new { error = $"Failed to update user status: {errors}" });
+                }
+
+                var action = targetUser.IsActive ? "activated" : "deactivated";
+                _logger.LogInformation("User {TargetEmail} ({TargetRole}) was {Action} by {AdminEmail} ({AdminRole})", 
+                    targetUser.Email, targetUser.Role, action, User.FindFirst(ClaimTypes.Email)?.Value, currentUserRole);
+
+                return Ok(new { 
+                    success = true,
+                    message = $"User {targetUser.FirstName} {targetUser.LastName} has been {action}",
+                    userId = targetUser.Id,
+                    newStatus = targetUser.IsActive,
+                    userName = $"{targetUser.FirstName} {targetUser.LastName}",
+                    userEmail = targetUser.Email
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error toggling user status for user {UserId}", request.UserId);
+                return StatusCode(500, new { error = "Failed to update user status" });
+            }
+        }
+
         [HttpPost("send-engagement-email")]
         [Authorize(Roles = "Admin,SuperAdmin")]
         public async Task<ActionResult> SendEngagementEmail([FromBody] EngagementEmailRequest request)
@@ -1165,6 +1229,11 @@ This is an automated message from the campaign management system.
         public string Content { get; set; } = string.Empty;
         public string RecipientType { get; set; } = string.Empty; // "selected", "all", "volunteers", "admins"
         public List<string> SelectedUserIds { get; set; } = new();
+    }
+
+    public class ToggleUserStatusRequest
+    {
+        public string UserId { get; set; } = string.Empty;
     }
 
     public class LeaderboardResponse
