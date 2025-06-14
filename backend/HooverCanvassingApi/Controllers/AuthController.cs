@@ -575,7 +575,10 @@ namespace HooverCanvassingApi.Controllers
                 if (user != null && user.IsActive)
                 {
                     var resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
-                    var frontendUrl = _configuration["Frontend:BaseUrl"] ?? "http://localhost:3000";
+                    var frontendUrl = _configuration["Frontend:BaseUrl"] ?? 
+                                     (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Production" 
+                                         ? "https://t4h-canvas-2uwxt.ondigitalocean.app" 
+                                         : "http://localhost:3000");
                     var resetUrl = $"{frontendUrl}/reset-password?token={Uri.EscapeDataString(resetToken)}&email={Uri.EscapeDataString(user.Email!)}";
 
                     var emailSent = await _emailService.SendPasswordResetEmailAsync(
