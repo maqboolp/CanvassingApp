@@ -128,6 +128,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
   const [createAdminDialog, setCreateAdminDialog] = useState(false);
   const [adminCreateLoading, setAdminCreateLoading] = useState(false);
   const [volunteerCreateLoading, setVolunteerCreateLoading] = useState(false);
+  const [volunteerCreateResult, setVolunteerCreateResult] = useState<any>(null);
+  const [adminCreateResult, setAdminCreateResult] = useState<any>(null);
   const [geocodingStatus, setGeocodingStatus] = useState<any>(null);
   const [geocodingLoading, setGeocodingLoading] = useState(false);
   const [resetPasswordDialog, setResetPasswordDialog] = useState(false);
@@ -311,11 +313,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
 
   const handleCreateVolunteer = async () => {
     if (!volunteerForm.firstName || !volunteerForm.lastName || !volunteerForm.email || !volunteerForm.password) {
-      setImportResult({ error: 'All fields are required' });
+      setVolunteerCreateResult({ error: 'All fields are required' });
       return;
     }
 
     setVolunteerCreateLoading(true);
+    setVolunteerCreateResult(null);
+    
     try {
       const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
         method: 'POST',
@@ -328,27 +332,33 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
 
       if (response.ok) {
         const result = await response.json();
-        setImportResult({ success: `Volunteer ${volunteerForm.firstName} ${volunteerForm.lastName} created successfully!` });
+        setVolunteerCreateResult({ success: `Volunteer ${volunteerForm.firstName} ${volunteerForm.lastName} created successfully!` });
         setCreateVolunteerDialog(false);
         setVolunteerForm({ firstName: '', lastName: '', email: '', phoneNumber: '', password: '' });
+        setShowVolunteerPassword(false);
         // Refresh volunteers list if we're on that tab
         if (currentTab === 1) {
           fetchVolunteers();
         }
       } else {
         const error = await response.json();
-        setImportResult({ error: error.error || 'Failed to create volunteer' });
+        setVolunteerCreateResult({ error: error.error || 'Failed to create volunteer' });
       }
     } catch (error) {
-      setImportResult({ error: 'Failed to create volunteer: ' + (error as Error).message });
+      setVolunteerCreateResult({ error: 'Failed to create volunteer: ' + (error as Error).message });
     } finally {
       setVolunteerCreateLoading(false);
     }
   };
 
   const handleCreateAdmin = async () => {
+    if (!adminForm.firstName || !adminForm.lastName || !adminForm.email || !adminForm.password) {
+      setAdminCreateResult({ error: 'All fields are required' });
+      return;
+    }
+
     setAdminCreateLoading(true);
-    setImportResult(null);
+    setAdminCreateResult(null);
     
     try {
       const response = await fetch(`${API_BASE_URL}/api/auth/create-admin`, {
@@ -361,19 +371,21 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
       });
       
       if (response.ok) {
-        setImportResult({ success: 'Admin created successfully!' });
+        const result = await response.json();
+        setAdminCreateResult({ success: `Admin ${adminForm.firstName} ${adminForm.lastName} created successfully!` });
         setCreateAdminDialog(false);
         setAdminForm({ firstName: '', lastName: '', email: '', phoneNumber: '', password: '' });
+        setShowAdminPassword(false);
         // Refresh the volunteers list to show the new admin
         if (currentTab === 1) {
           fetchVolunteers();
         }
       } else {
         const error = await response.json();
-        setImportResult({ error: error.error || 'Failed to create admin' });
+        setAdminCreateResult({ error: error.error || 'Failed to create admin' });
       }
     } catch (error) {
-      setImportResult({ error: 'Failed to create admin: ' + (error as Error).message });
+      setAdminCreateResult({ error: 'Failed to create admin: ' + (error as Error).message });
     } finally {
       setAdminCreateLoading(false);
     }
@@ -1237,7 +1249,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                 <Button
                   variant="contained"
                   startIcon={<People />}
-                  onClick={() => setCreateAdminDialog(true)}
+                  onClick={() => {
+                    setCreateAdminDialog(true);
+                    setAdminCreateResult(null);
+                  }}
                   color="secondary"
                 >
                   Create Admin
@@ -1246,7 +1261,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
               <Button
                 variant="contained"
                 startIcon={<People />}
-                onClick={() => setCreateVolunteerDialog(true)}
+                onClick={() => {
+                  setCreateVolunteerDialog(true);
+                  setVolunteerCreateResult(null);
+                }}
               >
                 Create Volunteer
               </Button>
@@ -1683,6 +1701,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
           <Typography variant="body2" color="text.secondary" paragraph>
             Create a new volunteer account for canvassing activities.
           </Typography>
+          {volunteerCreateResult && volunteerCreateResult.success && (
+            <Alert severity="success" sx={{ mb: 2 }}>
+              {volunteerCreateResult.success}
+            </Alert>
+          )}
+          {volunteerCreateResult && volunteerCreateResult.error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {volunteerCreateResult.error}
+            </Alert>
+          )}
           <TextField
             label="First Name"
             fullWidth
@@ -1770,6 +1798,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
           <Typography variant="body2" color="text.secondary" paragraph>
             Create a new administrator account with elevated privileges.
           </Typography>
+          {adminCreateResult && adminCreateResult.success && (
+            <Alert severity="success" sx={{ mb: 2 }}>
+              {adminCreateResult.success}
+            </Alert>
+          )}
+          {adminCreateResult && adminCreateResult.error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {adminCreateResult.error}
+            </Alert>
+          )}
           <TextField
             label="First Name"
             fullWidth
