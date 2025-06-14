@@ -152,9 +152,8 @@ class AuthService {
           headers: newHeaders,
         });
       } else {
-        // Refresh failed, redirect to login
+        // Refresh failed, redirect to home (which will redirect to login)
         this.logout();
-        window.location.href = '/login';
         throw new Error('Authentication failed');
       }
     }

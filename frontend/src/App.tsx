@@ -225,8 +225,17 @@ function App() {
             }
           />
 
-          {/* Catch all route - redirect to home */}
-          <Route path="*" element={<Navigate to="/" replace />} />
+          {/* Catch all route - redirect based on auth status */}
+          <Route 
+            path="*" 
+            element={
+              user ? (
+                <Navigate to="/" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            } 
+          />
         </Routes>
       </Router>
     </ThemeProvider>
