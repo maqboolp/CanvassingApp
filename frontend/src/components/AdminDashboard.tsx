@@ -34,7 +34,10 @@ import {
   FormControl,
   InputLabel,
   Select,
-  InputAdornment
+  InputAdornment,
+  Fab,
+  useMediaQuery,
+  useTheme
 } from '@mui/material';
 import {
   ExitToApp,
@@ -100,6 +103,8 @@ function TabPanel(props: TabPanelProps) {
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [currentTab, setCurrentTab] = useState(0);
   const [analytics, setAnalytics] = useState<any>(null);
@@ -923,14 +928,39 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
 
       {/* Tabs */}
       <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-        <Tabs value={currentTab} onChange={handleTabChange} aria-label="admin tabs">
+        <Tabs 
+          value={currentTab} 
+          onChange={handleTabChange} 
+          aria-label="admin tabs"
+          variant="scrollable"
+          scrollButtons="auto"
+          allowScrollButtonsMobile
+          sx={{
+            '& .MuiTab-root': {
+              minWidth: { xs: 80, sm: 120 },
+              fontSize: { xs: '0.75rem', sm: '0.875rem' },
+              padding: { xs: '6px 8px', sm: '12px 16px' },
+            },
+            '& .MuiTab-iconWrapper': {
+              marginBottom: { xs: '2px', sm: '4px' },
+            }
+          }}
+        >
           <Tab label="Analytics" icon={<Analytics />} />
           <Tab label="Users" icon={<People />} />
           <Tab label="Voters" icon={<HowToVote />} />
-          <Tab label="Contact History" icon={<History />} />
-          <Tab label="Engagement" icon={<Email />} />
+          <Tab label="History" icon={<History />} />
+          <Tab 
+            label="Engagement" 
+            icon={<Email />} 
+            sx={{ 
+              backgroundColor: { xs: 'action.hover', sm: 'transparent' },
+              borderRadius: { xs: 1, sm: 0 },
+              margin: { xs: '0 2px', sm: 0 }
+            }}
+          />
           {user.role === 'superadmin' && (
-            <Tab label="Data Management" icon={<Upload />} />
+            <Tab label="Data Mgmt" icon={<Upload />} />
           )}
         </Tabs>
       </Box>
@@ -2528,6 +2558,23 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Mobile Engagement FAB */}
+      {isMobile && currentTab !== 4 && (
+        <Fab
+          color="primary"
+          aria-label="engagement"
+          onClick={() => setCurrentTab(4)}
+          sx={{
+            position: 'fixed',
+            bottom: 16,
+            right: 16,
+            zIndex: 1000,
+          }}
+        >
+          <Email />
+        </Fab>
+      )}
     </Box>
   );
 };
