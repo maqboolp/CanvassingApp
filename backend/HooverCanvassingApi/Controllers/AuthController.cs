@@ -670,6 +670,73 @@ namespace HooverCanvassingApi.Controllers
                 });
             }
         }
+
+        [HttpPost("test-email")]
+        [Authorize(Roles = "SuperAdmin")]
+        public async Task<ActionResult<ApiResponse<object>>> TestEmail([FromBody] TestEmailRequest request)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(request.Email))
+                {
+                    return BadRequest(new ApiResponse<object>
+                    {
+                        Success = false,
+                        Error = "Email is required"
+                    });
+                }
+
+                var testSubject = "Test Email - SendGrid Integration";
+                var testHtmlContent = @"
+                    <h2>SendGrid Test Email</h2>
+                    <p>This is a test email to verify SendGrid integration is working correctly.</p>
+                    <p>If you receive this email, the integration is successful!</p>
+                    <p>Time sent: " + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss UTC") + @"</p>";
+                
+                var testTextContent = @"
+SendGrid Test Email
+
+This is a test email to verify SendGrid integration is working correctly.
+If you receive this email, the integration is successful!
+
+Time sent: " + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss UTC");
+
+                var emailSent = await _emailService.SendEmailAsync(
+                    request.Email,
+                    testSubject,
+                    testHtmlContent,
+                    testTextContent
+                );
+
+                if (emailSent)
+                {
+                    _logger.LogInformation("Test email sent successfully to {Email}", request.Email);
+                    return Ok(new ApiResponse<object>
+                    {
+                        Success = true,
+                        Message = "Test email sent successfully"
+                    });
+                }
+                else
+                {
+                    _logger.LogError("Failed to send test email to {Email}", request.Email);
+                    return BadRequest(new ApiResponse<object>
+                    {
+                        Success = false,
+                        Error = "Failed to send test email"
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during test email send to {Email}", request.Email);
+                return StatusCode(500, new ApiResponse<object>
+                {
+                    Success = false,
+                    Error = "An error occurred while sending test email"
+                });
+            }
+        }
     }
 
     public class LoginRequest
@@ -714,6 +781,11 @@ namespace HooverCanvassingApi.Controllers
         public string Email { get; set; } = string.Empty;
         public string Token { get; set; } = string.Empty;
         public string NewPassword { get; set; } = string.Empty;
+    }
+
+    public class TestEmailRequest
+    {
+        public string Email { get; set; } = string.Empty;
     }
 
     public class ApiResponse<T>

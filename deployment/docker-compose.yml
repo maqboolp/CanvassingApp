@@ -28,6 +28,7 @@ services:
       - JwtSettings__Issuer=http://localhost:8080
       - JwtSettings__Audience=http://localhost:8080
       - JwtSettings__ExpirationMinutes=480
+      - SENDGRID_API_KEY=${SENDGRID_API_KEY}
     ports:
       - "8080:8080"
     depends_on:

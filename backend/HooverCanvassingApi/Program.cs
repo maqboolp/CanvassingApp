@@ -138,7 +138,16 @@ builder.Services.AddScoped<VoterImportService>();
 builder.Services.AddHttpClient();
 
 // Configure Email Service
-builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
+builder.Services.Configure<EmailSettings>(options =>
+{
+    builder.Configuration.GetSection("EmailSettings").Bind(options);
+    // Override with environment variable if provided
+    var sendGridApiKey = Environment.GetEnvironmentVariable("SENDGRID_API_KEY");
+    if (!string.IsNullOrEmpty(sendGridApiKey))
+    {
+        options.SendGridApiKey = sendGridApiKey;
+    }
+});
 builder.Services.AddTransient<IEmailService, EmailService>();
 
 var app = builder.Build();

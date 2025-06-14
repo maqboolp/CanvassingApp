@@ -1,6 +1,8 @@
 using MailKit.Net.Smtp;
 using Microsoft.Extensions.Options;
 using MimeKit;
+using SendGrid;
+using SendGrid.Helpers.Mail;
 using HooverCanvassingApi.Models;
 
 namespace HooverCanvassingApi.Services;
@@ -29,6 +31,73 @@ public class EmailService : IEmailService
     {
         try
         {
+            if (_emailSettings.Provider == "SendGrid")
+            {
+                return await SendEmailViaSendGridAsync(to, subject, htmlContent, textContent);
+            }
+            else
+            {
+                return await SendEmailViaSmtpAsync(to, subject, htmlContent, textContent);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Failed to send email to {to}");
+            return false;
+        }
+    }
+
+    private async Task<bool> SendEmailViaSendGridAsync(string to, string subject, string htmlContent, string? textContent = null)
+    {
+        try
+        {
+            // For development, we'll log instead of actually sending email if no API key is configured
+            if (string.IsNullOrEmpty(_emailSettings.SendGridApiKey))
+            {
+                _logger.LogInformation($"SendGrid email would be sent to {to}:");
+                _logger.LogInformation($"Subject: {subject}");
+                _logger.LogInformation($"HTML Content: {htmlContent}");
+                _logger.LogInformation($"Text Content: {textContent}");
+                return true;
+            }
+
+            var client = new SendGridClient(_emailSettings.SendGridApiKey);
+            var from = new EmailAddress(_emailSettings.FromEmail, _emailSettings.FromName);
+            var toAddress = new EmailAddress(to);
+            
+            var msg = MailHelper.CreateSingleEmail(
+                from, 
+                toAddress, 
+                subject, 
+                textContent ?? htmlContent, // Use text content or fallback to HTML
+                htmlContent
+            );
+
+            var response = await client.SendEmailAsync(msg);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                _logger.LogInformation($"SendGrid email sent successfully to {to}");
+                return true;
+            }
+            else
+            {
+                var responseBody = await response.Body.ReadAsStringAsync();
+                _logger.LogError($"SendGrid API error: {response.StatusCode} - {responseBody}");
+                return false;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Failed to send email via SendGrid to {to}");
+            return false;
+        }
+    }
+
+    private async Task<bool> SendEmailViaSmtpAsync(string to, string subject, string htmlContent, string? textContent = null)
+    {
+        try
+        {
             var message = new MimeMessage();
             message.From.Add(new MailboxAddress(_emailSettings.FromName, _emailSettings.FromEmail));
             message.To.Add(new MailboxAddress("", to));
@@ -49,7 +118,7 @@ public class EmailService : IEmailService
             // For development, we'll log instead of actually sending email if no SMTP credentials are configured
             if (string.IsNullOrEmpty(_emailSettings.Username) || string.IsNullOrEmpty(_emailSettings.Password))
             {
-                _logger.LogInformation($"Email would be sent to {to}:");
+                _logger.LogInformation($"SMTP email would be sent to {to}:");
                 _logger.LogInformation($"Subject: {subject}");
                 _logger.LogInformation($"HTML Content: {htmlContent}");
                 _logger.LogInformation($"Text Content: {textContent}");
@@ -61,12 +130,12 @@ public class EmailService : IEmailService
             await client.SendAsync(message);
             await client.DisconnectAsync(true);
 
-            _logger.LogInformation($"Password reset email sent successfully to {to}");
+            _logger.LogInformation($"SMTP email sent successfully to {to}");
             return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Failed to send email to {to}");
+            _logger.LogError(ex, $"Failed to send email via SMTP to {to}");
             return false;
         }
     }
