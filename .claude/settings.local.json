@@ -3,7 +3,8 @@
     "allow": [
       "Bash(doctl apps logs:*)",
       "Bash(git add:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(dotnet build)"
     ],
     "deny": []
   }

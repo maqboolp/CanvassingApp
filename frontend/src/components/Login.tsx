@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import QRCode from 'react-qr-code';
+import VersionInfo from './VersionInfo';
 import {
   Paper,
   TextField,
@@ -360,6 +361,9 @@ const Login: React.FC<LoginProps> = ({ onLogin, isLoading = false, error }) => {
                 </Typography>
               </Box>
             </Box>
+
+            {/* Version Information */}
+            <VersionInfo />
           </CardContent>
         </Card>
       </Box>

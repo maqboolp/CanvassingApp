@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import QRCode from 'react-qr-code';
+import VersionInfo from './VersionInfo';
 import {
   AppBar,
   Toolbar,
@@ -2969,6 +2970,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
           <Email />
         </Fab>
       )}
+      
+      {/* Version Information */}
+      <Container maxWidth="lg" sx={{ pb: 2 }}>
+        <VersionInfo />
+      </Container>
     </Box>
   );
 };

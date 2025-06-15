@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import QRCode from 'react-qr-code';
+import VersionInfo from './VersionInfo';
 import {
   AppBar,
   Toolbar,
@@ -1069,6 +1070,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
           </Button>
         </DialogActions>
       </Dialog>
+      
+      {/* Version Information */}
+      <Container maxWidth="sm" sx={{ pb: 2 }}>
+        <VersionInfo />
+      </Container>
     </Box>
   );
 };
