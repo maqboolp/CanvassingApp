@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import QRCode from 'react-qr-code';
 import {
   Paper,
@@ -42,6 +43,7 @@ interface LoginProps {
 }
 
 const Login: React.FC<LoginProps> = ({ onLogin, isLoading = false, error }) => {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -105,9 +107,9 @@ const Login: React.FC<LoginProps> = ({ onLogin, isLoading = false, error }) => {
         }}
       >
         <Card sx={{ width: '100%', maxWidth: 400 }}>
-          <CardContent sx={{ p: 4 }}>
+          <CardContent sx={{ p: 3 }}>
             {/* Header */}
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 3 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 2 }}>
               <img 
                 src="/campaign-logo.png" 
                 alt="Tanveer Patel for Hoover City Council" 
@@ -115,12 +117,9 @@ const Login: React.FC<LoginProps> = ({ onLogin, isLoading = false, error }) => {
                   width: 'auto', 
                   maxWidth: '180px', 
                   height: '60px', 
-                  marginBottom: '16px' 
+                  marginBottom: '8px' 
                 }} 
               />
-              <Typography variant="subtitle1" align="center" color="text.secondary">
-                Canvassing Portal
-              </Typography>
             </Box>
 
             {error && (
@@ -129,7 +128,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, isLoading = false, error }) => {
               </Alert>
             )}
 
-            <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
+            <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
               <TextField
                 margin="normal"
                 required
@@ -204,12 +203,16 @@ const Login: React.FC<LoginProps> = ({ onLogin, isLoading = false, error }) => {
                 <Typography variant="body2" color="text.secondary">
                   Want to join our team?{' '}
                   <Link
-                    href="/register"
+                    component="button"
                     variant="body2"
+                    onClick={() => navigate('/register')}
                     sx={{ 
                       color: '#2f1c6a',
                       textDecoration: 'none',
                       fontWeight: 500,
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
                       '&:hover': {
                         textDecoration: 'underline'
                       }
