@@ -450,6 +450,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
               <AccountCircle sx={{ mr: 1 }} />
               Change Avatar
             </MenuItem>
+            <MenuItem disabled>
+              <VersionInfo />
+            </MenuItem>
             <MenuItem onClick={onLogout}>
               <ExitToApp sx={{ mr: 1 }} />
               Logout

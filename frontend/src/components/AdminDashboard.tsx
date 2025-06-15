@@ -1068,6 +1068,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
               <Lock sx={{ mr: 1 }} />
               Change Password
             </MenuItem>
+            <MenuItem disabled>
+              <VersionInfo />
+            </MenuItem>
             <MenuItem onClick={onLogout}>
               <ExitToApp sx={{ mr: 1 }} />
               Logout
