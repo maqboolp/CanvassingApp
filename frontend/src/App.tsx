@@ -10,6 +10,8 @@ import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 import AdminDashboard from './components/AdminDashboard';
 import ResetPassword from './components/ResetPassword';
+import CompleteRegistration from './components/CompleteRegistration';
+import SelfRegistration from './components/SelfRegistration';
 
 // Create Material-UI theme matching tanveer4hoover.com
 const theme = createTheme({
@@ -183,6 +185,28 @@ function App() {
                 <Navigate to="/" replace />
               ) : (
                 <ResetPassword />
+              )
+            }
+          />
+
+          <Route
+            path="/complete-registration"
+            element={
+              user ? (
+                <Navigate to="/" replace />
+              ) : (
+                <CompleteRegistration />
+              )
+            }
+          />
+
+          <Route
+            path="/register"
+            element={
+              user ? (
+                <Navigate to="/" replace />
+              ) : (
+                <SelfRegistration />
               )
             }
           />
