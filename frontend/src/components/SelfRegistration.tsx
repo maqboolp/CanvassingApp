@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import VersionInfo from './VersionInfo';
 import {
   Container,
   Card,
@@ -139,8 +140,18 @@ const SelfRegistration: React.FC = () => {
       <Container maxWidth="sm" sx={{ mt: 8 }}>
         <Card>
           <CardContent sx={{ textAlign: 'center', py: 4 }}>
+            <img 
+              src="/campaign-logo.png" 
+              alt="Tanveer Patel for Hoover City Council" 
+              style={{ 
+                width: 'auto', 
+                maxWidth: '180px', 
+                height: '60px', 
+                marginBottom: '16px' 
+              }} 
+            />
             <CheckCircle sx={{ fontSize: 64, color: 'success.main', mb: 2 }} />
-            <Typography variant="h5" gutterBottom>
+            <Typography variant="h5" gutterBottom sx={{ color: '#2f1c6a', fontWeight: 600 }}>
               Registration Submitted!
             </Typography>
             <Typography variant="body1" color="text.secondary" paragraph>
@@ -163,6 +174,9 @@ const SelfRegistration: React.FC = () => {
                 Visit Campaign Site
               </Button>
             </Box>
+            
+            {/* Version Information */}
+            <VersionInfo />
           </CardContent>
         </Card>
       </Container>
@@ -173,8 +187,19 @@ const SelfRegistration: React.FC = () => {
     <Container maxWidth="sm" sx={{ mt: 4, mb: 4 }}>
       <Card>
         <CardContent sx={{ p: 4 }}>
+          {/* Campaign Header */}
           <Box sx={{ textAlign: 'center', mb: 4 }}>
-            <Typography variant="h4" gutterBottom sx={{ color: '#673ab7' }}>
+            <img 
+              src="/campaign-logo.png" 
+              alt="Tanveer Patel for Hoover City Council" 
+              style={{ 
+                width: 'auto', 
+                maxWidth: '200px', 
+                height: '70px', 
+                marginBottom: '16px' 
+              }} 
+            />
+            <Typography variant="h4" gutterBottom sx={{ color: '#2f1c6a', fontWeight: 600 }}>
               Join Our Campaign Team
             </Typography>
             <Typography variant="body1" color="text.secondary">
@@ -381,13 +406,27 @@ const SelfRegistration: React.FC = () => {
             </Typography>
           </Box>
 
-          <Box sx={{ mt: 3, p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
-            <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>
-              🏛️ By joining our team, you're helping to build a stronger, more connected Hoover community.
-              <br />
-              Together, we can make a real difference in our city's future!
+          {/* Campaign Info */}
+          <Box sx={{ 
+            mt: 3, 
+            p: 2, 
+            background: 'linear-gradient(45deg, #ebe4ff 30%, #d5dfff 90%)',
+            borderRadius: 2,
+            border: '1px solid rgba(103, 61, 230, 0.1)'
+          }}>
+            <Typography variant="body2" align="center" sx={{ color: '#2f1c6a', fontWeight: 600 }}>
+              "Take a Walk With Me."
+            </Typography>
+            <Typography variant="body2" align="center" sx={{ color: '#2f1c6a', mt: 0.5 }}>
+              Join the movement for a better Hoover - August 26, 2025 Election
+            </Typography>
+            <Typography variant="caption" align="center" sx={{ mt: 1, display: 'block', color: '#2f1c6a', fontStyle: 'italic' }}>
+              Paid for by Tanveer for Hoover
             </Typography>
           </Box>
+
+          {/* Version Information */}
+          <VersionInfo />
         </CardContent>
       </Card>
     </Container>
