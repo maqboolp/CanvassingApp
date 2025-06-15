@@ -510,7 +510,7 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
                       />
                     ) : (
                       <Chip
-                        label={isMobile ? "Not Called" : "Not Contacted"}
+                        label="Not Contacted"
                         size="small"
                         variant="outlined"
                       />
@@ -549,7 +549,7 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
                       disabled={loading}
                       sx={{ minWidth: isMobile ? '60px' : 'auto' }}
                     >
-                      {isMobile ? "Call" : "Contact"}
+                      Contact
                     </Button>
                   </TableCell>
                 </TableRow>
