@@ -195,6 +195,7 @@ app.MapGet("/api/debug/routes", (IServiceProvider services) =>
     return Results.Ok(routes);
 }).RequireAuthorization(policy => policy.RequireRole("SuperAdmin"));
 
+
 // Apply migrations and seed data before running
 using (var scope = app.Services.CreateScope())
 {
