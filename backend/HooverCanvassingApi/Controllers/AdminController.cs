@@ -969,6 +969,74 @@ namespace HooverCanvassingApi.Controllers
             }
         }
 
+        [HttpDelete("delete-user/{userId}")]
+        [Authorize(Roles = "SuperAdmin")]
+        public async Task<ActionResult> DeleteUser(string userId)
+        {
+            try
+            {
+                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return BadRequest(new { error = "User ID is required" });
+                }
+
+                // Find the target user
+                var targetUser = await _userManager.FindByIdAsync(userId);
+                if (targetUser == null)
+                {
+                    return NotFound(new { error = "User not found" });
+                }
+
+                // Permission checks
+                if (targetUser.Id == currentUserId)
+                {
+                    return BadRequest(new { error = "Cannot delete your own account" });
+                }
+
+                // Check if user has any contacts
+                var contactCount = await _context.Contacts
+                    .CountAsync(c => c.VolunteerId == userId);
+                
+                if (contactCount > 0)
+                {
+                    return BadRequest(new { error = $"Cannot delete user with {contactCount} contact records. Users with contact history cannot be deleted." });
+                }
+
+                // Additional safety check - don't delete if this is the only superadmin
+                if (targetUser.Role == VolunteerRole.SuperAdmin)
+                {
+                    var superAdminCount = await _userManager.GetUsersInRoleAsync("SuperAdmin");
+                    if (superAdminCount.Count <= 1)
+                    {
+                        return BadRequest(new { error = "Cannot delete the last SuperAdmin account" });
+                    }
+                }
+
+                // Delete the user
+                var result = await _userManager.DeleteAsync(targetUser);
+                if (!result.Succeeded)
+                {
+                    var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                    return BadRequest(new { error = $"Failed to delete user: {errors}" });
+                }
+
+                _logger.LogWarning("User {TargetEmail} ({TargetRole}) was PERMANENTLY DELETED by SuperAdmin {AdminEmail}", 
+                    targetUser.Email, targetUser.Role, User.FindFirst(ClaimTypes.Email)?.Value);
+
+                return Ok(new { 
+                    success = true,
+                    message = $"User {targetUser.FirstName} {targetUser.LastName} has been permanently deleted"
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting user {UserId}", userId);
+                return StatusCode(500, new { error = "Failed to delete user" });
+            }
+        }
+
         [HttpPost("send-engagement-email")]
         [Authorize(Roles = "Admin,SuperAdmin")]
         public async Task<ActionResult> SendEngagementEmail([FromBody] EngagementEmailRequest request)

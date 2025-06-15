@@ -69,7 +69,8 @@ import {
   Visibility,
   VisibilityOff,
   Email,
-  Schedule
+  Schedule,
+  Delete
 } from '@mui/icons-material';
 import { AuthUser, Voter, ContactStatus, VoterSupport } from '../types';
 import VoterList from './VoterList';
@@ -187,6 +188,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
   const [adminNotes, setAdminNotes] = useState('');
   const [approvalLoading, setApprovalLoading] = useState(false);
   const [approvalResult, setApprovalResult] = useState<any>(null);
+
+  // Delete user state
+  const [deleteDialog, setDeleteDialog] = useState(false);
+  const [selectedUserForDelete, setSelectedUserForDelete] = useState<any>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteResult, setDeleteResult] = useState<any>(null);
 
   useEffect(() => {
     if (currentTab === 0) {
@@ -352,6 +360,43 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
       setApprovalResult({ error: 'Failed to reject volunteer: ' + (error as Error).message });
     } finally {
       setApprovalLoading(false);
+    }
+  };
+
+  const handleDeleteUser = async (userToDelete: any) => {
+    // Check if confirmation text matches
+    if (deleteConfirmText !== userToDelete.email) {
+      setDeleteResult({ error: 'Please type the email address exactly to confirm deletion' });
+      return;
+    }
+
+    setDeleteLoading(true);
+    setDeleteResult(null);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/admin/delete-user/${userToDelete.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${user.token}`
+        }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setDeleteResult({ success: result.message });
+        // Refresh volunteers list
+        fetchVolunteers();
+        setDeleteDialog(false);
+        setDeleteConfirmText('');
+        setSelectedUserForDelete(null);
+      } else {
+        const error = await response.json();
+        setDeleteResult({ error: error.error || 'Failed to delete user' });
+      }
+    } catch (error) {
+      setDeleteResult({ error: 'Failed to delete user: ' + (error as Error).message });
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -1815,6 +1860,22 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                               >
                                 {volunteer.isActive ? 'Deactivate' : 'Activate'}
                               </Button>
+                              {user.role === 'superadmin' && volunteer.contactCount === 0 && (
+                                <Button
+                                  size="small"
+                                  variant="outlined"
+                                  color="error"
+                                  onClick={() => {
+                                    setSelectedUserForDelete(volunteer);
+                                    setDeleteDialog(true);
+                                    setDeleteConfirmText('');
+                                    setDeleteResult(null);
+                                  }}
+                                  startIcon={<Delete />}
+                                >
+                                  Delete
+                                </Button>
+                              )}
                             </Box>
                           </TableCell>
                         </TableRow>
@@ -2973,6 +3034,84 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
           <Email />
         </Fab>
       )}
+
+      {/* Delete User Dialog */}
+      <Dialog open={deleteDialog} onClose={() => !deleteLoading && setDeleteDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ color: 'error.main' }}>⚠️ Delete User</DialogTitle>
+        <DialogContent>
+          {selectedUserForDelete && (
+            <>
+              <Alert severity="error" sx={{ mb: 3 }}>
+                <Typography variant="body2">
+                  <strong>This action cannot be undone!</strong>
+                  <br />
+                  This will permanently delete the user and all associated data.
+                </Typography>
+              </Alert>
+              
+              <Typography variant="body1" paragraph>
+                You are about to permanently delete:
+              </Typography>
+              <Typography variant="h6" sx={{ mb: 2 }}>
+                {selectedUserForDelete.firstName} {selectedUserForDelete.lastName}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Email: {selectedUserForDelete.email}
+                <br />
+                Role: {selectedUserForDelete.role}
+                <br />
+                Contacts Made: {selectedUserForDelete.contactCount || 0}
+              </Typography>
+              
+              {selectedUserForDelete.contactCount > 0 && (
+                <Alert severity="warning" sx={{ mb: 3 }}>
+                  <Typography variant="body2">
+                    This user has made {selectedUserForDelete.contactCount} contacts. 
+                    Deletion is not allowed for users with contact history.
+                  </Typography>
+                </Alert>
+              )}
+              
+              {selectedUserForDelete.contactCount === 0 && (
+                <>
+                  <Typography variant="body2" paragraph sx={{ mt: 3 }}>
+                    To confirm deletion, type the user's email address exactly:
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace', mb: 1, display: 'block' }}>
+                    {selectedUserForDelete.email}
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    label="Type email to confirm"
+                    value={deleteConfirmText}
+                    onChange={(e) => setDeleteConfirmText(e.target.value)}
+                    disabled={deleteLoading}
+                    error={deleteResult?.error ? true : false}
+                    helperText={deleteResult?.error}
+                    autoFocus
+                  />
+                </>
+              )}
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialog(false)} disabled={deleteLoading}>
+            Cancel
+          </Button>
+          {selectedUserForDelete?.contactCount === 0 && (
+            <Button 
+              onClick={() => handleDeleteUser(selectedUserForDelete)} 
+              variant="contained" 
+              color="error"
+              disabled={deleteLoading || deleteConfirmText !== selectedUserForDelete?.email}
+              startIcon={deleteLoading ? <CircularProgress size={20} /> : <Delete />}
+            >
+              {deleteLoading ? 'Deleting...' : 'Delete User'}
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
       
       {/* Version Information */}
       <Container maxWidth="lg" sx={{ pb: 2 }}>
