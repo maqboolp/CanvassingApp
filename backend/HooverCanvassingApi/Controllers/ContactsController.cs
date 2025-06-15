@@ -27,25 +27,56 @@ namespace HooverCanvassingApi.Controllers
             _userManager = userManager;
         }
 
+        [HttpGet("test")]
+        public async Task<ActionResult> TestEndpoint()
+        {
+            var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var currentUserEmail = User.FindFirst(ClaimTypes.Email)?.Value;
+            
+            _logger.LogInformation("=== CONTACTS API TEST ENDPOINT CALLED ===");
+            _logger.LogInformation("Test endpoint called by user {UserId} ({UserEmail})", currentUserId, currentUserEmail);
+            
+            return Ok(new { 
+                message = "Contacts API is working", 
+                timestamp = DateTime.UtcNow,
+                userId = currentUserId,
+                userEmail = currentUserEmail
+            });
+        }
+
         [HttpPost]
         public async Task<ActionResult<ContactDto>> CreateContact([FromBody] CreateContactRequest request)
         {
             try
             {
                 var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var currentUserEmail = User.FindFirst(ClaimTypes.Email)?.Value;
+                
+                _logger.LogInformation("=== CONTACT CREATION STARTED ===");
+                _logger.LogInformation("Contact creation request received from user {UserId} ({UserEmail}) for voter {VoterId}", 
+                    currentUserId, currentUserEmail, request.VoterId);
+                _logger.LogInformation("Contact request details: Status={Status}, Support={Support}, Notes={Notes}", 
+                    request.Status, request.VoterSupport, request.Notes);
+                
                 if (string.IsNullOrEmpty(currentUserId))
                 {
+                    _logger.LogWarning("Contact creation failed: Unauthorized user");
                     return Unauthorized();
                 }
 
                 // Validate voter exists
+                _logger.LogInformation("Looking up voter with ID: {VoterId}", request.VoterId);
                 var voter = await _context.Voters
                     .FirstOrDefaultAsync(v => v.LalVoterId == request.VoterId);
 
                 if (voter == null)
                 {
+                    _logger.LogWarning("Contact creation failed: Voter {VoterId} not found", request.VoterId);
                     return NotFound(new { error = "Voter not found" });
                 }
+                
+                _logger.LogInformation("Voter found: {VoterName} at {VoterAddress}", 
+                    $"{voter.FirstName} {voter.LastName}", voter.AddressLine);
 
                 // Parse contact status
                 if (!Enum.TryParse<ContactStatus>(request.Status, true, out var contactStatus))
@@ -88,10 +119,14 @@ namespace HooverCanvassingApi.Controllers
                     voter.VoterSupport = voterSupport.Value;
                 }
 
+                _logger.LogInformation("Saving contact to database...");
                 await _context.SaveChangesAsync();
+                _logger.LogInformation("Contact {ContactId} saved successfully to database", contact.Id);
 
                 // Send notification emails to all super admins
+                _logger.LogInformation("Starting notification process for contact {ContactId}", contact.Id);
                 await SendContactNotificationToSuperAdmins(contact, voter, currentUserId);
+                _logger.LogInformation("Notification process completed for contact {ContactId}", contact.Id);
 
                 var contactDto = new ContactDto
                 {
@@ -113,6 +148,7 @@ namespace HooverCanvassingApi.Controllers
 
                 _logger.LogInformation("Contact created: {ContactId} for voter {VoterId} by volunteer {VolunteerId}",
                     contact.Id, contact.VoterId, contact.VolunteerId);
+                _logger.LogInformation("=== CONTACT CREATION COMPLETED SUCCESSFULLY ===");
 
                 return CreatedAtAction(nameof(GetContact), new { id = contact.Id }, contactDto);
             }
@@ -327,22 +363,36 @@ namespace HooverCanvassingApi.Controllers
         {
             try
             {
+                _logger.LogInformation("=== NOTIFICATION PROCESS STARTED ===");
+                _logger.LogInformation("Attempting to send notifications for contact {ContactId}", contact.Id);
+                
                 // Get all super admins
+                _logger.LogInformation("Fetching super admins from database...");
                 var superAdmins = await _userManager.GetUsersInRoleAsync("SuperAdmin");
+                _logger.LogInformation("Found {SuperAdminCount} super admins in system", superAdmins.Count);
                 
                 if (!superAdmins.Any())
                 {
                     _logger.LogWarning("No super admins found to notify about contact {ContactId}", contact.Id);
                     return;
                 }
+                
+                // Log details of each super admin
+                foreach (var admin in superAdmins)
+                {
+                    _logger.LogInformation("Super admin found: {AdminEmail} (Active: {IsActive})", admin.Email, admin.IsActive);
+                }
 
                 // Get volunteer details
+                _logger.LogInformation("Fetching volunteer details for ID: {VolunteerId}", volunteerId);
                 var volunteer = await _userManager.FindByIdAsync(volunteerId);
                 if (volunteer == null)
                 {
                     _logger.LogError("Volunteer {VolunteerId} not found for contact notification", volunteerId);
                     return;
                 }
+                _logger.LogInformation("Volunteer found: {VolunteerName} ({VolunteerEmail})", 
+                    $"{volunteer.FirstName} {volunteer.LastName}", volunteer.Email);
 
                 // Prepare notification data
                 var voterAddress = $"{voter.AddressLine}, {voter.City}, {voter.State} {voter.Zip}";
@@ -363,10 +413,15 @@ namespace HooverCanvassingApi.Controllers
                     Location = location
                 };
 
+                _logger.LogInformation("Prepared notification data - Volunteer: {VolunteerName}, Voter: {VoterName}, Status: {Status}", 
+                    notificationData.VolunteerName, notificationData.VoterName, notificationData.ContactStatus);
+
                 // Send notifications to all super admins
-                var notificationTasks = superAdmins.Select(admin => 
-                    _emailService.SendContactNotificationEmailAsync(admin.Email!, notificationData)
-                ).ToArray();
+                _logger.LogInformation("Sending {EmailCount} notification emails...", superAdmins.Count);
+                var notificationTasks = superAdmins.Select(admin => {
+                    _logger.LogInformation("Queuing email to super admin: {AdminEmail}", admin.Email);
+                    return _emailService.SendContactNotificationEmailAsync(admin.Email!, notificationData);
+                }).ToArray();
 
                 var results = await Task.WhenAll(notificationTasks);
                 var successCount = results.Count(r => r);
@@ -379,6 +434,8 @@ namespace HooverCanvassingApi.Controllers
                 {
                     _logger.LogWarning("Some contact notification emails failed for contact {ContactId}", contact.Id);
                 }
+                
+                _logger.LogInformation("=== NOTIFICATION PROCESS COMPLETED ===");
             }
             catch (Exception ex)
             {

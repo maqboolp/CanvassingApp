@@ -33,7 +33,13 @@ public class EmailService : IEmailService
         var htmlContent = GenerateContactNotificationHtml(data);
         var textContent = GenerateContactNotificationText(data);
 
-        return await SendEmailAsync(email, subject, htmlContent, textContent);
+        _logger.LogInformation("=== EMAIL SERVICE: Sending contact notification to {Email} ===", email);
+        _logger.LogInformation("Email subject: {Subject}", subject);
+        
+        var result = await SendEmailAsync(email, subject, htmlContent, textContent);
+        
+        _logger.LogInformation("Email service result for {Email}: {Result}", email, result ? "SUCCESS" : "FAILED");
+        return result;
     }
 
     public async Task<bool> SendEmailAsync(string to, string subject, string htmlContent, string? textContent = null)
@@ -60,9 +66,13 @@ public class EmailService : IEmailService
     {
         try
         {
+            _logger.LogInformation("=== SENDGRID: Starting email send process ===");
+            _logger.LogInformation("SendGrid API Key configured: {HasKey}", !string.IsNullOrEmpty(_emailSettings.SendGridApiKey));
+            
             // For development, we'll log instead of actually sending email if no API key is configured
             if (string.IsNullOrEmpty(_emailSettings.SendGridApiKey))
             {
+                _logger.LogWarning("=== DEVELOPMENT MODE: No SendGrid API Key configured ===");
                 _logger.LogInformation($"SendGrid email would be sent to {to}:");
                 _logger.LogInformation($"Subject: {subject}");
                 _logger.LogInformation($"HTML Content: {htmlContent}");
