@@ -44,6 +44,57 @@ namespace HooverCanvassingApi.Controllers
             });
         }
 
+        [HttpGet("debug-superadmins")]
+        [Authorize(Roles = "Admin,SuperAdmin")]
+        public async Task<ActionResult> DebugSuperAdmins()
+        {
+            try
+            {
+                _logger.LogInformation("=== DEBUGGING SUPER ADMINS ===");
+                
+                var superAdmins = await _userManager.GetUsersInRoleAsync("SuperAdmin");
+                _logger.LogInformation("Total super admins found: {Count}", superAdmins.Count);
+                
+                var adminDetails = superAdmins.Select(admin => {
+                    var details = new {
+                        Id = admin.Id,
+                        Email = admin.Email,
+                        FirstName = admin.FirstName,
+                        LastName = admin.LastName,
+                        IsActive = admin.IsActive,
+                        EmailConfirmed = admin.EmailConfirmed,
+                        HasValidEmail = !string.IsNullOrEmpty(admin.Email)
+                    };
+                    
+                    _logger.LogInformation("Super Admin: {Email} - Active: {IsActive}, ValidEmail: {HasValidEmail}", 
+                        admin.Email, admin.IsActive, !string.IsNullOrEmpty(admin.Email));
+                    
+                    return details;
+                }).ToList();
+
+                // Check how many would actually get emails
+                var eligibleForEmails = superAdmins.Where(admin => 
+                    admin.IsActive && !string.IsNullOrEmpty(admin.Email)
+                ).ToList();
+                
+                _logger.LogInformation("Super admins eligible for emails: {EligibleCount} out of {TotalCount}", 
+                    eligibleForEmails.Count, superAdmins.Count);
+
+                return Ok(new {
+                    message = "Super admin debug completed",
+                    totalSuperAdmins = superAdmins.Count,
+                    eligibleForEmails = eligibleForEmails.Count,
+                    superAdmins = adminDetails,
+                    timestamp = DateTime.UtcNow
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error debugging super admins");
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
         [HttpPost]
         public async Task<ActionResult<ContactDto>> CreateContact([FromBody] CreateContactRequest request)
         {
