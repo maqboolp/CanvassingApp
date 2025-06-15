@@ -190,6 +190,9 @@ namespace HooverCanvassingApi.Controllers
                     });
                 }
 
+                // Add user to role - THIS WAS MISSING!
+                await _userManager.AddToRoleAsync(user, user.Role.ToString());
+
                 var token = GenerateJwtToken(user);
                 var authUser = new AuthUserDto
                 {
@@ -376,6 +379,9 @@ namespace HooverCanvassingApi.Controllers
                         Error = $"Admin creation failed: {errors}"
                     });
                 }
+
+                // Add user to role - THIS WAS MISSING!
+                await _userManager.AddToRoleAsync(user, user.Role.ToString());
 
                 _logger.LogInformation("Admin created successfully: {Email}", request.Email);
 

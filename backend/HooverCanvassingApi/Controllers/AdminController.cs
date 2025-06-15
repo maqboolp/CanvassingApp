@@ -1154,6 +1154,168 @@ Paid for by Tanveer for Hoover
 This is an automated message from the campaign management system.
 ";
         }
+
+        // Pending Volunteer Management Endpoints
+        [HttpGet("pending-volunteers")]
+        [Authorize(Roles = "Admin,SuperAdmin")]
+        public async Task<ActionResult> GetPendingVolunteers()
+        {
+            try
+            {
+                var pendingVolunteers = await _context.PendingVolunteers
+                    .Where(p => p.Status == PendingVolunteerStatus.Pending)
+                    .OrderBy(p => p.CreatedAt)
+                    .Select(p => new
+                    {
+                        id = p.Id,
+                        firstName = p.FirstName,
+                        lastName = p.LastName,
+                        email = p.Email,
+                        phoneNumber = p.PhoneNumber,
+                        requestedRole = p.RequestedRole.ToString(),
+                        createdAt = p.CreatedAt,
+                        status = p.Status.ToString()
+                    })
+                    .ToListAsync();
+
+                return Ok(pendingVolunteers);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching pending volunteers");
+                return StatusCode(500, new { error = "Failed to fetch pending volunteers" });
+            }
+        }
+
+        [HttpPost("approve-volunteer/{pendingVolunteerId}")]
+        [Authorize(Roles = "Admin,SuperAdmin")]
+        public async Task<ActionResult> ApproveVolunteer(string pendingVolunteerId, [FromBody] ApproveVolunteerRequest? request = null)
+        {
+            try
+            {
+                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                // Find pending volunteer
+                var pendingVolunteer = await _context.PendingVolunteers
+                    .FirstOrDefaultAsync(p => p.Id == pendingVolunteerId && p.Status == PendingVolunteerStatus.Pending);
+
+                if (pendingVolunteer == null)
+                {
+                    return NotFound(new { error = "Pending volunteer not found" });
+                }
+
+                // Check if email already exists
+                var existingUser = await _userManager.FindByEmailAsync(pendingVolunteer.Email);
+                if (existingUser != null)
+                {
+                    return BadRequest(new { error = "User with this email already exists" });
+                }
+
+                // Create new volunteer account
+                var newVolunteer = new Volunteer
+                {
+                    FirstName = pendingVolunteer.FirstName,
+                    LastName = pendingVolunteer.LastName,
+                    Email = pendingVolunteer.Email,
+                    UserName = pendingVolunteer.Email,
+                    PhoneNumber = pendingVolunteer.PhoneNumber,
+                    Role = pendingVolunteer.RequestedRole,
+                    IsActive = true,
+                    EmailConfirmed = true
+                };
+
+                // Create user account with stored password
+                var result = await _userManager.CreateAsync(newVolunteer, "TempPassword123!"); // We'll use the stored hashed password
+                if (!result.Succeeded)
+                {
+                    var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                    return BadRequest(new { error = $"Failed to create user: {errors}" });
+                }
+
+                // Update with the actual hashed password from pending registration
+                newVolunteer.PasswordHash = pendingVolunteer.HashedPassword;
+                await _userManager.UpdateAsync(newVolunteer);
+
+                // Add user to role
+                await _userManager.AddToRoleAsync(newVolunteer, pendingVolunteer.RequestedRole.ToString());
+
+                // Update pending volunteer status
+                pendingVolunteer.Status = PendingVolunteerStatus.Approved;
+                pendingVolunteer.ReviewedAt = DateTime.UtcNow;
+                pendingVolunteer.ReviewedByUserId = currentUserId;
+                pendingVolunteer.ReviewNotes = request?.AdminNotes;
+
+                await _context.SaveChangesAsync();
+
+                // Send approval email
+                await _emailService.SendRegistrationStatusEmailAsync(
+                    pendingVolunteer.Email, 
+                    pendingVolunteer.FirstName, 
+                    true, 
+                    request?.AdminNotes);
+
+                _logger.LogInformation("Volunteer {Email} approved by {AdminId}", pendingVolunteer.Email, currentUserId);
+
+                return Ok(new
+                {
+                    message = "Volunteer approved successfully",
+                    volunteerId = newVolunteer.Id,
+                    email = newVolunteer.Email
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error approving volunteer {VolunteerId}", pendingVolunteerId);
+                return StatusCode(500, new { error = "Failed to approve volunteer" });
+            }
+        }
+
+        [HttpPost("reject-volunteer/{pendingVolunteerId}")]
+        [Authorize(Roles = "Admin,SuperAdmin")]
+        public async Task<ActionResult> RejectVolunteer(string pendingVolunteerId, [FromBody] RejectVolunteerRequest request)
+        {
+            try
+            {
+                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                // Find pending volunteer
+                var pendingVolunteer = await _context.PendingVolunteers
+                    .FirstOrDefaultAsync(p => p.Id == pendingVolunteerId && p.Status == PendingVolunteerStatus.Pending);
+
+                if (pendingVolunteer == null)
+                {
+                    return NotFound(new { error = "Pending volunteer not found" });
+                }
+
+                // Update pending volunteer status
+                pendingVolunteer.Status = PendingVolunteerStatus.Rejected;
+                pendingVolunteer.ReviewedAt = DateTime.UtcNow;
+                pendingVolunteer.ReviewedByUserId = currentUserId;
+                pendingVolunteer.ReviewNotes = request.AdminNotes;
+
+                await _context.SaveChangesAsync();
+
+                // Send rejection email
+                await _emailService.SendRegistrationStatusEmailAsync(
+                    pendingVolunteer.Email, 
+                    pendingVolunteer.FirstName, 
+                    false, 
+                    request.AdminNotes);
+
+                _logger.LogInformation("Volunteer {Email} rejected by {AdminId}", pendingVolunteer.Email, currentUserId);
+
+                return Ok(new
+                {
+                    message = "Volunteer registration rejected",
+                    email = pendingVolunteer.Email
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error rejecting volunteer {VolunteerId}", pendingVolunteerId);
+                return StatusCode(500, new { error = "Failed to reject volunteer" });
+            }
+        }
     }
 
     public class VolunteerDto
@@ -1234,6 +1396,16 @@ This is an automated message from the campaign management system.
     public class ToggleUserStatusRequest
     {
         public string UserId { get; set; } = string.Empty;
+    }
+
+    public class ApproveVolunteerRequest
+    {
+        public string? AdminNotes { get; set; }
+    }
+
+    public class RejectVolunteerRequest
+    {
+        public string AdminNotes { get; set; } = string.Empty;
     }
 
     public class LeaderboardResponse
