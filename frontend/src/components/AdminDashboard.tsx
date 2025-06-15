@@ -1151,7 +1151,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
         )}
 
         {/* Nearest Voter Card - Only show in Voters tab */}
-        {currentTab === 2 && nearestVoter && (
+        {currentTab === 3 && nearestVoter && (
           <Alert 
             severity="info" 
             sx={{ mb: 3 }}
@@ -1231,7 +1231,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
         )}
 
         {/* Location Enable Card - Only show in Voters tab */}
-        {currentTab === 2 && !nearestVoter && !location && (
+        {currentTab === 3 && !nearestVoter && !location && (
           <Alert severity={locationError ? "error" : "warning"} sx={{ mb: 3 }}>
             <Typography variant="subtitle2" gutterBottom>
               📍 Location needed for nearest voter
