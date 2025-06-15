@@ -67,7 +67,8 @@ import {
   MenuBook,
   Visibility,
   VisibilityOff,
-  Email
+  Email,
+  Schedule
 } from '@mui/icons-material';
 import { AuthUser, Voter, ContactStatus, VoterSupport } from '../types';
 import VoterList from './VoterList';
@@ -116,12 +117,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
   const [importResult, setImportResult] = useState<any>(null);
   const [enableGeocoding, setEnableGeocoding] = useState(false);
   const [createVolunteerDialog, setCreateVolunteerDialog] = useState(false);
-  const [volunteerForm, setVolunteerForm] = useState({
-    firstName: '',
-    lastName: '',
+  const [invitationForm, setInvitationForm] = useState({
     email: '',
-    phoneNumber: '',
-    password: ''
+    role: 'Volunteer'
   });
   const [showVolunteerPassword, setShowVolunteerPassword] = useState(false);
   const [adminForm, setAdminForm] = useState({
@@ -179,16 +177,28 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
   const [emailSending, setEmailSending] = useState(false);
   const [emailResult, setEmailResult] = useState<any>(null);
 
+  // Pending volunteers state
+  const [pendingVolunteers, setPendingVolunteers] = useState<any[]>([]);
+  const [pendingLoading, setPendingLoading] = useState(false);
+  const [approveDialog, setApproveDialog] = useState(false);
+  const [rejectDialog, setRejectDialog] = useState(false);
+  const [selectedPendingVolunteer, setSelectedPendingVolunteer] = useState<any>(null);
+  const [adminNotes, setAdminNotes] = useState('');
+  const [approvalLoading, setApprovalLoading] = useState(false);
+  const [approvalResult, setApprovalResult] = useState<any>(null);
+
   useEffect(() => {
     if (currentTab === 0) {
       fetchAnalytics();
       fetchLeaderboard();
     } else if (currentTab === 1) {
       fetchVolunteers();
-    } else if (currentTab === 4) {
+    } else if (currentTab === 2) {
+      fetchPendingVolunteers();
+    } else if (currentTab === 5) {
       // Engagement tab - fetch volunteers for recipient selection
       fetchVolunteers();
-    } else if (currentTab === 5 && user.role === 'superadmin') {
+    } else if (currentTab === 6 && user.role === 'superadmin') {
       fetchGeocodingStatus();
     }
   }, [currentTab, user.role]);
@@ -252,6 +262,95 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
       console.error('Failed to fetch volunteers:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchPendingVolunteers = async () => {
+    setPendingLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/admin/pending-volunteers`, {
+        headers: {
+          'Authorization': `Bearer ${user.token}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setPendingVolunteers(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch pending volunteers:', error);
+    } finally {
+      setPendingLoading(false);
+    }
+  };
+
+  const handleApproveVolunteer = async (volunteer: any, notes?: string) => {
+    setApprovalLoading(true);
+    setApprovalResult(null);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/admin/approve-volunteer/${volunteer.id}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.token}`
+        },
+        body: JSON.stringify({ adminNotes: notes || null })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setApprovalResult({ success: result.message });
+        // Refresh pending volunteers list
+        fetchPendingVolunteers();
+        setApproveDialog(false);
+        setAdminNotes('');
+      } else {
+        const error = await response.json();
+        setApprovalResult({ error: error.error || 'Failed to approve volunteer' });
+      }
+    } catch (error) {
+      setApprovalResult({ error: 'Failed to approve volunteer: ' + (error as Error).message });
+    } finally {
+      setApprovalLoading(false);
+    }
+  };
+
+  const handleRejectVolunteer = async (volunteer: any, notes: string) => {
+    if (!notes.trim()) {
+      setApprovalResult({ error: 'Please provide a reason for rejection' });
+      return;
+    }
+
+    setApprovalLoading(true);
+    setApprovalResult(null);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/admin/reject-volunteer/${volunteer.id}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.token}`
+        },
+        body: JSON.stringify({ adminNotes: notes })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setApprovalResult({ success: result.message });
+        // Refresh pending volunteers list
+        fetchPendingVolunteers();
+        setRejectDialog(false);
+        setAdminNotes('');
+      } else {
+        const error = await response.json();
+        setApprovalResult({ error: error.error || 'Failed to reject volunteer' });
+      }
+    } catch (error) {
+      setApprovalResult({ error: 'Failed to reject volunteer: ' + (error as Error).message });
+    } finally {
+      setApprovalLoading(false);
     }
   };
 
@@ -332,9 +431,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
     }
   };
 
-  const handleCreateVolunteer = async () => {
-    if (!volunteerForm.firstName || !volunteerForm.lastName || !volunteerForm.email || !volunteerForm.password) {
-      setVolunteerCreateResult({ error: 'All fields are required' });
+  const handleSendInvitation = async () => {
+    if (!invitationForm.email) {
+      setVolunteerCreateResult({ error: 'Email address is required' });
       return;
     }
 
@@ -342,31 +441,30 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
     setVolunteerCreateResult(null);
     
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
+      const response = await fetch(`${API_BASE_URL}/api/registration/send-invitation`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${user.token}`
         },
-        body: JSON.stringify(volunteerForm)
+        body: JSON.stringify(invitationForm)
       });
 
       if (response.ok) {
         const result = await response.json();
-        setVolunteerCreateResult({ success: `Volunteer ${volunteerForm.firstName} ${volunteerForm.lastName} created successfully!` });
+        setVolunteerCreateResult({ success: `Invitation sent successfully to ${invitationForm.email}!` });
         setCreateVolunteerDialog(false);
-        setVolunteerForm({ firstName: '', lastName: '', email: '', phoneNumber: '', password: '' });
-        setShowVolunteerPassword(false);
+        setInvitationForm({ email: '', role: 'Volunteer' });
         // Refresh volunteers list if we're on that tab
         if (currentTab === 1) {
           fetchVolunteers();
         }
       } else {
         const error = await response.json();
-        setVolunteerCreateResult({ error: error.error || 'Failed to create volunteer' });
+        setVolunteerCreateResult({ error: error.error || 'Failed to send invitation' });
       }
     } catch (error) {
-      setVolunteerCreateResult({ error: 'Failed to create volunteer: ' + (error as Error).message });
+      setVolunteerCreateResult({ error: 'Failed to send invitation: ' + (error as Error).message });
     } finally {
       setVolunteerCreateLoading(false);
     }
@@ -999,6 +1097,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
         >
           <Tab label="Analytics" icon={<Analytics />} />
           <Tab label="Users" icon={<People />} />
+          <Tab label="Pending" icon={<Schedule />} />
           <Tab label="Voters" icon={<HowToVote />} />
           <Tab label="History" icon={<History />} />
           <Tab 
@@ -1430,7 +1529,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                   setVolunteerCreateResult(null);
                 }}
               >
-                Create Volunteer
+                Invite Team Member
               </Button>
             </Box>
           </Box>
@@ -1724,8 +1823,118 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
           )}
         </TabPanel>
 
-        {/* Voters Tab */}
+        {/* Pending Volunteers Tab */}
         <TabPanel value={currentTab} index={2}>
+          <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+            <Typography variant="h5">
+              Pending Volunteer Registrations
+            </Typography>
+            <Button
+              startIcon={<Refresh />}
+              variant="outlined"
+              onClick={fetchPendingVolunteers}
+              disabled={pendingLoading}
+            >
+              {pendingLoading ? 'Loading...' : 'Refresh'}
+            </Button>
+          </Box>
+
+          {approvalResult && approvalResult.success && (
+            <Alert severity="success" sx={{ mb: 3 }} onClose={() => setApprovalResult(null)}>
+              {approvalResult.success}
+            </Alert>
+          )}
+
+          {approvalResult && approvalResult.error && (
+            <Alert severity="error" sx={{ mb: 3 }} onClose={() => setApprovalResult(null)}>
+              {approvalResult.error}
+            </Alert>
+          )}
+
+          {pendingLoading ? (
+            <Box display="flex" justifyContent="center" py={4}>
+              <CircularProgress />
+            </Box>
+          ) : pendingVolunteers.length === 0 ? (
+            <Alert severity="info">
+              <Typography variant="body1">
+                🎉 No pending registrations! All volunteers have been processed.
+              </Typography>
+            </Alert>
+          ) : (
+            <TableContainer component={Paper}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Name</TableCell>
+                    <TableCell>Email</TableCell>
+                    <TableCell>Phone</TableCell>
+                    <TableCell>Role</TableCell>
+                    <TableCell>Registered</TableCell>
+                    <TableCell>Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {pendingVolunteers.map((volunteer) => (
+                    <TableRow key={volunteer.id}>
+                      <TableCell>
+                        {volunteer.firstName} {volunteer.lastName}
+                      </TableCell>
+                      <TableCell>{volunteer.email}</TableCell>
+                      <TableCell>{volunteer.phoneNumber}</TableCell>
+                      <TableCell>
+                        <Chip 
+                          label={volunteer.requestedRole} 
+                          color="primary" 
+                          size="small" 
+                          variant="outlined"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        {new Date(volunteer.createdAt).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          <Button
+                            size="small"
+                            variant="contained"
+                            color="success"
+                            onClick={() => {
+                              setSelectedPendingVolunteer(volunteer);
+                              setApproveDialog(true);
+                              setAdminNotes('');
+                              setApprovalResult(null);
+                            }}
+                            disabled={approvalLoading}
+                          >
+                            Approve
+                          </Button>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            color="error"
+                            onClick={() => {
+                              setSelectedPendingVolunteer(volunteer);
+                              setRejectDialog(true);
+                              setAdminNotes('');
+                              setApprovalResult(null);
+                            }}
+                            disabled={approvalLoading}
+                          >
+                            Reject
+                          </Button>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </TabPanel>
+
+        {/* Voters Tab */}
+        <TabPanel value={currentTab} index={3}>
           <Typography variant="h5" gutterBottom>
             Voter Management
           </Typography>
@@ -1733,12 +1942,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
         </TabPanel>
 
         {/* Contact History Tab */}
-        <TabPanel value={currentTab} index={3}>
+        <TabPanel value={currentTab} index={4}>
           <VoterContactHistory user={user} />
         </TabPanel>
 
         {/* Engagement Tab */}
-        <TabPanel value={currentTab} index={4}>
+        <TabPanel value={currentTab} index={5}>
           <Typography variant="h5" gutterBottom>
             User Engagement
           </Typography>
@@ -1907,7 +2116,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
 
         {/* Data Management Tab - Only for SuperAdmins */}
         {user.role === 'superadmin' && (
-          <TabPanel value={currentTab} index={5}>
+          <TabPanel value={currentTab} index={6}>
           <Typography variant="h5" gutterBottom>
             Data Management
           </Typography>
@@ -2060,12 +2269,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
         </DialogActions>
       </Dialog>
 
-      {/* Create Volunteer Dialog */}
+      {/* Invite Team Member Dialog */}
       <Dialog open={createVolunteerDialog} onClose={() => !volunteerCreateLoading && setCreateVolunteerDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Create New Volunteer</DialogTitle>
+        <DialogTitle>📧 Invite Team Member</DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary" paragraph>
-            Create a new volunteer account for canvassing activities.
+            Send an invitation email to add a new team member. They'll receive a secure link to complete their registration with their personal details.
           </Typography>
           {volunteerCreateResult && volunteerCreateResult.success && (
             <Alert severity="success" sx={{ mb: 2 }}>
@@ -2078,81 +2287,52 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
             </Alert>
           )}
           <TextField
-            label="First Name"
-            fullWidth
-            margin="normal"
-            value={volunteerForm.firstName}
-            onChange={(e) => setVolunteerForm({ ...volunteerForm, firstName: e.target.value })}
-            disabled={volunteerCreateLoading}
-            required
-          />
-          <TextField
-            label="Last Name"
-            fullWidth
-            margin="normal"
-            value={volunteerForm.lastName}
-            onChange={(e) => setVolunteerForm({ ...volunteerForm, lastName: e.target.value })}
-            disabled={volunteerCreateLoading}
-            required
-          />
-          <TextField
             label="Email Address"
             type="email"
             fullWidth
             margin="normal"
-            value={volunteerForm.email}
-            onChange={(e) => setVolunteerForm({ ...volunteerForm, email: e.target.value })}
+            value={invitationForm.email}
+            onChange={(e) => setInvitationForm({ ...invitationForm, email: e.target.value })}
             disabled={volunteerCreateLoading}
             required
+            helperText="The person will receive an invitation email at this address"
+            placeholder="volunteer@example.com"
           />
-          <TextField
-            label="Phone Number"
-            type="tel"
-            fullWidth
-            margin="normal"
-            value={volunteerForm.phoneNumber}
-            onChange={(e) => setVolunteerForm({ ...volunteerForm, phoneNumber: e.target.value })}
-            disabled={volunteerCreateLoading}
-            placeholder="(555) 123-4567"
-            helperText="Optional - for emergency contact"
-          />
-          <TextField
-            label="Password"
-            type={showVolunteerPassword ? 'text' : 'password'}
-            fullWidth
-            margin="normal"
-            value={volunteerForm.password}
-            onChange={(e) => setVolunteerForm({ ...volunteerForm, password: e.target.value })}
-            disabled={volunteerCreateLoading}
-            required
-            helperText="Minimum 6 characters with at least one digit and lowercase letter"
-            InputProps={{
-              endAdornment: (
-                <InputAdornment position="end">
-                  <IconButton
-                    aria-label="toggle password visibility"
-                    onClick={() => setShowVolunteerPassword(!showVolunteerPassword)}
-                    edge="end"
-                    disabled={volunteerCreateLoading}
-                  >
-                    {showVolunteerPassword ? <VisibilityOff /> : <Visibility />}
-                  </IconButton>
-                </InputAdornment>
-              ),
-            }}
-          />
+          <FormControl fullWidth margin="normal">
+            <InputLabel>Role</InputLabel>
+            <Select
+              value={invitationForm.role}
+              onChange={(e) => setInvitationForm({ ...invitationForm, role: e.target.value })}
+              disabled={volunteerCreateLoading}
+              label="Role"
+            >
+              <MenuItem value="Volunteer">Volunteer</MenuItem>
+              {user.role === 'superadmin' && (
+                <MenuItem value="Admin">Admin</MenuItem>
+              )}
+            </Select>
+          </FormControl>
+          <Box sx={{ mt: 2, p: 2, bgcolor: 'info.light', borderRadius: 1 }}>
+            <Typography variant="body2" color="info.contrastText">
+              💡 <strong>How it works:</strong>
+              <br />• They'll get an email with a secure registration link
+              <br />• Link expires in 7 days for security
+              <br />• They complete their name, phone, and password
+              <br />• Account is immediately active once completed
+            </Typography>
+          </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setCreateVolunteerDialog(false)} disabled={volunteerCreateLoading}>
             Cancel
           </Button>
           <Button 
-            onClick={handleCreateVolunteer} 
+            onClick={handleSendInvitation} 
             variant="contained" 
-            disabled={volunteerCreateLoading || !volunteerForm.firstName || !volunteerForm.lastName || !volunteerForm.email || !volunteerForm.password}
-            startIcon={volunteerCreateLoading ? <CircularProgress size={20} /> : <People />}
+            disabled={volunteerCreateLoading || !invitationForm.email}
+            startIcon={volunteerCreateLoading ? <CircularProgress size={20} /> : <Email />}
           >
-            {volunteerCreateLoading ? 'Creating...' : 'Create Volunteer'}
+            {volunteerCreateLoading ? 'Sending...' : 'Send Invitation'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -2667,6 +2847,108 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
             color={actionToConfirm?.action === 'deactivate' ? 'error' : 'success'}
           >
             {actionToConfirm?.actionText}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Approve Volunteer Dialog */}
+      <Dialog open={approveDialog} onClose={() => !approvalLoading && setApproveDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Approve Volunteer Registration</DialogTitle>
+        <DialogContent>
+          {selectedPendingVolunteer && (
+            <>
+              <Typography variant="body1" paragraph>
+                Are you sure you want to approve the volunteer registration for:
+              </Typography>
+              <Typography variant="h6" sx={{ mb: 2 }}>
+                {selectedPendingVolunteer.firstName} {selectedPendingVolunteer.lastName}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Email: {selectedPendingVolunteer.email}
+                <br />
+                Phone: {selectedPendingVolunteer.phoneNumber}
+                <br />
+                Requested Role: {selectedPendingVolunteer.requestedRole}
+              </Typography>
+              
+              <TextField
+                label="Welcome Message (Optional)"
+                multiline
+                rows={3}
+                fullWidth
+                value={adminNotes}
+                onChange={(e) => setAdminNotes(e.target.value)}
+                disabled={approvalLoading}
+                placeholder="Welcome to the team! We're excited to have you on board..."
+                helperText="This message will be included in the approval email"
+              />
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setApproveDialog(false)} disabled={approvalLoading}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={() => handleApproveVolunteer(selectedPendingVolunteer, adminNotes)} 
+            variant="contained" 
+            color="success"
+            disabled={approvalLoading}
+            startIcon={approvalLoading ? <CircularProgress size={20} /> : undefined}
+          >
+            {approvalLoading ? 'Approving...' : 'Approve'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Reject Volunteer Dialog */}
+      <Dialog open={rejectDialog} onClose={() => !approvalLoading && setRejectDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Reject Volunteer Registration</DialogTitle>
+        <DialogContent>
+          {selectedPendingVolunteer && (
+            <>
+              <Typography variant="body1" paragraph>
+                Are you sure you want to reject the volunteer registration for:
+              </Typography>
+              <Typography variant="h6" sx={{ mb: 2 }}>
+                {selectedPendingVolunteer.firstName} {selectedPendingVolunteer.lastName}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Email: {selectedPendingVolunteer.email}
+                <br />
+                Phone: {selectedPendingVolunteer.phoneNumber}
+                <br />
+                Requested Role: {selectedPendingVolunteer.requestedRole}
+              </Typography>
+              
+              <TextField
+                label="Reason for Rejection"
+                multiline
+                rows={3}
+                fullWidth
+                value={adminNotes}
+                onChange={(e) => setAdminNotes(e.target.value)}
+                disabled={approvalLoading}
+                required
+                placeholder="Please provide a reason for rejecting this application..."
+                helperText="This message will be included in the rejection email"
+                error={!adminNotes.trim() && adminNotes !== ''}
+              />
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setRejectDialog(false)} disabled={approvalLoading}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={() => handleRejectVolunteer(selectedPendingVolunteer, adminNotes)} 
+            variant="contained" 
+            color="error"
+            disabled={approvalLoading || !adminNotes.trim()}
+            startIcon={approvalLoading ? <CircularProgress size={20} /> : undefined}
+          >
+            {approvalLoading ? 'Rejecting...' : 'Reject'}
           </Button>
         </DialogActions>
       </Dialog>

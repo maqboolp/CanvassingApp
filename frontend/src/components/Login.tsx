@@ -198,6 +198,27 @@ const Login: React.FC<LoginProps> = ({ onLogin, isLoading = false, error }) => {
                   Forgot your password?
                 </Link>
               </Box>
+
+              {/* Registration Link */}
+              <Box sx={{ textAlign: 'center', mb: 2 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Want to join our team?{' '}
+                  <Link
+                    href="/register"
+                    variant="body2"
+                    sx={{ 
+                      color: '#2f1c6a',
+                      textDecoration: 'none',
+                      fontWeight: 500,
+                      '&:hover': {
+                        textDecoration: 'underline'
+                      }
+                    }}
+                  >
+                    Register as a volunteer
+                  </Link>
+                </Typography>
+              </Box>
             </Box>
 
             {/* Campaign Info */}
