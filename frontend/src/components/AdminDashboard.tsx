@@ -79,6 +79,7 @@ import VoterList from './VoterList';
 import VoterContactHistory from './VoterContactHistory';
 import ContactModal from './ContactModal';
 import { API_BASE_URL } from '../config';
+import { ApiErrorHandler, ApiError } from '../utils/apiErrorHandler';
 
 interface AdminDashboardProps {
   user: AuthUser;
@@ -237,18 +238,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
   const fetchAnalytics = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/admin/analytics`, {
-        headers: {
-          'Authorization': `Bearer ${user.token}`
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setAnalytics(data);
-      }
+      const data = await ApiErrorHandler.makeAuthenticatedRequest(
+        `${API_BASE_URL}/api/admin/analytics`
+      );
+      setAnalytics(data);
     } catch (error) {
-      console.error('Failed to fetch analytics:', error);
+      if (error instanceof ApiError && error.isAuthError) {
+        // Auth error is already handled by ApiErrorHandler (user redirected to login)
+        return;
+      }
+      console.error('Failed to fetch analytics:', error instanceof ApiError ? error.message : error);
     } finally {
       setLoading(false);
     }
@@ -256,36 +255,32 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
 
   const fetchLeaderboard = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/admin/leaderboard`, {
-        headers: {
-          'Authorization': `Bearer ${user.token}`
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setLeaderboard(data);
-      }
+      const data = await ApiErrorHandler.makeAuthenticatedRequest(
+        `${API_BASE_URL}/api/admin/leaderboard`
+      );
+      setLeaderboard(data);
     } catch (error) {
-      console.error('Failed to fetch leaderboard:', error);
+      if (error instanceof ApiError && error.isAuthError) {
+        // Auth error is already handled by ApiErrorHandler (user redirected to login)
+        return;
+      }
+      console.error('Failed to fetch leaderboard:', error instanceof ApiError ? error.message : error);
     }
   };
 
   const fetchVolunteers = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/admin/volunteers`, {
-        headers: {
-          'Authorization': `Bearer ${user.token}`
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setVolunteers(data);
-      }
+      const data = await ApiErrorHandler.makeAuthenticatedRequest(
+        `${API_BASE_URL}/api/admin/volunteers`
+      );
+      setVolunteers(data);
     } catch (error) {
-      console.error('Failed to fetch volunteers:', error);
+      if (error instanceof ApiError && error.isAuthError) {
+        // Auth error is already handled by ApiErrorHandler (user redirected to login)
+        return;
+      }
+      console.error('Failed to fetch volunteers:', error instanceof ApiError ? error.message : error);
     } finally {
       setLoading(false);
     }
@@ -504,30 +499,32 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
     setVolunteerCreateResult(null);
     
     try {
-      const response = await fetch(`${API_BASE_URL}/api/registration/send-invitation`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${user.token}`
-        },
-        body: JSON.stringify(invitationForm)
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        setVolunteerCreateResult({ success: `Invitation sent successfully to ${invitationForm.email}!` });
-        setCreateVolunteerDialog(false);
-        setInvitationForm({ email: '', role: 'Volunteer' });
-        // Refresh volunteers list if we're on that tab
-        if (currentTab === getTabIndex('users')) {
-          fetchVolunteers();
+      const result = await ApiErrorHandler.makeAuthenticatedRequest(
+        `${API_BASE_URL}/api/registration/send-invitation`,
+        {
+          method: 'POST',
+          body: JSON.stringify(invitationForm)
         }
-      } else {
-        const error = await response.json();
-        setVolunteerCreateResult({ error: error.error || 'Failed to send invitation' });
+      );
+
+      setVolunteerCreateResult({ success: `Invitation sent successfully to ${invitationForm.email}!` });
+      setCreateVolunteerDialog(false);
+      setInvitationForm({ email: '', role: 'Volunteer' });
+      
+      // Refresh volunteers list if we're on that tab
+      if (currentTab === getTabIndex('users')) {
+        fetchVolunteers();
       }
     } catch (error) {
-      setVolunteerCreateResult({ error: 'Failed to send invitation: ' + (error as Error).message });
+      if (error instanceof ApiError) {
+        if (error.isAuthError) {
+          // Auth error is already handled by ApiErrorHandler (user redirected to login)
+          return;
+        }
+        setVolunteerCreateResult({ error: error.message });
+      } else {
+        setVolunteerCreateResult({ error: 'Failed to send invitation: ' + (error as Error).message });
+      }
     } finally {
       setVolunteerCreateLoading(false);
     }

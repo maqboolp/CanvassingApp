@@ -30,6 +30,7 @@ import {
 } from '@mui/icons-material';
 import { API_BASE_URL } from '../config';
 import { AuthUser } from '../types';
+import { ApiErrorHandler, ApiError } from '../utils/apiErrorHandler';
 
 interface Campaign {
   id: number;
@@ -134,21 +135,17 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
 
   const fetchCampaigns = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/campaigns`, {
-        headers: {
-          'Authorization': `Bearer ${user.token}`
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Campaigns data from API:', data);
-        setCampaigns(data);
-      } else {
-        setError('Failed to fetch campaigns');
+      const data = await ApiErrorHandler.makeAuthenticatedRequest(
+        `${API_BASE_URL}/api/campaigns`
+      );
+      console.log('Campaigns data from API:', data);
+      setCampaigns(data);
+    } catch (error) {
+      if (error instanceof ApiError && error.isAuthError) {
+        // Auth error is already handled by ApiErrorHandler (user redirected to login)
+        return;
       }
-    } catch (err) {
-      setError('Error fetching campaigns');
+      setError(error instanceof ApiError ? error.message : 'Error fetching campaigns');
     } finally {
       setLoading(false);
     }
@@ -201,52 +198,50 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
       
       console.log('Sending campaign request:', requestBody);
       
-      const response = await fetch(`${API_BASE_URL}/api/campaigns`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${user.token}`
-        },
-        body: JSON.stringify(requestBody)
-      });
+      await ApiErrorHandler.makeAuthenticatedRequest(
+        `${API_BASE_URL}/api/campaigns`,
+        {
+          method: 'POST',
+          body: JSON.stringify(requestBody)
+        }
+      );
 
-      if (response.ok) {
-        setSuccess('Campaign created successfully');
-        setCreateDialogOpen(false);
-        setNewCampaign({
-          name: '', message: '', type: 'SMS', voiceUrl: '',
-          filterZipCodes: '', filterVoteFrequency: '', filterMinAge: '',
-          filterMaxAge: '', filterVoterSupport: ''
-        });
-        setValidationErrors({});
-        fetchCampaigns();
-      } else {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        console.log('Campaign creation failed:', response.status, errorData);
-        setError(errorData.error || `Failed to create campaign (${response.status})`);
+      setSuccess('Campaign created successfully');
+      setCreateDialogOpen(false);
+      setNewCampaign({
+        name: '', message: '', type: 'SMS', voiceUrl: '',
+        filterZipCodes: '', filterVoteFrequency: '', filterMinAge: '',
+        filterMaxAge: '', filterVoterSupport: ''
+      });
+      setValidationErrors({});
+      fetchCampaigns();
+    } catch (error) {
+      if (error instanceof ApiError && error.isAuthError) {
+        // Auth error is already handled by ApiErrorHandler (user redirected to login)
+        return;
       }
-    } catch (err) {
-      setError('Error creating campaign');
+      console.log('Campaign creation failed:', error);
+      setError(error instanceof ApiError ? error.message : 'Error creating campaign');
     }
   };
 
   const sendCampaign = async (campaignId: number) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/campaigns/${campaignId}/send`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${user.token}`
+      await ApiErrorHandler.makeAuthenticatedRequest(
+        `${API_BASE_URL}/api/campaigns/${campaignId}/send`,
+        {
+          method: 'POST'
         }
-      });
+      );
 
-      if (response.ok) {
-        setSuccess('Campaign is being sent');
-        fetchCampaigns();
-      } else {
-        setError('Failed to send campaign');
+      setSuccess('Campaign is being sent');
+      fetchCampaigns();
+    } catch (error) {
+      if (error instanceof ApiError && error.isAuthError) {
+        // Auth error is already handled by ApiErrorHandler (user redirected to login)
+        return;
       }
-    } catch (err) {
-      setError('Error sending campaign');
+      setError(error instanceof ApiError ? error.message : 'Error sending campaign');
     }
   };
 
@@ -254,21 +249,21 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
     if (!window.confirm('Are you sure you want to delete this campaign?')) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/campaigns/${campaignId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${user.token}`
+      await ApiErrorHandler.makeAuthenticatedRequest(
+        `${API_BASE_URL}/api/campaigns/${campaignId}`,
+        {
+          method: 'DELETE'
         }
-      });
+      );
 
-      if (response.ok) {
-        setSuccess('Campaign deleted');
-        fetchCampaigns();
-      } else {
-        setError('Failed to delete campaign');
+      setSuccess('Campaign deleted');
+      fetchCampaigns();
+    } catch (error) {
+      if (error instanceof ApiError && error.isAuthError) {
+        // Auth error is already handled by ApiErrorHandler (user redirected to login)
+        return;
       }
-    } catch (err) {
-      setError('Error deleting campaign');
+      setError(error instanceof ApiError ? error.message : 'Error deleting campaign');
     }
   };
 
@@ -308,33 +303,31 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
       
       console.log('Updating campaign:', requestBody);
       
-      const response = await fetch(`${API_BASE_URL}/api/campaigns/${editingCampaign.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${user.token}`
-        },
-        body: JSON.stringify(requestBody)
-      });
+      await ApiErrorHandler.makeAuthenticatedRequest(
+        `${API_BASE_URL}/api/campaigns/${editingCampaign.id}`,
+        {
+          method: 'PUT',
+          body: JSON.stringify(requestBody)
+        }
+      );
 
-      if (response.ok) {
-        setSuccess('Campaign updated successfully');
-        setEditDialogOpen(false);
-        setEditingCampaign(null);
-        setNewCampaign({
-          name: '', message: '', type: 'SMS', voiceUrl: '',
-          filterZipCodes: '', filterVoteFrequency: '', filterMinAge: '',
-          filterMaxAge: '', filterVoterSupport: ''
-        });
-        setValidationErrors({});
-        fetchCampaigns();
-      } else {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        console.log('Campaign update failed:', response.status, errorData);
-        setError(errorData.error || `Failed to update campaign (${response.status})`);
+      setSuccess('Campaign updated successfully');
+      setEditDialogOpen(false);
+      setEditingCampaign(null);
+      setNewCampaign({
+        name: '', message: '', type: 'SMS', voiceUrl: '',
+        filterZipCodes: '', filterVoteFrequency: '', filterMinAge: '',
+        filterMaxAge: '', filterVoterSupport: ''
+      });
+      setValidationErrors({});
+      fetchCampaigns();
+    } catch (error) {
+      if (error instanceof ApiError && error.isAuthError) {
+        // Auth error is already handled by ApiErrorHandler (user redirected to login)
+        return;
       }
-    } catch (err) {
-      setError('Error updating campaign');
+      console.log('Campaign update failed:', error);
+      setError(error instanceof ApiError ? error.message : 'Error updating campaign');
     }
   };
 
