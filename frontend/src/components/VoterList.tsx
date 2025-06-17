@@ -273,7 +273,12 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
   };
 
   return (
-    <Paper sx={{ width: '100%', overflow: 'hidden' }}>
+    <Paper sx={{ 
+      width: '100%', 
+      overflow: 'hidden',
+      mx: { xs: 0, sm: 'auto' }, // No margin on mobile, auto on larger screens
+      borderRadius: { xs: 0, sm: 1 } // No border radius on mobile for full edge-to-edge
+    }}>
       {/* Filter Controls */}
       <Box sx={{ p: { xs: 1, sm: 2 }, borderBottom: 1, borderColor: 'divider' }}>
         <Typography variant="h6" gutterBottom sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
@@ -372,7 +377,11 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
       )}
 
       {/* Voter Table */}
-      <TableContainer sx={{ maxHeight: 600 }}>
+      <TableContainer sx={{ 
+        maxHeight: 600,
+        width: '100%',
+        mx: 0 // Remove any horizontal margins
+      }}>
         <Table stickyHeader size={isMobile ? "small" : "medium"}>
           <TableHead>
             <TableRow>

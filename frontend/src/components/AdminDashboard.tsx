@@ -102,7 +102,7 @@ function TabPanel(props: TabPanelProps) {
       aria-labelledby={`simple-tab-${index}`}
       {...other}
     >
-      {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
+      {value === index && <Box sx={{ p: { xs: 0, sm: 2, md: 3 } }}>{children}</Box>}
     </div>
   );
 }
@@ -1189,7 +1189,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
         sx={{ 
           mt: 3, 
           mb: 3,
-          px: { xs: 1, sm: 2, md: 3 }, // Responsive padding: 8px on mobile, 16px on tablet, 24px on desktop
+          px: { xs: 0.5, sm: 2, md: 3 }, // Reduced mobile padding for more space
           maxWidth: { xs: '100%', lg: '1200px' }, // Full width on mobile, max width on desktop
           mx: 'auto' // Center the container
         }}
