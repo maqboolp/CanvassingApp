@@ -121,7 +121,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
       'pending',
       'voters',
       'history',
-      ...(user.role === 'superadmin' ? ['campaigns'] : []),
+      ...(user.role === 'admin' || user.role === 'superadmin' ? ['campaigns'] : []),
       'engagement',
       ...(user.role === 'superadmin' ? ['dataManagement'] : [])
     ];
@@ -1166,7 +1166,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
           <Tab label="Pending" icon={<Schedule />} />
           <Tab label="Voters" icon={<HowToVote />} />
           <Tab label="History" icon={<History />} />
-          {user.role === 'superadmin' && (
+          {(user.role === 'admin' || user.role === 'superadmin') && (
             <Tab label="Campaigns" icon={<Campaign />} />
           )}
           <Tab 
@@ -2031,8 +2031,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
           <VoterContactHistory user={user} />
         </TabPanel>
 
-        {/* Campaigns Tab - Only for SuperAdmins */}
-        {user.role === 'superadmin' && (
+        {/* Campaigns Tab - For Admins and SuperAdmins */}
+        {(user.role === 'admin' || user.role === 'superadmin') && (
           <TabPanel value={currentTab} index={getTabIndex('campaigns')}>
             <CampaignDashboard user={user} />
           </TabPanel>

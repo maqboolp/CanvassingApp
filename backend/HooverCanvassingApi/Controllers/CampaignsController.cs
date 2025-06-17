@@ -6,7 +6,7 @@ using System.Security.Claims;
 
 namespace HooverCanvassingApi.Controllers
 {
-    [Authorize(Roles = "SuperAdmin")]
+    [Authorize(Roles = "Admin,SuperAdmin")]
     [ApiController]
     [Route("api/[controller]")]
     public class CampaignsController : ControllerBase
@@ -70,7 +70,14 @@ namespace HooverCanvassingApi.Controllers
                 return NotFound();
 
             if (campaign.Status != CampaignStatus.Draft)
-                return BadRequest("Can only update draft campaigns");
+                return BadRequest("Can only update campaigns that are ready to send");
+
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
+            
+            // Check ownership: SuperAdmins can edit any campaign, Admins can only edit their own
+            if (userRole != "SuperAdmin" && campaign.CreatedById != userId)
+                return Forbid("You can only edit campaigns you created");
 
             campaign.Name = request.Name;
             campaign.Message = request.Message;
@@ -88,14 +95,26 @@ namespace HooverCanvassingApi.Controllers
         [HttpDelete("{id}")]
         public async Task<ActionResult> DeleteCampaign(int id)
         {
+            var campaign = await _campaignService.GetCampaignAsync(id);
+            if (campaign == null)
+                return NotFound();
+
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
+            
+            // Check ownership: SuperAdmins can delete any campaign, Admins can only delete their own
+            if (userRole != "SuperAdmin" && campaign.CreatedById != userId)
+                return Forbid("You can only delete campaigns you created");
+
             var success = await _campaignService.DeleteCampaignAsync(id);
             if (!success)
-                return NotFound();
+                return BadRequest("Campaign cannot be deleted");
 
             return NoContent();
         }
 
         [HttpPost("{id}/send")]
+        [Authorize(Roles = "SuperAdmin")]
         public async Task<ActionResult> SendCampaign(int id)
         {
             var success = await _campaignService.SendCampaignAsync(id);

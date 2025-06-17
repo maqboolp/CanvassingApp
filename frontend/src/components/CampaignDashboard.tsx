@@ -40,6 +40,7 @@ interface Campaign {
   scheduledTime?: string;
   createdAt: string;
   sentAt?: string;
+  createdById: string;
   totalRecipients: number;
   successfulDeliveries: number;
   failedDeliveries: number;
@@ -373,6 +374,24 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
     return type === 0 ? 'primary' : 'secondary'; // SMS = primary, RoboCall = secondary
   };
 
+  const canEditCampaign = (campaign: Campaign): boolean => {
+    // Can only edit campaigns that are "Ready to Send" (status 0)
+    if (campaign.status !== 0) return false;
+    
+    // SuperAdmins can edit any campaign, Admins can only edit their own
+    return user.role === 'superadmin' || campaign.createdById === user.id;
+  };
+
+  const canDeleteCampaign = (campaign: Campaign): boolean => {
+    // SuperAdmins can delete any campaign, Admins can only delete their own
+    return user.role === 'superadmin' || campaign.createdById === user.id;
+  };
+
+  const canSendCampaign = (): boolean => {
+    // Only SuperAdmins can send campaigns
+    return user.role === 'superadmin';
+  };
+
   if (loading) {
     return <Typography>Loading campaigns...</Typography>;
   }
@@ -461,38 +480,68 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
 
               <Typography variant="caption" color="text.secondary">
                 Created: {new Date(campaign.createdAt).toLocaleDateString()}
+                {user.role === 'superadmin' && campaign.createdById !== user.id && (
+                  <Chip 
+                    label="Other Admin" 
+                    size="small" 
+                    color="info"
+                    sx={{ ml: 1, height: 16, fontSize: '0.6rem' }}
+                  />
+                )}
+                {campaign.createdById === user.id && (
+                  <Chip 
+                    label="Your Campaign" 
+                    size="small" 
+                    color="success"
+                    sx={{ ml: 1, height: 16, fontSize: '0.6rem' }}
+                  />
+                )}
               </Typography>
             </CardContent>
             
             <CardActions>
               {campaign.status === 0 && ( // Ready to Send status
                 <>
-                  <Button
-                    size="small"
-                    startIcon={<SendIcon />}
-                    onClick={() => sendCampaign(campaign.id)}
-                    variant="contained"
-                    color="primary"
-                  >
-                    Send Now
-                  </Button>
-                  <Button
-                    size="small"
-                    startIcon={<EditIcon />}
-                    onClick={() => editCampaign(campaign)}
-                    variant="outlined"
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    size="small"
-                    startIcon={<DeleteIcon />}
-                    onClick={() => deleteCampaign(campaign.id)}
-                    color="error"
-                  >
-                    Delete
-                  </Button>
+                  {canSendCampaign() && (
+                    <Button
+                      size="small"
+                      startIcon={<SendIcon />}
+                      onClick={() => sendCampaign(campaign.id)}
+                      variant="contained"
+                      color="primary"
+                    >
+                      Send Now
+                    </Button>
+                  )}
+                  {canEditCampaign(campaign) && (
+                    <Button
+                      size="small"
+                      startIcon={<EditIcon />}
+                      onClick={() => editCampaign(campaign)}
+                      variant="outlined"
+                    >
+                      Edit
+                    </Button>
+                  )}
+                  {canDeleteCampaign(campaign) && (
+                    <Button
+                      size="small"
+                      startIcon={<DeleteIcon />}
+                      onClick={() => deleteCampaign(campaign.id)}
+                      color="error"
+                    >
+                      Delete
+                    </Button>
+                  )}
                 </>
+              )}
+              {/* Show a message for non-editable campaigns */}
+              {campaign.status !== 0 && (
+                <Box sx={{ p: 1 }}>
+                  <Typography variant="caption" color="text.secondary">
+                    Campaign has been sent and cannot be edited
+                  </Typography>
+                </Box>
               )}
             </CardActions>
           </Card>
