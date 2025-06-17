@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import QRCode from 'react-qr-code';
 import VersionInfo from './VersionInfo';
+import CampaignDashboard from './CampaignDashboard';
 import {
   AppBar,
   Toolbar,
@@ -59,6 +60,7 @@ import {
   Star,
   SwapHoriz,
   Language,
+  Campaign,
   VideoLibrary,
   Payment,
   HowToReg,
@@ -110,6 +112,21 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [currentTab, setCurrentTab] = useState(0);
+  
+  // Dynamic tab indices based on user role
+  const getTabIndex = (tabName: string) => {
+    const tabs = [
+      'analytics',
+      'users', 
+      'pending',
+      'voters',
+      'history',
+      ...(user.role === 'superadmin' ? ['campaigns'] : []),
+      'engagement',
+      ...(user.role === 'superadmin' ? ['dataManagement'] : [])
+    ];
+    return tabs.indexOf(tabName);
+  };
   const [analytics, setAnalytics] = useState<any>(null);
   const [volunteers, setVolunteers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -197,17 +214,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
   const [deleteResult, setDeleteResult] = useState<any>(null);
 
   useEffect(() => {
-    if (currentTab === 0) {
+    if (currentTab === getTabIndex('analytics')) {
       fetchAnalytics();
       fetchLeaderboard();
-    } else if (currentTab === 1) {
+    } else if (currentTab === getTabIndex('users')) {
       fetchVolunteers();
-    } else if (currentTab === 2) {
+    } else if (currentTab === getTabIndex('pending')) {
       fetchPendingVolunteers();
-    } else if (currentTab === 5) {
+    } else if (currentTab === getTabIndex('engagement')) {
       // Engagement tab - fetch volunteers for recipient selection
       fetchVolunteers();
-    } else if (currentTab === 6 && user.role === 'superadmin') {
+    } else if (currentTab === getTabIndex('dataManagement') && user.role === 'superadmin') {
       fetchGeocodingStatus();
     }
   }, [currentTab, user.role]);
@@ -439,7 +456,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
         setImportDialog(false);
         setImportFile(null);
         // Refresh analytics if we're on that tab
-        if (currentTab === 0) {
+        if (currentTab === getTabIndex('analytics')) {
           fetchAnalytics();
         }
       } else {
@@ -502,7 +519,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
         setCreateVolunteerDialog(false);
         setInvitationForm({ email: '', role: 'Volunteer' });
         // Refresh volunteers list if we're on that tab
-        if (currentTab === 1) {
+        if (currentTab === getTabIndex('users')) {
           fetchVolunteers();
         }
       } else {
@@ -1149,6 +1166,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
           <Tab label="Pending" icon={<Schedule />} />
           <Tab label="Voters" icon={<HowToVote />} />
           <Tab label="History" icon={<History />} />
+          {user.role === 'superadmin' && (
+            <Tab label="Campaigns" icon={<Campaign />} />
+          )}
           <Tab 
             label="Engagement" 
             icon={<Email />} 
@@ -1196,7 +1216,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
         )}
 
         {/* Nearest Voter Card - Only show in Voters tab */}
-        {currentTab === 3 && nearestVoter && (
+        {currentTab === getTabIndex('voters') && nearestVoter && (
           <Alert 
             severity="info" 
             sx={{ mb: 3 }}
@@ -1276,7 +1296,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
         )}
 
         {/* Location Enable Card - Only show in Voters tab */}
-        {currentTab === 3 && !nearestVoter && !location && (
+        {currentTab === getTabIndex('voters') && !nearestVoter && !location && (
           <Alert severity={locationError ? "error" : "warning"} sx={{ mb: 3 }}>
             <Typography variant="subtitle2" gutterBottom>
               📍 Location needed for nearest voter
@@ -1319,7 +1339,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
         )}
 
         {/* Analytics Tab */}
-        <TabPanel value={currentTab} index={0}>
+        <TabPanel value={currentTab} index={getTabIndex('analytics')}>
           {loading ? (
             <Box display="flex" justifyContent="center" py={4}>
               <CircularProgress />
@@ -1551,7 +1571,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
         </TabPanel>
 
         {/* Users Tab */}
-        <TabPanel value={currentTab} index={1}>
+        <TabPanel value={currentTab} index={getTabIndex('users')}>
           <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
             <Typography variant="h5">
               User Management
@@ -1889,7 +1909,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
         </TabPanel>
 
         {/* Pending Volunteers Tab */}
-        <TabPanel value={currentTab} index={2}>
+        <TabPanel value={currentTab} index={getTabIndex('pending')}>
           <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
             <Typography variant="h5">
               Pending Volunteer Registrations
@@ -1999,7 +2019,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
         </TabPanel>
 
         {/* Voters Tab */}
-        <TabPanel value={currentTab} index={3}>
+        <TabPanel value={currentTab} index={getTabIndex('voters')}>
           <Typography variant="h5" gutterBottom>
             Voter Management
           </Typography>
@@ -2007,12 +2027,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
         </TabPanel>
 
         {/* Contact History Tab */}
-        <TabPanel value={currentTab} index={4}>
+        <TabPanel value={currentTab} index={getTabIndex('history')}>
           <VoterContactHistory user={user} />
         </TabPanel>
 
+        {/* Campaigns Tab - Only for SuperAdmins */}
+        {user.role === 'superadmin' && (
+          <TabPanel value={currentTab} index={getTabIndex('campaigns')}>
+            <CampaignDashboard />
+          </TabPanel>
+        )}
+
         {/* Engagement Tab */}
-        <TabPanel value={currentTab} index={5}>
+        <TabPanel value={currentTab} index={getTabIndex('engagement')}>
           <Typography variant="h5" gutterBottom>
             User Engagement
           </Typography>
@@ -2181,7 +2208,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
 
         {/* Data Management Tab - Only for SuperAdmins */}
         {user.role === 'superadmin' && (
-          <TabPanel value={currentTab} index={6}>
+          <TabPanel value={currentTab} index={getTabIndex('dataManagement')}>
           <Typography variant="h5" gutterBottom>
             Data Management
           </Typography>
@@ -3019,11 +3046,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
       </Dialog>
 
       {/* Mobile Engagement FAB */}
-      {isMobile && currentTab !== 4 && (
+      {isMobile && currentTab !== getTabIndex('history') && (
         <Fab
           color="primary"
           aria-label="engagement"
-          onClick={() => setCurrentTab(4)}
+          onClick={() => setCurrentTab(getTabIndex('history'))}
           sx={{
             position: 'fixed',
             bottom: 16,

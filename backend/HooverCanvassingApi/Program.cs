@@ -135,6 +135,8 @@ builder.Services.AddAuthorization();
 
 // Add custom services
 builder.Services.AddScoped<VoterImportService>();
+builder.Services.AddScoped<ITwilioService, TwilioService>();
+builder.Services.AddScoped<ICampaignService, CampaignService>();
 builder.Services.AddHttpClient();
 
 // Configure Email Service

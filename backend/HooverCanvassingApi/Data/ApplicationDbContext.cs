@@ -15,6 +15,8 @@ namespace HooverCanvassingApi.Data
         public DbSet<Volunteer> Volunteers => Set<Volunteer>();
         public DbSet<InvitationToken> InvitationTokens { get; set; }
         public DbSet<PendingVolunteer> PendingVolunteers { get; set; }
+        public DbSet<Campaign> Campaigns { get; set; }
+        public DbSet<CampaignMessage> CampaignMessages { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -115,6 +117,44 @@ namespace HooverCanvassingApi.Data
                 .WithMany()
                 .HasForeignKey(p => p.ReviewedByUserId)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            // Configure Campaign entity
+            builder.Entity<Campaign>(entity =>
+            {
+                entity.HasKey(c => c.Id);
+                entity.Property(c => c.Name).IsRequired().HasMaxLength(200);
+                entity.Property(c => c.Message).IsRequired().HasMaxLength(1600); // SMS limit
+                entity.Property(c => c.Type).HasConversion<string>();
+                entity.Property(c => c.Status).HasConversion<string>();
+                entity.HasIndex(c => c.Status);
+                entity.HasIndex(c => c.CreatedAt);
+                entity.HasIndex(c => c.ScheduledTime);
+            });
+
+            // Configure CampaignMessage entity
+            builder.Entity<CampaignMessage>(entity =>
+            {
+                entity.HasKey(cm => cm.Id);
+                entity.Property(cm => cm.RecipientPhone).IsRequired().HasMaxLength(20);
+                entity.Property(cm => cm.Status).HasConversion<string>();
+                entity.HasIndex(cm => cm.Status);
+                entity.HasIndex(cm => cm.CreatedAt);
+                entity.HasIndex(cm => cm.CampaignId);
+                entity.HasIndex(cm => cm.VoterId);
+            });
+
+            // Configure Campaign relationships
+            builder.Entity<CampaignMessage>()
+                .HasOne(cm => cm.Campaign)
+                .WithMany(c => c.Messages)
+                .HasForeignKey(cm => cm.CampaignId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<CampaignMessage>()
+                .HasOne(cm => cm.Voter)
+                .WithMany()
+                .HasForeignKey(cm => cm.VoterId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

@@ -1,0 +1,193 @@
+using Microsoft.AspNetCore.Mvc;
+using HooverCanvassingApi.Services;
+using HooverCanvassingApi.Data;
+using HooverCanvassingApi.Models;
+using Microsoft.EntityFrameworkCore;
+
+namespace HooverCanvassingApi.Controllers
+{
+    [ApiController]
+    [Route("api/[controller]")]
+    public class TwilioWebhookController : ControllerBase
+    {
+        private readonly ApplicationDbContext _context;
+        private readonly ILogger<TwilioWebhookController> _logger;
+
+        public TwilioWebhookController(ApplicationDbContext context, ILogger<TwilioWebhookController> logger)
+        {
+            _context = context;
+            _logger = logger;
+        }
+
+        [HttpPost("sms-status")]
+        public async Task<IActionResult> SmsStatusCallback()
+        {
+            try
+            {
+                var messageSid = Request.Form["MessageSid"].ToString();
+                var messageStatus = Request.Form["MessageStatus"].ToString();
+                var errorCode = Request.Form["ErrorCode"].ToString();
+                var errorMessage = Request.Form["ErrorMessage"].ToString();
+
+                _logger.LogInformation($"SMS Status callback: SID={messageSid}, Status={messageStatus}");
+
+                var campaignMessage = await _context.CampaignMessages
+                    .FirstOrDefaultAsync(cm => cm.TwilioSid == messageSid);
+
+                if (campaignMessage != null)
+                {
+                    campaignMessage.Status = MapTwilioStatusToMessageStatus(messageStatus);
+                    
+                    if (!string.IsNullOrEmpty(errorCode) && !string.IsNullOrEmpty(errorMessage))
+                    {
+                        campaignMessage.ErrorMessage = $"Error {errorCode}: {errorMessage}";
+                        campaignMessage.Status = MessageStatus.Failed;
+                        campaignMessage.FailedAt = DateTime.UtcNow;
+                    }
+                    else if (campaignMessage.Status == MessageStatus.Delivered)
+                    {
+                        campaignMessage.DeliveredAt = DateTime.UtcNow;
+                    }
+
+                    await _context.SaveChangesAsync();
+                    await UpdateCampaignStats(campaignMessage.CampaignId);
+                }
+
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing SMS status callback");
+                return StatusCode(500);
+            }
+        }
+
+        [HttpPost("call-status")]
+        public async Task<IActionResult> CallStatusCallback()
+        {
+            try
+            {
+                var callSid = Request.Form["CallSid"].ToString();
+                var callStatus = Request.Form["CallStatus"].ToString();
+                var callDuration = Request.Form["CallDuration"].ToString();
+                var recordingUrl = Request.Form["RecordingUrl"].ToString();
+
+                _logger.LogInformation($"Call Status callback: SID={callSid}, Status={callStatus}");
+
+                var campaignMessage = await _context.CampaignMessages
+                    .FirstOrDefaultAsync(cm => cm.TwilioSid == callSid);
+
+                if (campaignMessage != null)
+                {
+                    campaignMessage.Status = MapTwilioCallStatusToMessageStatus(callStatus);
+                    campaignMessage.CallStatus = callStatus;
+                    
+                    if (int.TryParse(callDuration, out int duration))
+                    {
+                        campaignMessage.CallDuration = duration;
+                    }
+
+                    if (!string.IsNullOrEmpty(recordingUrl))
+                    {
+                        campaignMessage.RecordingUrl = recordingUrl;
+                    }
+
+                    if (campaignMessage.Status == MessageStatus.Completed || 
+                        campaignMessage.Status == MessageStatus.Failed ||
+                        campaignMessage.Status == MessageStatus.Busy ||
+                        campaignMessage.Status == MessageStatus.NoAnswer)
+                    {
+                        campaignMessage.DeliveredAt = DateTime.UtcNow;
+                    }
+
+                    await _context.SaveChangesAsync();
+                    await UpdateCampaignStats(campaignMessage.CampaignId);
+                }
+
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing call status callback");
+                return StatusCode(500);
+            }
+        }
+
+        [HttpPost("voice")]
+        public IActionResult VoiceResponse([FromQuery] string message = "")
+        {
+            // Generate TwiML for the robo call
+            var twiml = $@"<?xml version=""1.0"" encoding=""UTF-8""?>
+                <Response>
+                    <Say voice=""alice"">{message}</Say>
+                    <Pause length=""1""/>
+                    <Say voice=""alice"">Thank you for your time. Goodbye.</Say>
+                </Response>";
+
+            return Content(twiml, "application/xml");
+        }
+
+        private async Task UpdateCampaignStats(int campaignId)
+        {
+            var campaign = await _context.Campaigns
+                .Include(c => c.Messages)
+                .FirstOrDefaultAsync(c => c.Id == campaignId);
+
+            if (campaign != null)
+            {
+                campaign.SuccessfulDeliveries = campaign.Messages.Count(m => 
+                    m.Status == MessageStatus.Delivered || 
+                    m.Status == MessageStatus.Completed);
+                
+                campaign.FailedDeliveries = campaign.Messages.Count(m => 
+                    m.Status == MessageStatus.Failed ||
+                    m.Status == MessageStatus.Undelivered ||
+                    m.Status == MessageStatus.Busy ||
+                    m.Status == MessageStatus.NoAnswer);
+                
+                campaign.PendingDeliveries = campaign.Messages.Count(m => 
+                    m.Status == MessageStatus.Pending ||
+                    m.Status == MessageStatus.Queued ||
+                    m.Status == MessageStatus.Sending);
+
+                // Update campaign status if all messages are processed
+                if (campaign.PendingDeliveries == 0 && campaign.Status == CampaignStatus.Sending)
+                {
+                    campaign.Status = CampaignStatus.Completed;
+                }
+
+                await _context.SaveChangesAsync();
+            }
+        }
+
+        private MessageStatus MapTwilioStatusToMessageStatus(string twilioStatus)
+        {
+            return twilioStatus.ToLower() switch
+            {
+                "queued" => MessageStatus.Queued,
+                "sending" => MessageStatus.Sending,
+                "sent" => MessageStatus.Sent,
+                "delivered" => MessageStatus.Delivered,
+                "failed" => MessageStatus.Failed,
+                "undelivered" => MessageStatus.Undelivered,
+                _ => MessageStatus.Pending
+            };
+        }
+
+        private MessageStatus MapTwilioCallStatusToMessageStatus(string twilioCallStatus)
+        {
+            return twilioCallStatus.ToLower() switch
+            {
+                "queued" => MessageStatus.Queued,
+                "ringing" => MessageStatus.Sending,
+                "in-progress" => MessageStatus.Sending,
+                "completed" => MessageStatus.Completed,
+                "busy" => MessageStatus.Busy,
+                "no-answer" => MessageStatus.NoAnswer,
+                "failed" => MessageStatus.Failed,
+                "canceled" => MessageStatus.Cancelled,
+                _ => MessageStatus.Pending
+            };
+        }
+    }
+}
