@@ -2034,7 +2034,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
         {/* Campaigns Tab - Only for SuperAdmins */}
         {user.role === 'superadmin' && (
           <TabPanel value={currentTab} index={getTabIndex('campaigns')}>
-            <CampaignDashboard />
+            <CampaignDashboard user={user} />
           </TabPanel>
         )}
 

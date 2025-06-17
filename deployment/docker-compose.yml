@@ -29,6 +29,9 @@ services:
       - JwtSettings__Audience=http://localhost:8080
       - JwtSettings__ExpirationMinutes=480
       - SENDGRID_API_KEY=${SENDGRID_API_KEY}
+      - Twilio__AccountSid=${TWILIO_ACCOUNT_SID:-YOUR_TWILIO_ACCOUNT_SID}
+      - Twilio__AuthToken=${TWILIO_AUTH_TOKEN:-YOUR_TWILIO_AUTH_TOKEN}
+      - Twilio__FromPhoneNumber=${TWILIO_FROM_PHONE_NUMBER:-YOUR_TWILIO_PHONE_NUMBER}
     ports:
       - "8080:8080"
     depends_on:
@@ -37,6 +40,19 @@ services:
     restart: unless-stopped
     volumes:
       - ../backend/HooverCanvassingApi:/src/HooverCanvassingApi:cached
+
+# Uncomment to run frontend with Docker (needs development setup)
+  # frontend:
+  #   build:
+  #     context: ../frontend
+  #     dockerfile: ../deployment/Dockerfile.frontend
+  #   environment:
+  #     - REACT_APP_API_URL=http://localhost:8080
+  #   ports:
+  #     - "3000:3000"
+  #   depends_on:
+  #     - api
+  #   restart: unless-stopped
 
 volumes:
   postgres_data:
