@@ -13,40 +13,77 @@ namespace HooverCanvassingApi.Services
         private readonly ApplicationDbContext _context;
         private readonly IConfiguration _configuration;
         private readonly ILogger<TwilioService> _logger;
+        private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly string _accountSid;
         private readonly string _authToken;
         private readonly string _fromPhoneNumber;
+        private readonly string? _messagingServiceSid;
 
         public TwilioService(
             ApplicationDbContext context,
             IConfiguration configuration,
-            ILogger<TwilioService> logger)
+            ILogger<TwilioService> logger,
+            IServiceScopeFactory serviceScopeFactory)
         {
             _context = context;
             _configuration = configuration;
             _logger = logger;
+            _serviceScopeFactory = serviceScopeFactory;
             
-            _accountSid = _configuration["Twilio:AccountSid"] ?? throw new InvalidOperationException("Twilio AccountSid not configured");
-            _authToken = _configuration["Twilio:AuthToken"] ?? throw new InvalidOperationException("Twilio AuthToken not configured");
-            _fromPhoneNumber = _configuration["Twilio:FromPhoneNumber"] ?? throw new InvalidOperationException("Twilio FromPhoneNumber not configured");
+            // Debug logging for Twilio configuration
+            var accountSid = _configuration["Twilio:AccountSid"];
+            var authToken = _configuration["Twilio:AuthToken"];
+            var fromPhone = _configuration["Twilio:FromPhoneNumber"];
+            var messagingSid = _configuration["Twilio:MessagingServiceSid"];
+            
+            _logger.LogInformation($"Twilio Config - AccountSid: {(string.IsNullOrEmpty(accountSid) ? "MISSING" : $"***{accountSid.Substring(Math.Max(0, accountSid.Length - 4))}")}");
+            _logger.LogInformation($"Twilio Config - AuthToken: {(string.IsNullOrEmpty(authToken) ? "MISSING" : "***CONFIGURED")}");
+            _logger.LogInformation($"Twilio Config - FromPhone: {(string.IsNullOrEmpty(fromPhone) ? "MISSING" : fromPhone)}");
+            _logger.LogInformation($"Twilio Config - MessagingServiceSid: {(string.IsNullOrEmpty(messagingSid) ? "NOT SET" : $"***{messagingSid.Substring(Math.Max(0, messagingSid.Length - 4))}")}");
+            
+            _accountSid = accountSid ?? throw new InvalidOperationException("Twilio AccountSid not configured");
+            _authToken = authToken ?? throw new InvalidOperationException("Twilio AuthToken not configured");
+            _fromPhoneNumber = fromPhone ?? throw new InvalidOperationException("Twilio FromPhoneNumber not configured");
+            _messagingServiceSid = messagingSid; // Optional for bulk SMS
             
             TwilioClient.Init(_accountSid, _authToken);
+            _logger.LogInformation("TwilioClient initialized successfully");
         }
 
         public async Task<bool> SendSmsAsync(string toPhoneNumber, string message, int campaignMessageId)
         {
             try
             {
+                _logger.LogInformation($"Attempting to send SMS to {toPhoneNumber} for campaign message {campaignMessageId}");
                 var formattedNumber = FormatPhoneNumber(toPhoneNumber);
+                _logger.LogInformation($"Formatted phone number: {formattedNumber}");
                 
-                var messageResource = await MessageResource.CreateAsync(
-                    body: message,
-                    from: new PhoneNumber(_fromPhoneNumber),
-                    to: new PhoneNumber(formattedNumber)
-                );
+                MessageResource messageResource;
+                
+                // Use Messaging Service if available for better bulk performance
+                if (!string.IsNullOrEmpty(_messagingServiceSid))
+                {
+                    _logger.LogInformation($"Using Messaging Service SID: ***{_messagingServiceSid.Substring(Math.Max(0, _messagingServiceSid.Length - 4))}");
+                    messageResource = await MessageResource.CreateAsync(
+                        body: message,
+                        messagingServiceSid: _messagingServiceSid,
+                        to: new PhoneNumber(formattedNumber)
+                    );
+                }
+                else
+                {
+                    _logger.LogInformation($"Using From Phone Number: {_fromPhoneNumber}");
+                    messageResource = await MessageResource.CreateAsync(
+                        body: message,
+                        from: new PhoneNumber(_fromPhoneNumber),
+                        to: new PhoneNumber(formattedNumber)
+                    );
+                }
 
-                // Update campaign message with Twilio SID and status
-                var campaignMessage = await _context.CampaignMessages
+                // Update campaign message with Twilio SID and status using scoped context
+                using var scope = _serviceScopeFactory.CreateScope();
+                var scopedContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                var campaignMessage = await scopedContext.CampaignMessages
                     .FirstOrDefaultAsync(cm => cm.Id == campaignMessageId);
                 
                 if (campaignMessage != null)
@@ -55,7 +92,7 @@ namespace HooverCanvassingApi.Services
                     campaignMessage.Status = MapTwilioStatusToMessageStatus(messageResource.Status.ToString());
                     campaignMessage.SentAt = DateTime.UtcNow;
                     
-                    await _context.SaveChangesAsync();
+                    await scopedContext.SaveChangesAsync();
                 }
 
                 _logger.LogInformation($"SMS sent successfully to {formattedNumber}, SID: {messageResource.Sid}");
@@ -65,8 +102,10 @@ namespace HooverCanvassingApi.Services
             {
                 _logger.LogError(ex, $"Failed to send SMS to {toPhoneNumber}");
                 
-                // Update campaign message with error
-                var campaignMessage = await _context.CampaignMessages
+                // Update campaign message with error using scoped context
+                using var scope = _serviceScopeFactory.CreateScope();
+                var scopedContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                var campaignMessage = await scopedContext.CampaignMessages
                     .FirstOrDefaultAsync(cm => cm.Id == campaignMessageId);
                 
                 if (campaignMessage != null)
@@ -75,7 +114,7 @@ namespace HooverCanvassingApi.Services
                     campaignMessage.ErrorMessage = ex.Message;
                     campaignMessage.FailedAt = DateTime.UtcNow;
                     
-                    await _context.SaveChangesAsync();
+                    await scopedContext.SaveChangesAsync();
                 }
                 
                 return false;
@@ -226,6 +265,45 @@ namespace HooverCanvassingApi.Services
                 "canceled" => MessageStatus.Cancelled,
                 _ => MessageStatus.Pending
             };
+        }
+
+        public async Task<List<bool>> SendBulkSmsAsync(List<(string phoneNumber, string message, int campaignMessageId)> messages)
+        {
+            _logger.LogInformation($"Starting bulk SMS for {messages.Count} messages");
+            _logger.LogInformation($"Twilio AccountSid configured: {!string.IsNullOrEmpty(_accountSid)}");
+            _logger.LogInformation($"Twilio AuthToken configured: {!string.IsNullOrEmpty(_authToken)}");
+            _logger.LogInformation($"Twilio FromPhone configured: {!string.IsNullOrEmpty(_fromPhoneNumber)}");
+            
+            var results = new List<bool>();
+            var semaphore = new SemaphoreSlim(10, 10); // Limit concurrent requests to 10
+            var tasks = new List<Task<bool>>();
+
+            foreach (var (phoneNumber, message, campaignMessageId) in messages)
+            {
+                _logger.LogInformation($"Queuing SMS for {phoneNumber}, message ID: {campaignMessageId}");
+                tasks.Add(SendSmsWithSemaphoreAsync(phoneNumber, message, campaignMessageId, semaphore));
+            }
+
+            var taskResults = await Task.WhenAll(tasks);
+            results.AddRange(taskResults);
+
+            _logger.LogInformation($"Bulk SMS completed: {results.Count(r => r)} successful, {results.Count(r => !r)} failed");
+            return results;
+        }
+
+        private async Task<bool> SendSmsWithSemaphoreAsync(string phoneNumber, string message, int campaignMessageId, SemaphoreSlim semaphore)
+        {
+            await semaphore.WaitAsync();
+            try
+            {
+                // Small delay to avoid hitting rate limits
+                await Task.Delay(100);
+                return await SendSmsAsync(phoneNumber, message, campaignMessageId);
+            }
+            finally
+            {
+                semaphore.Release();
+            }
         }
     }
 }

@@ -18,7 +18,10 @@ import {
   MenuItem,
   Alert,
   IconButton,
-  Stack
+  Stack,
+  Checkbox,
+  ListItemText,
+  OutlinedInput
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -66,25 +69,6 @@ const getCampaignTypeEnum = (value: string): number => {
   }
 };
 
-const getVoteFrequencyEnum = (value: string): number => {
-  switch (value) {
-    case 'NonVoter': return 0;
-    case 'Infrequent': return 1;
-    case 'Frequent': return 2;
-    default: return 0;
-  }
-};
-
-const getVoterSupportEnum = (value: string): number => {
-  switch (value) {
-    case 'StrongYes': return 0;
-    case 'LeaningYes': return 1;
-    case 'Undecided': return 2;
-    case 'LeaningNo': return 3;
-    case 'StrongNo': return 4;
-    default: return 0;
-  }
-};
 
 // Convert enum numbers back to strings for display
 const getCampaignTypeString = (type: number): string => {
@@ -116,22 +100,30 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
+  const [availableZipCodes, setAvailableZipCodes] = useState<string[]>([]);
+  const [audienceCount, setAudienceCount] = useState<number>(0);
 
   const [newCampaign, setNewCampaign] = useState({
     name: '',
     message: '',
     type: 'SMS' as 'SMS' | 'RoboCall',
     voiceUrl: '',
-    filterZipCodes: '',
-    filterVoteFrequency: '',
-    filterMinAge: '',
-    filterMaxAge: '',
-    filterVoterSupport: ''
+    selectedZipCodes: [] as string[]
   });
 
   useEffect(() => {
     fetchCampaigns();
+    fetchAvailableZipCodes();
   }, []);
+
+  useEffect(() => {
+    // Update audience count when ZIP codes change
+    if (newCampaign.selectedZipCodes.length > 0) {
+      previewAudienceCount();
+    } else {
+      setAudienceCount(0);
+    }
+  }, [newCampaign.selectedZipCodes]);
 
   const fetchCampaigns = async () => {
     try {
@@ -151,6 +143,44 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
     }
   };
 
+  const fetchAvailableZipCodes = async () => {
+    try {
+      console.log('Fetching available ZIP codes...');
+      const data = await ApiErrorHandler.makeAuthenticatedRequest(
+        `${API_BASE_URL}/api/campaigns/available-zipcodes`
+      );
+      console.log('Received ZIP codes:', data);
+      setAvailableZipCodes(data);
+    } catch (error) {
+      if (error instanceof ApiError && error.isAuthError) {
+        console.log('Auth error when fetching ZIP codes, user needs to login');
+        return;
+      }
+      console.error('Failed to fetch ZIP codes:', error instanceof ApiError ? error.message : error);
+      setError('Failed to load ZIP codes. Please refresh the page.');
+    }
+  };
+
+  const previewAudienceCount = async () => {
+    try {
+      const filterZipCodes = JSON.stringify(newCampaign.selectedZipCodes);
+      const data = await ApiErrorHandler.makeAuthenticatedRequest(
+        `${API_BASE_URL}/api/campaigns/preview-audience`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ filterZipCodes })
+        }
+      );
+      setAudienceCount(data.count);
+    } catch (error) {
+      if (error instanceof ApiError && error.isAuthError) {
+        return;
+      }
+      console.error('Failed to preview audience:', error instanceof ApiError ? error.message : error);
+      setAudienceCount(0);
+    }
+  };
+
   const validateForm = () => {
     const errors: {[key: string]: string} = {};
     
@@ -166,12 +196,8 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
       errors.voiceUrl = 'Voice URL is required for robo calls';
     }
     
-    if (newCampaign.filterMinAge && newCampaign.filterMaxAge) {
-      const minAge = parseInt(newCampaign.filterMinAge);
-      const maxAge = parseInt(newCampaign.filterMaxAge);
-      if (minAge >= maxAge) {
-        errors.filterMaxAge = 'Max age must be greater than min age';
-      }
+    if (newCampaign.selectedZipCodes.length === 0) {
+      errors.zipCodes = 'Please select at least one ZIP code';
     }
     
     setValidationErrors(errors);
@@ -189,11 +215,11 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
         message: newCampaign.message,
         type: getCampaignTypeEnum(newCampaign.type),
         voiceUrl: newCampaign.voiceUrl || null,
-        filterZipCodes: newCampaign.filterZipCodes || null,
-        filterVoteFrequency: newCampaign.filterVoteFrequency ? getVoteFrequencyEnum(newCampaign.filterVoteFrequency) : null,
-        filterMinAge: newCampaign.filterMinAge ? parseInt(newCampaign.filterMinAge) : null,
-        filterMaxAge: newCampaign.filterMaxAge ? parseInt(newCampaign.filterMaxAge) : null,
-        filterVoterSupport: newCampaign.filterVoterSupport ? getVoterSupportEnum(newCampaign.filterVoterSupport) : null
+        filterZipCodes: JSON.stringify(newCampaign.selectedZipCodes),
+        filterVoteFrequency: null,
+        filterMinAge: null,
+        filterMaxAge: null,
+        filterVoterSupport: null
       };
       
       console.log('Sending campaign request:', requestBody);
@@ -209,11 +235,14 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
       setSuccess('Campaign created successfully');
       setCreateDialogOpen(false);
       setNewCampaign({
-        name: '', message: '', type: 'SMS', voiceUrl: '',
-        filterZipCodes: '', filterVoteFrequency: '', filterMinAge: '',
-        filterMaxAge: '', filterVoterSupport: ''
+        name: '', 
+        message: '', 
+        type: 'SMS', 
+        voiceUrl: '',
+        selectedZipCodes: []
       });
       setValidationErrors({});
+      setAudienceCount(0);
       fetchCampaigns();
     } catch (error) {
       if (error instanceof ApiError && error.isAuthError) {
@@ -269,19 +298,30 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
 
   const editCampaign = (campaign: Campaign) => {
     setEditingCampaign(campaign);
+    // Parse existing ZIP codes from JSON string
+    let selectedZipCodes: string[] = [];
+    if (campaign.filterZipCodes) {
+      try {
+        selectedZipCodes = JSON.parse(campaign.filterZipCodes);
+      } catch {
+        // If not JSON, treat as comma-separated string (legacy format)
+        selectedZipCodes = campaign.filterZipCodes.split(',').map(z => z.trim()).filter(z => z);
+      }
+    }
+    
     // Populate form with existing campaign data
     setNewCampaign({
       name: campaign.name,
       message: campaign.message,
       type: getCampaignTypeString(campaign.type) as 'SMS' | 'RoboCall',
       voiceUrl: campaign.voiceUrl || '',
-      filterZipCodes: campaign.filterZipCodes || '',
-      filterVoteFrequency: getVoteFrequencyString(campaign.filterVoteFrequency),
-      filterMinAge: campaign.filterMinAge?.toString() || '',
-      filterMaxAge: campaign.filterMaxAge?.toString() || '',
-      filterVoterSupport: getVoterSupportString(campaign.filterVoterSupport)
+      selectedZipCodes
     });
     setEditDialogOpen(true);
+    // Fetch ZIP codes when dialog opens to ensure we have fresh data
+    if (availableZipCodes.length === 0) {
+      fetchAvailableZipCodes();
+    }
   };
 
   const updateCampaign = async () => {
@@ -294,11 +334,11 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
         name: newCampaign.name,
         message: newCampaign.message,
         voiceUrl: newCampaign.voiceUrl || null,
-        filterZipCodes: newCampaign.filterZipCodes || null,
-        filterVoteFrequency: newCampaign.filterVoteFrequency ? getVoteFrequencyEnum(newCampaign.filterVoteFrequency) : null,
-        filterMinAge: newCampaign.filterMinAge ? parseInt(newCampaign.filterMinAge) : null,
-        filterMaxAge: newCampaign.filterMaxAge ? parseInt(newCampaign.filterMaxAge) : null,
-        filterVoterSupport: newCampaign.filterVoterSupport ? getVoterSupportEnum(newCampaign.filterVoterSupport) : null
+        filterZipCodes: JSON.stringify(newCampaign.selectedZipCodes),
+        filterVoteFrequency: null,
+        filterMinAge: null,
+        filterMaxAge: null,
+        filterVoterSupport: null
       };
       
       console.log('Updating campaign:', requestBody);
@@ -315,11 +355,14 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
       setEditDialogOpen(false);
       setEditingCampaign(null);
       setNewCampaign({
-        name: '', message: '', type: 'SMS', voiceUrl: '',
-        filterZipCodes: '', filterVoteFrequency: '', filterMinAge: '',
-        filterMaxAge: '', filterVoterSupport: ''
+        name: '', 
+        message: '', 
+        type: 'SMS', 
+        voiceUrl: '',
+        selectedZipCodes: []
       });
       setValidationErrors({});
+      setAudienceCount(0);
       fetchCampaigns();
     } catch (error) {
       if (error instanceof ApiError && error.isAuthError) {
@@ -331,25 +374,6 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
     }
   };
 
-  const getVoteFrequencyString = (value?: number): string => {
-    switch (value) {
-      case 0: return 'NonVoter';
-      case 1: return 'Infrequent';
-      case 2: return 'Frequent';
-      default: return '';
-    }
-  };
-
-  const getVoterSupportString = (value?: number): string => {
-    switch (value) {
-      case 0: return 'StrongYes';
-      case 1: return 'LeaningYes';
-      case 2: return 'Undecided';
-      case 3: return 'LeaningNo';
-      case 4: return 'StrongNo';
-      default: return '';
-    }
-  };
 
   const getStatusColor = (status: number): "default" | "primary" | "secondary" | "error" | "info" | "success" | "warning" => {
     switch (status) {
@@ -396,7 +420,13 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
         <Button
           variant="contained"
           startIcon={<AddIcon />}
-          onClick={() => setCreateDialogOpen(true)}
+          onClick={() => {
+            setCreateDialogOpen(true);
+            // Fetch ZIP codes when dialog opens to ensure we have fresh data
+            if (availableZipCodes.length === 0) {
+              fetchAvailableZipCodes();
+            }
+          }}
           sx={{ backgroundColor: '#1976d2' }}
         >
           Create Campaign
@@ -597,67 +627,49 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
               />
             )}
 
-            <Typography variant="subtitle1">Audience Filters</Typography>
+            <Typography variant="subtitle1">Target Audience</Typography>
 
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
-              <TextField
-                label="ZIP Codes (comma separated)"
-                fullWidth
-                value={newCampaign.filterZipCodes}
-                onChange={(e) => setNewCampaign({ ...newCampaign, filterZipCodes: e.target.value })}
-                placeholder="35244, 35216, 35226"
-              />
-              <FormControl fullWidth>
-                <InputLabel>Vote Frequency</InputLabel>
-                <Select
-                  value={newCampaign.filterVoteFrequency}
-                  label="Vote Frequency"
-                  onChange={(e) => setNewCampaign({ ...newCampaign, filterVoteFrequency: e.target.value })}
-                >
-                  <MenuItem value="">All</MenuItem>
-                  <MenuItem value="Frequent">Frequent</MenuItem>
-                  <MenuItem value="Infrequent">Infrequent</MenuItem>
-                  <MenuItem value="NonVoter">Non Voter</MenuItem>
-                </Select>
-              </FormControl>
-            </Box>
-
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
-              <TextField
-                label="Min Age"
-                type="number"
-                fullWidth
-                value={newCampaign.filterMinAge}
-                onChange={(e) => setNewCampaign({ ...newCampaign, filterMinAge: e.target.value })}
-                error={!!validationErrors.filterMinAge}
-                helperText={validationErrors.filterMinAge}
-              />
-              <TextField
-                label="Max Age"
-                type="number"
-                fullWidth
-                value={newCampaign.filterMaxAge}
-                onChange={(e) => setNewCampaign({ ...newCampaign, filterMaxAge: e.target.value })}
-                error={!!validationErrors.filterMaxAge}
-                helperText={validationErrors.filterMaxAge}
-              />
-            </Box>
-
-            <FormControl fullWidth>
-              <InputLabel>Voter Support Level</InputLabel>
+            <FormControl fullWidth required>
+              <InputLabel>ZIP Codes</InputLabel>
               <Select
-                value={newCampaign.filterVoterSupport}
-                label="Voter Support Level"
-                onChange={(e) => setNewCampaign({ ...newCampaign, filterVoterSupport: e.target.value })}
+                multiple
+                value={newCampaign.selectedZipCodes}
+                onChange={(e) => setNewCampaign({ ...newCampaign, selectedZipCodes: e.target.value as string[] })}
+                input={<OutlinedInput label="ZIP Codes" />}
+                renderValue={(selected) => (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    {selected.map((value) => (
+                      <Chip key={value} label={value} size="small" />
+                    ))}
+                  </Box>
+                )}
+                error={!!validationErrors.zipCodes}
               >
-                <MenuItem value="">All</MenuItem>
-                <MenuItem value="StrongYes">Strong Yes</MenuItem>
-                <MenuItem value="LeaningYes">Leaning Yes</MenuItem>
-                <MenuItem value="Undecided">Undecided</MenuItem>
-                <MenuItem value="LeaningNo">Leaning No</MenuItem>
-                <MenuItem value="StrongNo">Strong No</MenuItem>
+                {availableZipCodes.length === 0 ? (
+                  <MenuItem disabled>
+                    <ListItemText primary="Loading ZIP codes..." />
+                  </MenuItem>
+                ) : (
+                  availableZipCodes.map((zipCode) => (
+                    <MenuItem key={zipCode} value={zipCode}>
+                      <Checkbox checked={newCampaign.selectedZipCodes.indexOf(zipCode) > -1} />
+                      <ListItemText primary={zipCode} />
+                    </MenuItem>
+                  ))
+                )}
               </Select>
+              {validationErrors.zipCodes && (
+                <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
+                  {validationErrors.zipCodes}
+                </Typography>
+              )}
             </FormControl>
+
+            {audienceCount > 0 && (
+              <Alert severity="info">
+                <strong>{audienceCount}</strong> voters will receive this campaign
+              </Alert>
+            )}
           </Stack>
         </DialogContent>
         <DialogActions>
@@ -731,67 +743,43 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
               />
             )}
 
-            <Typography variant="subtitle1">Audience Filters</Typography>
+            <Typography variant="subtitle1">Target Audience</Typography>
 
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
-              <TextField
-                label="ZIP Codes (comma separated)"
-                fullWidth
-                value={newCampaign.filterZipCodes}
-                onChange={(e) => setNewCampaign({ ...newCampaign, filterZipCodes: e.target.value })}
-                placeholder="35244, 35216, 35226"
-              />
-              <FormControl fullWidth>
-                <InputLabel>Vote Frequency</InputLabel>
-                <Select
-                  value={newCampaign.filterVoteFrequency}
-                  label="Vote Frequency"
-                  onChange={(e) => setNewCampaign({ ...newCampaign, filterVoteFrequency: e.target.value })}
-                >
-                  <MenuItem value="">All</MenuItem>
-                  <MenuItem value="Frequent">Frequent</MenuItem>
-                  <MenuItem value="Infrequent">Infrequent</MenuItem>
-                  <MenuItem value="NonVoter">Non Voter</MenuItem>
-                </Select>
-              </FormControl>
-            </Box>
-
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
-              <TextField
-                label="Min Age"
-                type="number"
-                fullWidth
-                value={newCampaign.filterMinAge}
-                onChange={(e) => setNewCampaign({ ...newCampaign, filterMinAge: e.target.value })}
-                error={!!validationErrors.filterMinAge}
-                helperText={validationErrors.filterMinAge}
-              />
-              <TextField
-                label="Max Age"
-                type="number"
-                fullWidth
-                value={newCampaign.filterMaxAge}
-                onChange={(e) => setNewCampaign({ ...newCampaign, filterMaxAge: e.target.value })}
-                error={!!validationErrors.filterMaxAge}
-                helperText={validationErrors.filterMaxAge}
-              />
-            </Box>
-
-            <FormControl fullWidth>
-              <InputLabel>Voter Support Level</InputLabel>
+            <FormControl fullWidth required>
+              <InputLabel>ZIP Codes</InputLabel>
               <Select
-                value={newCampaign.filterVoterSupport}
-                label="Voter Support Level"
-                onChange={(e) => setNewCampaign({ ...newCampaign, filterVoterSupport: e.target.value })}
+                multiple
+                value={newCampaign.selectedZipCodes}
+                onChange={(e) => setNewCampaign({ ...newCampaign, selectedZipCodes: e.target.value as string[] })}
+                input={<OutlinedInput label="ZIP Codes" />}
+                renderValue={(selected) => (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    {selected.map((value) => (
+                      <Chip key={value} label={value} size="small" />
+                    ))}
+                  </Box>
+                )}
+                error={!!validationErrors.zipCodes}
               >
-                <MenuItem value="">All</MenuItem>
-                <MenuItem value="StrongYes">Strong Yes</MenuItem>
-                <MenuItem value="LeaningYes">Leaning Yes</MenuItem>
-                <MenuItem value="Undecided">Undecided</MenuItem>
-                <MenuItem value="LeaningNo">Leaning No</MenuItem>
-                <MenuItem value="StrongNo">Strong No</MenuItem>
+                {availableZipCodes.map((zipCode) => (
+                  <MenuItem key={zipCode} value={zipCode}>
+                    <Checkbox checked={newCampaign.selectedZipCodes.indexOf(zipCode) > -1} />
+                    <ListItemText primary={zipCode} />
+                  </MenuItem>
+                ))}
               </Select>
+              {validationErrors.zipCodes && (
+                <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
+                  {validationErrors.zipCodes}
+                </Typography>
+              )}
             </FormControl>
+
+            {audienceCount > 0 && (
+              <Alert severity="info">
+                <strong>{audienceCount}</strong> voters will receive this campaign
+              </Alert>
+            )}
           </Stack>
         </DialogContent>
         <DialogActions>

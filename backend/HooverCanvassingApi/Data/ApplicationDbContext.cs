@@ -35,6 +35,7 @@ namespace HooverCanvassingApi.Data
                 entity.Property(v => v.Gender).IsRequired().HasMaxLength(20);
                 entity.Property(v => v.VoteFrequency).HasConversion<string>();
                 entity.Property(v => v.LastContactStatus).HasConversion<string>();
+                entity.Property(v => v.VoterSupport).HasConversion<string>();
                 entity.HasIndex(v => v.Zip);
                 entity.HasIndex(v => v.VoteFrequency);
                 entity.HasIndex(v => v.IsContacted);

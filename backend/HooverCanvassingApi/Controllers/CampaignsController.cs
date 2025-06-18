@@ -113,6 +113,34 @@ namespace HooverCanvassingApi.Controllers
             return NoContent();
         }
 
+        [HttpGet("available-zipcodes")]
+        public async Task<ActionResult> GetAvailableZipCodes()
+        {
+            try
+            {
+                var zipCodes = await _campaignService.GetAvailableZipCodesAsync();
+                return Ok(zipCodes);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpPost("preview-audience")]
+        public async Task<ActionResult> PreviewAudience(PreviewAudienceRequest request)
+        {
+            try
+            {
+                var count = await _campaignService.PreviewAudienceCountAsync(request.FilterZipCodes);
+                return Ok(new { count });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
         [HttpPost("{id}/send")]
         [Authorize(Roles = "SuperAdmin")]
         public async Task<ActionResult> SendCampaign(int id)
@@ -164,18 +192,22 @@ namespace HooverCanvassingApi.Controllers
         [HttpGet("recipient-count")]
         public async Task<ActionResult<int>> GetRecipientCount([FromQuery] RecipientCountRequest request)
         {
-            // Create a temporary campaign to use the filtering logic
-            var tempCampaign = new Campaign
+            try
             {
-                FilterZipCodes = request.FilterZipCodes,
-                FilterVoteFrequency = request.FilterVoteFrequency,
-                FilterMinAge = request.FilterMinAge,
-                FilterMaxAge = request.FilterMaxAge,
-                FilterVoterSupport = request.FilterVoterSupport
-            };
-
-            var recipients = await _campaignService.GetCampaignRecipientsAsync(-1); // Fake ID, service will use filters
-            return Ok(recipients.Count());
+                var count = await _campaignService.GetRecipientCountAsync(
+                    request.FilterZipCodes,
+                    request.FilterVoteFrequency,
+                    request.FilterMinAge,
+                    request.FilterMaxAge,
+                    request.FilterVoterSupport
+                );
+                return Ok(count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting recipient count");
+                return StatusCode(500, new { error = ex.Message });
+            }
         }
     }
 
@@ -207,6 +239,11 @@ namespace HooverCanvassingApi.Controllers
     public class ScheduleCampaignRequest
     {
         public DateTime ScheduledTime { get; set; }
+    }
+
+    public class PreviewAudienceRequest
+    {
+        public string? FilterZipCodes { get; set; }
     }
 
     public class RecipientCountRequest

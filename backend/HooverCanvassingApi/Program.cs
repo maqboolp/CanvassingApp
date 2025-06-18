@@ -73,6 +73,17 @@ Console.WriteLine($"Connection string available: {!string.IsNullOrEmpty(connecti
 var googleApiKey = Environment.GetEnvironmentVariable("GOOGLE_GEOCODING_API_KEY");
 Console.WriteLine($"Google API Key: {(string.IsNullOrEmpty(googleApiKey) ? "MISSING" : "PRESENT")} (Length: {googleApiKey?.Length ?? 0})");
 
+// Check Twilio configuration
+var twilioAccountSid = builder.Configuration["Twilio:AccountSid"];
+var twilioAuthToken = builder.Configuration["Twilio:AuthToken"];
+var twilioFromPhone = builder.Configuration["Twilio:FromPhoneNumber"];
+var twilioMessagingSid = builder.Configuration["Twilio:MessagingServiceSid"];
+
+Console.WriteLine($"Twilio AccountSid: {(string.IsNullOrEmpty(twilioAccountSid) ? "MISSING" : $"***{twilioAccountSid.Substring(Math.Max(0, twilioAccountSid.Length - 4))}")} (Length: {twilioAccountSid?.Length ?? 0})");
+Console.WriteLine($"Twilio AuthToken: {(string.IsNullOrEmpty(twilioAuthToken) ? "MISSING" : "***CONFIGURED")} (Length: {twilioAuthToken?.Length ?? 0})");
+Console.WriteLine($"Twilio FromPhone: {(string.IsNullOrEmpty(twilioFromPhone) ? "MISSING" : twilioFromPhone)} (Length: {twilioFromPhone?.Length ?? 0})");
+Console.WriteLine($"Twilio MessagingSid: {(string.IsNullOrEmpty(twilioMessagingSid) ? "NOT SET" : $"***{twilioMessagingSid.Substring(Math.Max(0, twilioMessagingSid.Length - 4))}")} (Length: {twilioMessagingSid?.Length ?? 0})");
+
 if (string.IsNullOrEmpty(connectionString))
 {
     Console.WriteLine("WARNING: Could not build connection string!");

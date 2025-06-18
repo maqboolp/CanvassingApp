@@ -25,7 +25,19 @@ namespace HooverCanvassingApi.Models
         public ContactStatus? LastContactStatus { get; set; }
         public VoterSupport? VoterSupport { get; set; }
         
+        // Campaign communication tracking
+        public DateTime? LastCampaignContactAt { get; set; }
+        public int? LastCampaignId { get; set; } // Track which campaign last contacted this voter
+        public int TotalCampaignContacts { get; set; } = 0;
+        public DateTime? LastSmsAt { get; set; }
+        public int? LastSmsCampaignId { get; set; } // Track which campaign sent the last SMS
+        public DateTime? LastCallAt { get; set; }
+        public int? LastCallCampaignId { get; set; } // Track which campaign made the last call
+        public int SmsCount { get; set; } = 0;
+        public int CallCount { get; set; } = 0;
+        
         public ICollection<Contact> Contacts { get; set; } = new List<Contact>();
+        public ICollection<CampaignMessage> CampaignMessages { get; set; } = new List<CampaignMessage>();
     }
 
     public enum VoteFrequency
