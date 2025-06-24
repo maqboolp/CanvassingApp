@@ -337,12 +337,9 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
               onChange={(e) => handleFilterChange('partyAffiliation', e.target.value)}
             >
               <MenuItem value="">All</MenuItem>
-              <MenuItem value="DEM">Democrat</MenuItem>
-              <MenuItem value="REP">Republican</MenuItem>
-              <MenuItem value="IND">Independent</MenuItem>
-              <MenuItem value="GRN">Green</MenuItem>
-              <MenuItem value="LIB">Libertarian</MenuItem>
-              <MenuItem value="OTH">Other</MenuItem>
+              <MenuItem value="Democratic">Democratic</MenuItem>
+              <MenuItem value="Republican">Republican</MenuItem>
+              <MenuItem value="Non-Partisan">Non-Partisan</MenuItem>
             </Select>
           </FormControl>
           
