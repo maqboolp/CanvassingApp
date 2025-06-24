@@ -59,6 +59,32 @@ interface DashboardProps {
   onLogout: () => void;
 }
 
+interface TabPanelProps {
+  children?: React.ReactNode;
+  index: number;
+  value: number;
+}
+
+function TabPanel(props: TabPanelProps) {
+  const { children, value, index, ...other } = props;
+
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`dashboard-tabpanel-${index}`}
+      aria-labelledby={`dashboard-tab-${index}`}
+      {...other}
+    >
+      {value === index && (
+        <Box sx={{ py: 3 }}>
+          {children}
+        </Box>
+      )}
+    </div>
+  );
+}
+
 const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [stats, setStats] = useState({
@@ -89,6 +115,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const [avatarInfo, setAvatarInfo] = useState<any>(null);
   const [debugStats, setDebugStats] = useState<any>(null);
   const [resourcesDialog, setResourcesDialog] = useState(false);
+  const [currentTab, setCurrentTab] = useState(0);
 
   useEffect(() => {
     fetchStats();
@@ -788,8 +815,144 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
           </Card>
         )}
 
-        {/* Voter List */}
-        <VoterList onContactVoter={handleContactVoter} user={user} />
+        {/* Tabs */}
+        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+          <Tabs value={currentTab} onChange={(e, newValue) => setCurrentTab(newValue)}>
+            <Tab label="Voters" />
+            <Tab label="Resources" />
+          </Tabs>
+        </Box>
+
+        {/* Voters Tab */}
+        <TabPanel value={currentTab} index={0}>
+          <VoterList onContactVoter={handleContactVoter} user={user} />
+        </TabPanel>
+
+        {/* Resources Tab */}
+        <TabPanel value={currentTab} index={1}>
+          <Typography variant="h5" gutterBottom>
+            Volunteer Resources
+          </Typography>
+          
+          {/* Campaign Information */}
+          <Card sx={{ mb: 3 }}>
+            <CardContent>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: '#2f1c6a' }}>
+                Campaign Information
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Language fontSize="small" sx={{ color: '#2f1c6a' }} />
+                  <a 
+                    href="https://tanveer4hoover.com" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    style={{ color: '#2f1c6a', textDecoration: 'none', fontSize: '14px' }}
+                  >
+                    Campaign Website <OpenInNew fontSize="small" sx={{ ml: 0.5, verticalAlign: 'middle' }} />
+                  </a>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <VideoLibrary fontSize="small" sx={{ color: '#2f1c6a' }} />
+                  <a 
+                    href="https://youtube.com/@tanveer4hoover" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    style={{ color: '#2f1c6a', textDecoration: 'none', fontSize: '14px' }}
+                  >
+                    Campaign Videos <OpenInNew fontSize="small" sx={{ ml: 0.5, verticalAlign: 'middle' }} />
+                  </a>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+
+          {/* Support the Campaign */}
+          <Card sx={{ mb: 3 }}>
+            <CardContent>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: '#2f1c6a' }}>
+                Support the Campaign
+              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Payment fontSize="small" sx={{ color: '#2f1c6a' }} />
+                  <Typography variant="body2" sx={{ color: '#2f1c6a' }}>
+                    Venmo: @tanveerforhoover
+                  </Typography>
+                </Box>
+                <Box sx={{ p: 1, bgcolor: 'white', borderRadius: 1, border: '1px solid #e0e0e0' }}>
+                  <QRCode 
+                    value="https://venmo.com/tanveerforhoover" 
+                    size={80}
+                    style={{ height: "auto", maxWidth: "100%", width: "100%" }}
+                  />
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+
+          {/* Voter Resources */}
+          <Card sx={{ mb: 3 }}>
+            <CardContent>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: '#2f1c6a' }}>
+                Voter Resources
+              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <HowToReg fontSize="small" sx={{ color: '#2f1c6a' }} />
+                <a 
+                  href="https://myinfo.alabamavotes.gov/VoterView" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  style={{ color: '#2f1c6a', textDecoration: 'none', fontSize: '14px' }}
+                >
+                  Check Voter Registration <OpenInNew fontSize="small" sx={{ ml: 0.5, verticalAlign: 'middle' }} />
+                </a>
+              </Box>
+            </CardContent>
+          </Card>
+
+          {/* Support & Help */}
+          <Card sx={{ mb: 3 }}>
+            <CardContent>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: '#2f1c6a' }}>
+                Support & Help
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Phone fontSize="small" sx={{ color: '#2f1c6a' }} />
+                  <Typography variant="body2" sx={{ color: '#2f1c6a' }}>
+                    Volunteer Hotline: (205) 555-VOTE
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Help fontSize="small" sx={{ color: '#2f1c6a' }} />
+                  <Typography variant="body2" sx={{ color: '#2f1c6a' }}>
+                    App Support: Email support@tanveer4hoover.com
+                  </Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+
+          {/* Quick Tips */}
+          <Card>
+            <CardContent sx={{ 
+              background: 'rgba(47, 28, 106, 0.05)',
+              border: '1px solid rgba(47, 28, 106, 0.1)'
+            }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: '#2f1c6a' }}>
+                Canvassing Quick Tips
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#2f1c6a', lineHeight: 1.6 }}>
+                • Always wear your volunteer badge<br/>
+                • Be respectful and polite<br/>
+                • Don't argue with voters<br/>
+                • Use the app to log all contacts<br/>
+                • Ask for help if you need it
+              </Typography>
+            </CardContent>
+          </Card>
+        </TabPanel>
       </Container>
 
       {/* Avatar Info Dialog */}
