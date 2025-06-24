@@ -17,6 +17,7 @@ namespace HooverCanvassingApi.Data
         public DbSet<PendingVolunteer> PendingVolunteers { get; set; }
         public DbSet<Campaign> Campaigns { get; set; }
         public DbSet<CampaignMessage> CampaignMessages { get; set; }
+        public DbSet<VolunteerResource> VolunteerResources { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -156,6 +157,15 @@ namespace HooverCanvassingApi.Data
                 .WithMany()
                 .HasForeignKey(cm => cm.VoterId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // Configure VolunteerResource entity
+            builder.Entity<VolunteerResource>(entity =>
+            {
+                entity.HasKey(vr => vr.Id);
+                entity.Property(vr => vr.ResourceType).IsRequired().HasMaxLength(50);
+                entity.Property(vr => vr.Content).IsRequired();
+                entity.HasIndex(vr => vr.ResourceType).IsUnique();
+            });
         }
     }
 }

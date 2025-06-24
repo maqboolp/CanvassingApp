@@ -47,7 +47,8 @@ import {
   OpenInNew,
   MenuBook,
   Visibility,
-  VisibilityOff
+  VisibilityOff,
+  Edit
 } from '@mui/icons-material';
 import { AuthUser, Voter, ContactStatus, VoterSupport } from '../types';
 import VoterList from './VoterList';
@@ -116,11 +117,23 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const [debugStats, setDebugStats] = useState<any>(null);
   const [resourcesDialog, setResourcesDialog] = useState(false);
   const [currentTab, setCurrentTab] = useState(0);
+  const [volunteerResources, setVolunteerResources] = useState<{
+    quickTips: string;
+    script: string;
+  }>({
+    quickTips: '',
+    script: ''
+  });
+  const [editResourceDialog, setEditResourceDialog] = useState(false);
+  const [editingResourceType, setEditingResourceType] = useState<'quickTips' | 'script'>('quickTips');
+  const [editResourceContent, setEditResourceContent] = useState('');
+  const [resourceSaving, setResourceSaving] = useState(false);
 
   useEffect(() => {
     fetchStats();
     fetchLeaderboard();
     getCurrentLocation();
+    fetchVolunteerResources();
     if (user.role === 'admin' || user.role === 'superadmin') {
       fetchDebugStats();
     }
@@ -175,6 +188,68 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       }
     } catch (error) {
       console.error('Failed to fetch debug stats:', error);
+    }
+  };
+
+  const fetchVolunteerResources = async () => {
+    try {
+      const [quickTipsResponse, scriptResponse] = await Promise.all([
+        fetch(`${API_BASE_URL}/api/volunteerresources/QuickTips`, {
+          headers: { 'Authorization': `Bearer ${user.token}` }
+        }),
+        fetch(`${API_BASE_URL}/api/volunteerresources/Script`, {
+          headers: { 'Authorization': `Bearer ${user.token}` }
+        })
+      ]);
+
+      if (quickTipsResponse.ok && scriptResponse.ok) {
+        const [quickTipsData, scriptData] = await Promise.all([
+          quickTipsResponse.json(),
+          scriptResponse.json()
+        ]);
+
+        setVolunteerResources({
+          quickTips: quickTipsData.content,
+          script: scriptData.content
+        });
+      }
+    } catch (error) {
+      console.error('Failed to fetch volunteer resources:', error);
+    }
+  };
+
+  const handleEditResource = (resourceType: 'quickTips' | 'script') => {
+    setEditingResourceType(resourceType);
+    setEditResourceContent(volunteerResources[resourceType]);
+    setEditResourceDialog(true);
+  };
+
+  const handleSaveResource = async () => {
+    setResourceSaving(true);
+    try {
+      const apiResourceType = editingResourceType === 'quickTips' ? 'QuickTips' : 'Script';
+      const response = await fetch(`${API_BASE_URL}/api/volunteerresources/${apiResourceType}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.token}`
+        },
+        body: JSON.stringify({
+          content: editResourceContent
+        })
+      });
+
+      if (response.ok) {
+        setVolunteerResources(prev => ({
+          ...prev,
+          [editingResourceType]: editResourceContent
+        }));
+        setEditResourceDialog(false);
+      }
+    } catch (error) {
+      console.error('Failed to save resource:', error);
+    } finally {
+      setResourceSaving(false);
     }
   };
 
@@ -935,20 +1010,59 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
           </Card>
 
           {/* Quick Tips */}
+          <Card sx={{ mb: 3 }}>
+            <CardContent sx={{ 
+              background: 'rgba(47, 28, 106, 0.05)',
+              border: '1px solid rgba(47, 28, 106, 0.1)'
+            }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6" sx={{ fontWeight: 600, color: '#2f1c6a' }}>
+                  Canvassing Quick Tips
+                </Typography>
+                {user.role === 'superadmin' && (
+                  <IconButton 
+                    size="small" 
+                    onClick={() => handleEditResource('quickTips')}
+                    sx={{ color: '#2f1c6a' }}
+                  >
+                    <Edit fontSize="small" />
+                  </IconButton>
+                )}
+              </Box>
+              <Typography 
+                variant="body2" 
+                sx={{ color: '#2f1c6a', lineHeight: 1.6, whiteSpace: 'pre-line' }}
+              >
+                {volunteerResources.quickTips}
+              </Typography>
+            </CardContent>
+          </Card>
+
+          {/* Script */}
           <Card>
             <CardContent sx={{ 
               background: 'rgba(47, 28, 106, 0.05)',
               border: '1px solid rgba(47, 28, 106, 0.1)'
             }}>
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: '#2f1c6a' }}>
-                Canvassing Quick Tips
-              </Typography>
-              <Typography variant="body2" sx={{ color: '#2f1c6a', lineHeight: 1.6 }}>
-                • Always wear your volunteer badge<br/>
-                • Be respectful and polite<br/>
-                • Don't argue with voters<br/>
-                • Use the app to log all contacts<br/>
-                • Ask for help if you need it
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6" sx={{ fontWeight: 600, color: '#2f1c6a' }}>
+                  Volunteer Script
+                </Typography>
+                {user.role === 'superadmin' && (
+                  <IconButton 
+                    size="small" 
+                    onClick={() => handleEditResource('script')}
+                    sx={{ color: '#2f1c6a' }}
+                  >
+                    <Edit fontSize="small" />
+                  </IconButton>
+                )}
+              </Box>
+              <Typography 
+                variant="body2" 
+                sx={{ color: '#2f1c6a', lineHeight: 1.6, whiteSpace: 'pre-line' }}
+              >
+                {volunteerResources.script}
               </Typography>
             </CardContent>
           </Card>
@@ -1237,6 +1351,40 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         </DialogActions>
       </Dialog>
       
+      {/* Edit Resource Dialog */}
+      <Dialog open={editResourceDialog} onClose={() => setEditResourceDialog(false)} maxWidth="md" fullWidth>
+        <DialogTitle>
+          Edit {editingResourceType === 'quickTips' ? 'Quick Tips' : 'Volunteer Script'}
+        </DialogTitle>
+        <DialogContent>
+          <TextField
+            fullWidth
+            multiline
+            rows={10}
+            value={editResourceContent}
+            onChange={(e) => setEditResourceContent(e.target.value)}
+            placeholder={editingResourceType === 'quickTips' 
+              ? 'Enter quick tips for volunteers...'
+              : 'Enter the volunteer script...'
+            }
+            sx={{ mt: 1 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEditResourceDialog(false)} disabled={resourceSaving}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleSaveResource} 
+            variant="contained" 
+            disabled={resourceSaving}
+            startIcon={resourceSaving ? <CircularProgress size={20} /> : undefined}
+          >
+            {resourceSaving ? 'Saving...' : 'Save'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Version Information */}
       <Container maxWidth="sm" sx={{ pb: 2 }}>
         <VersionInfo />
