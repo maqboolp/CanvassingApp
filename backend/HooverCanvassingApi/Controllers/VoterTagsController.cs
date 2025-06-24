@@ -294,6 +294,106 @@ namespace HooverCanvassingApi.Controllers
                 return StatusCode(500, new { error = "Failed to remove voters from tag" });
             }
         }
+
+        // POST: api/votertags/bulk-add
+        [HttpPost("bulk-add")]
+        [Authorize(Roles = "Admin,SuperAdmin")]
+        public async Task<IActionResult> BulkAddTags([FromBody] BulkTagOperationRequest request)
+        {
+            try
+            {
+                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(currentUserId))
+                {
+                    return Unauthorized();
+                }
+
+                // Validate that all tags exist
+                var existingTags = await _context.VoterTags
+                    .Where(t => request.TagIds.Contains(t.Id))
+                    .ToListAsync();
+
+                if (existingTags.Count != request.TagIds.Count)
+                {
+                    return BadRequest(new { error = "One or more tags not found" });
+                }
+
+                // Get existing assignments to avoid duplicates
+                var existingAssignments = await _context.VoterTagAssignments
+                    .Where(vta => request.VoterIds.Contains(vta.VoterId) && request.TagIds.Contains(vta.TagId))
+                    .Select(vta => new { vta.VoterId, vta.TagId })
+                    .ToListAsync();
+
+                var existingPairs = existingAssignments.Select(ea => $"{ea.VoterId}_{ea.TagId}").ToHashSet();
+
+                // Create new assignments
+                var newAssignments = new List<VoterTagAssignment>();
+                foreach (var voterId in request.VoterIds)
+                {
+                    foreach (var tagId in request.TagIds)
+                    {
+                        if (!existingPairs.Contains($"{voterId}_{tagId}"))
+                        {
+                            newAssignments.Add(new VoterTagAssignment
+                            {
+                                VoterId = voterId,
+                                TagId = tagId,
+                                AssignedAt = DateTime.UtcNow,
+                                AssignedById = currentUserId
+                            });
+                        }
+                    }
+                }
+
+                if (newAssignments.Any())
+                {
+                    _context.VoterTagAssignments.AddRange(newAssignments);
+                    await _context.SaveChangesAsync();
+                }
+
+                return Ok(new { 
+                    addedCount = newAssignments.Count, 
+                    skippedCount = existingAssignments.Count,
+                    processedVoters = request.VoterIds.Count,
+                    processedTags = request.TagIds.Count
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error bulk adding tags");
+                return StatusCode(500, new { error = "Failed to add tags to voters" });
+            }
+        }
+
+        // POST: api/votertags/bulk-remove
+        [HttpPost("bulk-remove")]
+        [Authorize(Roles = "Admin,SuperAdmin")]
+        public async Task<IActionResult> BulkRemoveTags([FromBody] BulkTagOperationRequest request)
+        {
+            try
+            {
+                var assignments = await _context.VoterTagAssignments
+                    .Where(vta => request.VoterIds.Contains(vta.VoterId) && request.TagIds.Contains(vta.TagId))
+                    .ToListAsync();
+
+                if (assignments.Any())
+                {
+                    _context.VoterTagAssignments.RemoveRange(assignments);
+                    await _context.SaveChangesAsync();
+                }
+
+                return Ok(new { 
+                    removedCount = assignments.Count,
+                    processedVoters = request.VoterIds.Count,
+                    processedTags = request.TagIds.Count
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error bulk removing tags");
+                return StatusCode(500, new { error = "Failed to remove tags from voters" });
+            }
+        }
     }
 
     // DTOs
@@ -344,5 +444,11 @@ namespace HooverCanvassingApi.Controllers
     public class RemoveVotersFromTagRequest
     {
         public List<string> VoterIds { get; set; } = new List<string>();
+    }
+
+    public class BulkTagOperationRequest
+    {
+        public List<string> VoterIds { get; set; } = new List<string>();
+        public List<int> TagIds { get; set; } = new List<int>();
     }
 }

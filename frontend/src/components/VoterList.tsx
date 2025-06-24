@@ -13,6 +13,11 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Autocomplete,
+  Collapse,
+  Checkbox,
+  Toolbar,
+  Fade,
   Button,
   Chip,
   IconButton,
@@ -31,9 +36,15 @@ import {
   FilterList,
   Clear,
   Phone,
-  Email
+  Email,
+  LocalOffer,
+  ExpandMore,
+  CheckBoxOutlineBlank,
+  CheckBox,
+  Label,
+  LabelOff
 } from '@mui/icons-material';
-import { Voter, VoterFilter, PaginationParams, VoterListResponse, ContactStatus, VoterSupport, AuthUser } from '../types';
+import { Voter, VoterFilter, PaginationParams, VoterListResponse, ContactStatus, VoterSupport, AuthUser, VoterTag } from '../types';
 import ContactModal from './ContactModal';
 import { API_BASE_URL } from '../config';
 
@@ -57,6 +68,15 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [useLocation, setUseLocation] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 600);
+  const [availableTags, setAvailableTags] = useState<VoterTag[]>([]);
+  const [selectedTags, setSelectedTags] = useState<VoterTag[]>([]);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [selectedVoters, setSelectedVoters] = useState<string[]>([]);
+  const [bulkTagDialog, setBulkTagDialog] = useState(false);
+  const [bulkOperation, setBulkOperation] = useState<'add' | 'remove'>('add');
+  const [bulkSelectedTags, setBulkSelectedTags] = useState<VoterTag[]>([]);
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const [filterInputs, setFilterInputs] = useState({
     zipCode: '',
@@ -64,12 +84,18 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
     ageGroup: '',
     contactStatus: 'not-contacted',
     searchName: '',
-    partyAffiliation: ''
+    partyAffiliation: '',
+    tagIds: [] as number[]
   });
 
   useEffect(() => {
     fetchVoters();
+    fetchAvailableTags();
   }, [page, rowsPerPage, filters, useLocation, location]);
+
+  useEffect(() => {
+    fetchAvailableTags();
+  }, []);
 
   useEffect(() => {
     const handleResize = () => {
@@ -134,6 +160,24 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
     }
   };
 
+  const fetchAvailableTags = async () => {
+    try {
+      const token = user?.token || localStorage.getItem('auth_token');
+      const response = await fetch(`${API_BASE_URL}/api/votertags`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const tags = await response.json();
+        setAvailableTags(tags);
+      }
+    } catch (err) {
+      console.error('Failed to fetch tags:', err);
+    }
+  };
+
   const fetchVoters = async () => {
     setLoading(true);
     setError(null);
@@ -156,6 +200,13 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
           radiusKm: '5' // 5km radius
         })
       });
+      
+      // Add tag filters
+      if (filters.tagIds && filters.tagIds.length > 0) {
+        filters.tagIds.forEach(tagId => {
+          queryParams.append('tagIds', tagId.toString());
+        });
+      }
 
       const token = user?.token || localStorage.getItem('auth_token');
       const response = await fetch(`${API_BASE_URL}/api/voters?${queryParams}`, {
@@ -199,7 +250,8 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
       ageGroup: filterInputs.ageGroup as any || undefined,
       contactStatus: filterInputs.contactStatus as any || undefined,
       searchName: filterInputs.searchName || undefined,
-      partyAffiliation: filterInputs.partyAffiliation || undefined
+      partyAffiliation: filterInputs.partyAffiliation || undefined,
+      tagIds: filterInputs.tagIds.length > 0 ? filterInputs.tagIds : undefined
     });
     setPage(0);
   };
@@ -211,12 +263,96 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
       ageGroup: '',
       contactStatus: 'not-contacted',
       searchName: '',
-      partyAffiliation: ''
+      partyAffiliation: '',
+      tagIds: []
     });
+    setSelectedTags([]);
     setFilters({
       contactStatus: 'not-contacted'
     });
     setPage(0);
+  };
+
+  const handleTagFilterChange = (event: any, newValue: VoterTag[]) => {
+    setSelectedTags(newValue);
+    setFilterInputs(prev => ({
+      ...prev,
+      tagIds: newValue.map(tag => tag.id)
+    }));
+  };
+
+  const handleSelectAllVoters = () => {
+    if (selectedVoters.length === voters.length) {
+      setSelectedVoters([]);
+    } else {
+      setSelectedVoters(voters.map(voter => voter.lalVoterId));
+    }
+  };
+
+  const handleSelectVoter = (voterId: string) => {
+    setSelectedVoters(prev => {
+      if (prev.includes(voterId)) {
+        return prev.filter(id => id !== voterId);
+      } else {
+        return [...prev, voterId];
+      }
+    });
+  };
+
+  const handleBulkTagOperation = async () => {
+    if (selectedVoters.length === 0 || bulkSelectedTags.length === 0) {
+      setError('Please select voters and tags');
+      return;
+    }
+
+    setBulkLoading(true);
+    try {
+      const token = user?.token || localStorage.getItem('auth_token');
+      const response = await fetch(`${API_BASE_URL}/api/votertags/bulk-${bulkOperation}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          voterIds: selectedVoters,
+          tagIds: bulkSelectedTags.map(tag => tag.id)
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to ${bulkOperation} tags`);
+      }
+
+      const result = await response.json();
+      setError(null);
+      
+      // Show success message
+      const successMsg = `Successfully ${bulkOperation === 'add' ? 'added' : 'removed'} ${bulkSelectedTags.length} tag(s) ${bulkOperation === 'add' ? 'to' : 'from'} ${selectedVoters.length} voter(s)`;
+      setSuccessMessage(successMsg);
+      
+      // Close dialog and reset state
+      setBulkTagDialog(false);
+      setBulkSelectedTags([]);
+      setSelectedVoters([]);
+      
+      // Refresh voter list
+      fetchVoters();
+      
+      // Clear success message after 5 seconds
+      setTimeout(() => setSuccessMessage(null), 5000);
+      
+    } catch (err) {
+      setError(err instanceof Error ? err.message : `Failed to ${bulkOperation} tags`);
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
+  const openBulkTagDialog = (operation: 'add' | 'remove') => {
+    setBulkOperation(operation);
+    setBulkSelectedTags([]);
+    setBulkTagDialog(true);
   };
 
   const handleContactClick = (voter: Voter) => {
@@ -285,20 +421,31 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
     }}>
       {/* Filter Controls */}
       <Box sx={{ p: { xs: 1, sm: 2 }, borderBottom: 1, borderColor: 'divider' }}>
-        <Typography variant="h6" gutterBottom sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
-          Voter List ({total} voters)
-          {useLocation && (
-            <Chip 
-              icon={<LocationOn />} 
-              label="Within 5km" 
-              color="success" 
-              size="small" 
-              sx={{ ml: { xs: 1, sm: 2 } }} 
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Typography variant="h6" sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
+            Voter List ({total} voters)
+            {useLocation && (
+              <Chip 
+                icon={<LocationOn />} 
+                label="Within 5km" 
+                color="success" 
+                size="small" 
+                sx={{ ml: { xs: 1, sm: 2 } }} 
+              />
+            )}
+          </Typography>
+          
+          {selectedVoters.length > 0 && (
+            <Chip
+              label={`${selectedVoters.length} selected`}
+              color="primary"
+              size="small"
+              variant="filled"
             />
           )}
-        </Typography>
+        </Box>
         
-        <Box sx={{ display: 'flex', gap: { xs: 1, sm: 2 }, flexWrap: 'wrap', alignItems: 'center' }}>
+        <Box sx={{ display: 'flex', gap: { xs: 1, sm: 2 }, flexWrap: 'wrap', alignItems: 'center', mb: 2 }}>
           <TextField
             size="small"
             label="Search Name"
@@ -377,6 +524,17 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
             }
           </Button>
           
+          <Button
+            variant="outlined"
+            startIcon={<LocalOffer />}
+            endIcon={<ExpandMore sx={{ transform: showAdvancedFilters ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />}
+            onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+            size={isMobile ? "small" : "medium"}
+            sx={{ minWidth: { xs: 'auto', sm: 'auto' } }}
+          >
+            {isMobile ? "Tags" : "Filter by Tags"}
+          </Button>
+          
           {filters.sortBy === 'zip' && !useLocation && (
             <Chip 
               icon={<LocationOn />} 
@@ -386,11 +544,144 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
             />
           )}
         </Box>
+        
+        {/* Advanced Filters - Tags */}
+        <Collapse in={showAdvancedFilters}>
+          <Box sx={{ pt: 2, pb: 1 }}>
+            <Typography variant="subtitle2" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <LocalOffer fontSize="small" />
+              Filter by Tags
+            </Typography>
+            
+            <Autocomplete
+              multiple
+              size="small"
+              options={availableTags}
+              getOptionLabel={(option) => option.tagName}
+              value={selectedTags}
+              onChange={handleTagFilterChange}
+              isOptionEqualToValue={(option, value) => option.id === value.id}
+              renderTags={(value, getTagProps) =>
+                value.map((option, index) => (
+                  <Chip
+                    {...getTagProps({ index })}
+                    key={option.id}
+                    label={option.tagName}
+                    size="small"
+                    sx={{
+                      backgroundColor: option.color || '#2196F3',
+                      color: 'white',
+                      '& .MuiChip-deleteIcon': {
+                        color: 'white'
+                      }
+                    }}
+                  />
+                ))
+              }
+              renderOption={(props, option) => (
+                <li {...props} key={option.id}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box
+                      sx={{
+                        width: 12,
+                        height: 12,
+                        borderRadius: '50%',
+                        backgroundColor: option.color || '#2196F3'
+                      }}
+                    />
+                    {option.tagName}
+                  </Box>
+                </li>
+              )}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  placeholder={selectedTags.length === 0 ? "Select tags to filter by..." : ""}
+                  variant="outlined"
+                  size="small"
+                />
+              )}
+              sx={{ minWidth: 250 }}
+            />
+            
+            {selectedTags.length > 0 && (
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                Showing voters with {selectedTags.length === 1 ? 'this tag' : 'any of these tags'}
+              </Typography>
+            )}
+          </Box>
+        </Collapse>
+        
+        {/* Bulk Operations Toolbar */}
+        <Fade in={selectedVoters.length > 0}>
+          <Toolbar
+            sx={{
+              bgcolor: 'primary.light',
+              color: 'primary.contrastText',
+              borderRadius: 1,
+              mt: 2,
+              minHeight: { xs: 48, sm: 56 },
+              px: { xs: 1, sm: 2 }
+            }}
+          >
+            <Typography variant="subtitle1" sx={{ flex: 1, fontSize: { xs: '0.9rem', sm: '1rem' } }}>
+              {selectedVoters.length} voter(s) selected
+            </Typography>
+            
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button
+                variant="contained"
+                size={isMobile ? "small" : "medium"}
+                startIcon={<Label />}
+                onClick={() => openBulkTagDialog('add')}
+                sx={{ 
+                  bgcolor: 'white', 
+                  color: 'primary.main',
+                  '&:hover': { bgcolor: 'grey.100' }
+                }}
+              >
+                {isMobile ? "Add Tags" : "Add Tags"}
+              </Button>
+              
+              <Button
+                variant="contained"
+                size={isMobile ? "small" : "medium"}
+                startIcon={<LabelOff />}
+                onClick={() => openBulkTagDialog('remove')}
+                sx={{ 
+                  bgcolor: 'white', 
+                  color: 'primary.main',
+                  '&:hover': { bgcolor: 'grey.100' }
+                }}
+              >
+                {isMobile ? "Remove Tags" : "Remove Tags"}
+              </Button>
+              
+              <Button
+                variant="text"
+                size={isMobile ? "small" : "medium"}
+                onClick={() => setSelectedVoters([])}
+                sx={{ 
+                  color: 'white',
+                  '&:hover': { bgcolor: 'primary.dark' }
+                }}
+              >
+                Clear
+              </Button>
+            </Box>
+          </Toolbar>
+        </Fade>
       </Box>
 
       {error && (
         <Alert severity="error" sx={{ m: 2 }}>
           {error}
+        </Alert>
+      )}
+
+      {successMessage && (
+        <Alert severity="success" sx={{ m: 2 }} onClose={() => setSuccessMessage(null)}>
+          {successMessage}
         </Alert>
       )}
 
@@ -403,12 +694,21 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
         <Table stickyHeader size={isMobile ? "small" : "medium"}>
           <TableHead>
             <TableRow>
+              <TableCell padding="checkbox">
+                <Checkbox
+                  indeterminate={selectedVoters.length > 0 && selectedVoters.length < voters.length}
+                  checked={voters.length > 0 && selectedVoters.length === voters.length}
+                  onChange={handleSelectAllVoters}
+                  inputProps={{ 'aria-label': 'select all voters' }}
+                />
+              </TableCell>
               <TableCell>Name</TableCell>
               <TableCell>Address</TableCell>
               {!isMobile && <TableCell>Distance</TableCell>}
               {!isMobile && <TableCell>Age</TableCell>}
               {!isMobile && <TableCell>Vote Frequency</TableCell>}
               {!isMobile && <TableCell>Party</TableCell>}
+              <TableCell>Tags</TableCell>
               <TableCell>Status</TableCell>
               {!isMobile && <TableCell>Contact Info</TableCell>}
               <TableCell>Actions</TableCell>
@@ -417,13 +717,13 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={isMobile ? 4 : 8} sx={{ textAlign: 'center', py: 4 }}>
+                <TableCell colSpan={isMobile ? 6 : 10} sx={{ textAlign: 'center', py: 4 }}>
                   <CircularProgress />
                 </TableCell>
               </TableRow>
             ) : voters.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={isMobile ? 4 : 8} sx={{ textAlign: 'center', py: 4 }}>
+                <TableCell colSpan={isMobile ? 6 : 10} sx={{ textAlign: 'center', py: 4 }}>
                   No voters found
                 </TableCell>
               </TableRow>
@@ -431,8 +731,18 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
               voters.map((voter) => (
                 <TableRow
                   key={voter.lalVoterId}
-                  sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
+                  sx={{ 
+                    '&:last-child td, &:last-child th': { border: 0 },
+                    bgcolor: selectedVoters.includes(voter.lalVoterId) ? 'action.selected' : 'inherit'
+                  }}
                 >
+                  <TableCell padding="checkbox">
+                    <Checkbox
+                      checked={selectedVoters.includes(voter.lalVoterId)}
+                      onChange={() => handleSelectVoter(voter.lalVoterId)}
+                      inputProps={{ 'aria-label': `select voter ${voter.firstName} ${voter.lastName}` }}
+                    />
+                  </TableCell>
                   <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <Box>
@@ -453,6 +763,31 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
                               <Typography variant="caption" color="primary" sx={{ display: 'block' }}>
                                 📞 {voter.cellPhone}
                               </Typography>
+                            )}
+                            {voter.tags && voter.tags.length > 0 && (
+                              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.25, mt: 0.5 }}>
+                                {voter.tags.slice(0, 2).map((tag: VoterTag) => (
+                                  <Chip
+                                    key={tag.id}
+                                    label={tag.tagName}
+                                    size="small"
+                                    sx={{
+                                      backgroundColor: tag.color || '#2196F3',
+                                      color: 'white',
+                                      fontSize: '0.6rem',
+                                      height: 16,
+                                      '& .MuiChip-label': {
+                                        px: 0.5
+                                      }
+                                    }}
+                                  />
+                                ))}
+                                {voter.tags.length > 2 && (
+                                  <Typography variant="caption" color="text.secondary">
+                                    +{voter.tags.length - 2}
+                                  </Typography>
+                                )}
+                              </Box>
                             )}
                           </>
                         )}
@@ -544,6 +879,33 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
                   )}
                   
                   <TableCell>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, maxWidth: isMobile ? 120 : 200 }}>
+                      {voter.tags && voter.tags.length > 0 ? (
+                        voter.tags.map((tag: VoterTag) => (
+                          <Chip
+                            key={tag.id}
+                            label={tag.tagName}
+                            size="small"
+                            sx={{
+                              backgroundColor: tag.color || '#2196F3',
+                              color: 'white',
+                              fontSize: isMobile ? '0.6rem' : '0.7rem',
+                              height: isMobile ? 20 : 24,
+                              '& .MuiChip-label': {
+                                px: isMobile ? 0.5 : 1
+                              }
+                            }}
+                          />
+                        ))
+                      ) : (
+                        <Typography variant="caption" color="text.secondary">
+                          -
+                        </Typography>
+                      )}
+                    </Box>
+                  </TableCell>
+                  
+                  <TableCell>
                     {voter.isContacted ? (
                       <Chip
                         label={voter.lastContactStatus?.replace('-', ' ') || 'Contacted'}
@@ -622,6 +984,117 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
         }}
         onSubmit={handleContactSubmit}
       />
+
+      {/* Bulk Tag Operations Dialog */}
+      <Dialog open={bulkTagDialog} onClose={() => {
+        if (!bulkLoading) {
+          setBulkTagDialog(false);
+          setBulkSelectedTags([]);
+        }
+      }} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          {bulkOperation === 'add' ? 'Add Tags to Voters' : 'Remove Tags from Voters'}
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" paragraph>
+            {bulkOperation === 'add' 
+              ? `Add tags to ${selectedVoters.length} selected voter(s). Selected voters will have these tags added to their existing tags.`
+              : `Remove tags from ${selectedVoters.length} selected voter(s). Only voters who currently have these tags will be affected.`
+            }
+          </Typography>
+          
+          <Autocomplete
+            multiple
+            size="small"
+            options={availableTags}
+            getOptionLabel={(option) => option.tagName}
+            value={bulkSelectedTags}
+            onChange={(event, newValue) => setBulkSelectedTags(newValue)}
+            isOptionEqualToValue={(option, value) => option.id === value.id}
+            renderTags={(value, getTagProps) =>
+              value.map((option, index) => (
+                <Chip
+                  {...getTagProps({ index })}
+                  key={option.id}
+                  label={option.tagName}
+                  size="small"
+                  sx={{
+                    backgroundColor: option.color || '#2196F3',
+                    color: 'white',
+                    '& .MuiChip-deleteIcon': {
+                      color: 'white'
+                    }
+                  }}
+                />
+              ))
+            }
+            renderOption={(props, option) => (
+              <li {...props} key={option.id}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box
+                    sx={{
+                      width: 12,
+                      height: 12,
+                      borderRadius: '50%',
+                      backgroundColor: option.color || '#2196F3'
+                    }}
+                  />
+                  {option.tagName}
+                </Box>
+              </li>
+            )}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label={`Select tags to ${bulkOperation}`}
+                placeholder={bulkSelectedTags.length === 0 ? `Choose tags to ${bulkOperation}...` : ""}
+                variant="outlined"
+                size="small"
+                fullWidth
+                margin="normal"
+              />
+            )}
+            disabled={bulkLoading}
+          />
+          
+          {bulkSelectedTags.length > 0 && (
+            <Box sx={{ mt: 2, p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
+              <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+                {bulkOperation === 'add' ? 'Tags to add:' : 'Tags to remove:'}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {bulkSelectedTags.length} tag(s) will be {bulkOperation === 'add' ? 'added to' : 'removed from'} {selectedVoters.length} voter(s)
+              </Typography>
+            </Box>
+          )}
+
+          {error && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {error}
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => {
+            setBulkTagDialog(false);
+            setBulkSelectedTags([]);
+          }} disabled={bulkLoading}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleBulkTagOperation}
+            variant="contained" 
+            disabled={bulkLoading || bulkSelectedTags.length === 0}
+            startIcon={bulkLoading ? <CircularProgress size={20} /> : (bulkOperation === 'add' ? <Label /> : <LabelOff />)}
+            color={bulkOperation === 'add' ? 'primary' : 'warning'}
+          >
+            {bulkLoading 
+              ? `${bulkOperation === 'add' ? 'Adding' : 'Removing'}...` 
+              : `${bulkOperation === 'add' ? 'Add Tags' : 'Remove Tags'}`
+            }
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Paper>
   );
 };

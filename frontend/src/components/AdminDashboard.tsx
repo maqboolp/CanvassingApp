@@ -71,10 +71,14 @@ import {
   Visibility,
   VisibilityOff,
   Email,
-  Schedule,
-  Delete
+  LocalOffer,
+  Add,
+  Edit,
+  Delete,
+  ColorLens,
+  Schedule
 } from '@mui/icons-material';
-import { AuthUser, Voter, ContactStatus, VoterSupport } from '../types';
+import { AuthUser, Voter, ContactStatus, VoterSupport, VoterTagDetail } from '../types';
 import VoterList from './VoterList';
 import VoterContactHistory from './VoterContactHistory';
 import ContactModal from './ContactModal';
@@ -123,6 +127,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
       'voters',
       'history',
       ...(user.role === 'admin' || user.role === 'superadmin' ? ['campaigns'] : []),
+      ...(user.role === 'admin' || user.role === 'superadmin' ? ['tags'] : []),
       'engagement',
       ...(user.role === 'superadmin' ? ['dataManagement'] : [])
     ];
@@ -167,6 +172,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
   const [changePasswordDialog, setChangePasswordDialog] = useState(false);
   const [leaderboard, setLeaderboard] = useState<any>(null);
   const [leaderboardTab, setLeaderboardTab] = useState(0);
+  
+  // Tags state
+  const [tags, setTags] = useState<VoterTagDetail[]>([]);
+  const [tagDialog, setTagDialog] = useState(false);
+  const [editingTag, setEditingTag] = useState<VoterTagDetail | null>(null);
+  const [tagForm, setTagForm] = useState({
+    tagName: '',
+    description: '',
+    color: '#2196F3'
+  });
+  const [tagLoading, setTagLoading] = useState(false);
   const [changeRoleDialog, setChangeRoleDialog] = useState(false);
   const [selectedUserForRole, setSelectedUserForRole] = useState<any>(null);
   const [newRole, setNewRole] = useState('');
@@ -225,6 +241,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
     } else if (currentTab === getTabIndex('engagement')) {
       // Engagement tab - fetch volunteers for recipient selection
       fetchVolunteers();
+    } else if (currentTab === getTabIndex('tags') && (user.role === 'admin' || user.role === 'superadmin')) {
+      fetchTags();
     } else if (currentTab === getTabIndex('dataManagement') && user.role === 'superadmin') {
       fetchGeocodingStatus();
     }
@@ -266,6 +284,135 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
       }
       console.error('Failed to fetch leaderboard:', error instanceof ApiError ? error.message : error);
     }
+  };
+
+  const fetchTags = async () => {
+    setTagLoading(true);
+    try {
+      const data = await ApiErrorHandler.makeAuthenticatedRequest(
+        `${API_BASE_URL}/api/votertags`
+      );
+      setTags(data);
+    } catch (error) {
+      if (error instanceof ApiError && error.isAuthError) {
+        return;
+      }
+      console.error('Failed to fetch tags:', error instanceof ApiError ? error.message : error);
+    } finally {
+      setTagLoading(false);
+    }
+  };
+
+  const handleCreateTag = async () => {
+    if (!tagForm.tagName.trim()) {
+      setImportResult({ error: 'Tag name is required' });
+      return;
+    }
+
+    setTagLoading(true);
+    try {
+      const requestBody = {
+        tagName: tagForm.tagName.trim(),
+        description: tagForm.description.trim() || null,
+        color: tagForm.color
+      };
+      
+      await ApiErrorHandler.makeAuthenticatedRequest(
+        `${API_BASE_URL}/api/votertags`,
+        {
+          method: 'POST',
+          body: JSON.stringify(requestBody)
+        }
+      );
+
+      setImportResult({ success: 'Tag created successfully' });
+      setTagDialog(false);
+      setTagForm({ tagName: '', description: '', color: '#2196F3' });
+      fetchTags();
+    } catch (error) {
+      if (error instanceof ApiError && error.isAuthError) {
+        return;
+      }
+      setImportResult({ error: error instanceof ApiError ? error.message : 'Error creating tag' });
+    } finally {
+      setTagLoading(false);
+    }
+  };
+
+  const handleUpdateTag = async () => {
+    if (!editingTag || !tagForm.tagName.trim()) {
+      setImportResult({ error: 'Tag name is required' });
+      return;
+    }
+
+    setTagLoading(true);
+    try {
+      const requestBody = {
+        tagName: tagForm.tagName.trim(),
+        description: tagForm.description.trim() || null,
+        color: tagForm.color
+      };
+      
+      await ApiErrorHandler.makeAuthenticatedRequest(
+        `${API_BASE_URL}/api/votertags/${editingTag.id}`,
+        {
+          method: 'PUT',
+          body: JSON.stringify(requestBody)
+        }
+      );
+
+      setImportResult({ success: 'Tag updated successfully' });
+      setTagDialog(false);
+      setEditingTag(null);
+      setTagForm({ tagName: '', description: '', color: '#2196F3' });
+      fetchTags();
+    } catch (error) {
+      if (error instanceof ApiError && error.isAuthError) {
+        return;
+      }
+      setImportResult({ error: error instanceof ApiError ? error.message : 'Error updating tag' });
+    } finally {
+      setTagLoading(false);
+    }
+  };
+
+  const handleDeleteTag = async (tag: VoterTagDetail) => {
+    if (!window.confirm(`Are you sure you want to delete the tag "${tag.tagName}"? This will remove the tag from all ${tag.voterCount} associated voters.`)) {
+      return;
+    }
+
+    try {
+      await ApiErrorHandler.makeAuthenticatedRequest(
+        `${API_BASE_URL}/api/votertags/${tag.id}`,
+        {
+          method: 'DELETE'
+        }
+      );
+
+      setImportResult({ success: 'Tag deleted successfully' });
+      fetchTags();
+    } catch (error) {
+      if (error instanceof ApiError && error.isAuthError) {
+        return;
+      }
+      setImportResult({ error: error instanceof ApiError ? error.message : 'Error deleting tag' });
+    }
+  };
+
+  const openCreateTagDialog = () => {
+    setEditingTag(null);
+    setTagForm({ tagName: '', description: '', color: '#2196F3' });
+    setTagDialog(true);
+  };
+
+  const openEditTagDialog = (tag: VoterTagDetail) => {
+    setEditingTag(tag);
+    setTagForm({
+      tagName: tag.tagName,
+      description: tag.description || '',
+      color: tag.color || '#2196F3'
+    });
+    setTagDialog(true);
   };
 
   const fetchVolunteers = async () => {
@@ -1166,6 +1313,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
           {(user.role === 'admin' || user.role === 'superadmin') && (
             <Tab label="Campaigns" icon={<Campaign />} />
           )}
+          {(user.role === 'admin' || user.role === 'superadmin') && (
+            <Tab label="Tags" icon={<LocalOffer />} />
+          )}
           <Tab 
             label="Engagement" 
             icon={<Email />} 
@@ -2032,6 +2182,131 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
         {(user.role === 'admin' || user.role === 'superadmin') && (
           <TabPanel value={currentTab} index={getTabIndex('campaigns')}>
             <CampaignDashboard user={user} />
+          </TabPanel>
+        )}
+
+        {/* Tags Tab - For Admins and SuperAdmins */}
+        {(user.role === 'admin' || user.role === 'superadmin') && (
+          <TabPanel value={currentTab} index={getTabIndex('tags')}>
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+              <Typography variant="h5">
+                Tag Management
+              </Typography>
+              <Button
+                variant="contained"
+                startIcon={<Add />}
+                onClick={openCreateTagDialog}
+              >
+                Create Tag
+              </Button>
+            </Box>
+            
+            <Typography variant="body2" color="text.secondary" paragraph>
+              Create and manage tags to organize voters for targeted campaigns.
+            </Typography>
+
+            {tagLoading ? (
+              <Box display="flex" justifyContent="center" py={4}>
+                <CircularProgress />
+              </Box>
+            ) : (
+              <TableContainer component={Paper}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Tag Name</TableCell>
+                      <TableCell>Description</TableCell>
+                      <TableCell>Color</TableCell>
+                      <TableCell align="right">Voters</TableCell>
+                      <TableCell>Created</TableCell>
+                      <TableCell>Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {tags.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} align="center">
+                          <Typography variant="body2" color="text.secondary" sx={{ py: 4 }}>
+                            No tags created yet. Create your first tag to get started.
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      tags.map((tag) => (
+                        <TableRow key={tag.id}>
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Box
+                                sx={{
+                                  width: 12,
+                                  height: 12,
+                                  borderRadius: '50%',
+                                  backgroundColor: tag.color || '#2196F3'
+                                }}
+                              />
+                              <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+                                {tag.tagName}
+                              </Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" color="text.secondary">
+                              {tag.description || '-'}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Chip
+                              label={tag.color || '#2196F3'}
+                              size="small"
+                              sx={{
+                                backgroundColor: tag.color || '#2196F3',
+                                color: 'white',
+                                fontFamily: 'monospace',
+                                fontSize: '0.7rem'
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell align="right">
+                            <Chip
+                              label={tag.voterCount}
+                              size="small"
+                              color="primary"
+                              variant="outlined"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" color="text.secondary">
+                              {new Date(tag.createdAt).toLocaleDateString()}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Box sx={{ display: 'flex', gap: 1 }}>
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                startIcon={<Edit />}
+                                onClick={() => openEditTagDialog(tag)}
+                              >
+                                Edit
+                              </Button>
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                color="error"
+                                startIcon={<Delete />}
+                                onClick={() => handleDeleteTag(tag)}
+                              >
+                                Delete
+                              </Button>
+                            </Box>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
           </TabPanel>
         )}
 
@@ -3137,6 +3412,113 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
         </DialogActions>
       </Dialog>
       
+      {/* Tag Dialog */}
+      <Dialog open={tagDialog} onClose={() => {
+        if (!tagLoading) {
+          setTagDialog(false);
+          setEditingTag(null);
+          setTagForm({ tagName: '', description: '', color: '#2196F3' });
+        }
+      }} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          {editingTag ? 'Edit Tag' : 'Create New Tag'}
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" paragraph>
+            {editingTag ? 'Update the tag details below.' : 'Create a new tag to organize voters for targeted campaigns.'}
+          </Typography>
+          
+          <TextField
+            label="Tag Name"
+            fullWidth
+            margin="normal"
+            value={tagForm.tagName}
+            onChange={(e) => setTagForm({ ...tagForm, tagName: e.target.value })}
+            disabled={tagLoading}
+            required
+            placeholder="e.g., High Priority, Young Voters, etc."
+            autoFocus
+          />
+          
+          <TextField
+            label="Description"
+            fullWidth
+            margin="normal"
+            multiline
+            rows={3}
+            value={tagForm.description}
+            onChange={(e) => setTagForm({ ...tagForm, description: e.target.value })}
+            disabled={tagLoading}
+            placeholder="Optional description of what this tag represents..."
+          />
+          
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              Tag Color
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <TextField
+                type="color"
+                value={tagForm.color}
+                onChange={(e) => setTagForm({ ...tagForm, color: e.target.value })}
+                disabled={tagLoading}
+                sx={{ width: 80 }}
+              />
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                {[
+                  '#2196F3', '#4CAF50', '#FF9800', '#F44336', '#9C27B0',
+                  '#607D8B', '#795548', '#E91E63', '#00BCD4', '#8BC34A'
+                ].map((color) => (
+                  <Box
+                    key={color}
+                    sx={{
+                      width: 24,
+                      height: 24,
+                      borderRadius: '50%',
+                      backgroundColor: color,
+                      cursor: 'pointer',
+                      border: tagForm.color === color ? '2px solid #000' : '1px solid #ddd'
+                    }}
+                    onClick={() => setTagForm({ ...tagForm, color })}
+                  />
+                ))}
+              </Box>
+            </Box>
+          </Box>
+          
+          <Box sx={{ mt: 2, p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
+            <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Box
+                sx={{
+                  width: 12,
+                  height: 12,
+                  borderRadius: '50%',
+                  backgroundColor: tagForm.color
+                }}
+              />
+              Preview: {tagForm.tagName || 'Tag Name'}
+            </Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => {
+            setTagDialog(false);
+            setEditingTag(null);
+            setTagForm({ tagName: '', description: '', color: '#2196F3' });
+          }} disabled={tagLoading}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={editingTag ? handleUpdateTag : handleCreateTag}
+            variant="contained" 
+            disabled={tagLoading || !tagForm.tagName.trim()}
+            startIcon={tagLoading ? <CircularProgress size={20} /> : (editingTag ? <Edit /> : <Add />)}
+          >
+            {tagLoading ? (editingTag ? 'Updating...' : 'Creating...') : (editingTag ? 'Update Tag' : 'Create Tag')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Version Information */}
       <Container maxWidth="lg" sx={{ pb: 2 }}>
         <VersionInfo />

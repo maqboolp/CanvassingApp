@@ -21,7 +21,8 @@ import {
   Stack,
   Checkbox,
   ListItemText,
-  OutlinedInput
+  OutlinedInput,
+  Autocomplete
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -29,10 +30,11 @@ import {
   Schedule as ScheduleIcon,
   Cancel as CancelIcon,
   Delete as DeleteIcon,
-  Edit as EditIcon
+  Edit as EditIcon,
+  LocalOffer
 } from '@mui/icons-material';
 import { API_BASE_URL } from '../config';
-import { AuthUser } from '../types';
+import { AuthUser, VoterTag } from '../types';
 import { ApiErrorHandler, ApiError } from '../utils/apiErrorHandler';
 
 interface Campaign {
@@ -103,28 +105,32 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
   const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
   const [availableZipCodes, setAvailableZipCodes] = useState<string[]>([]);
   const [audienceCount, setAudienceCount] = useState<number>(0);
+  const [availableTags, setAvailableTags] = useState<VoterTag[]>([]);
+  const [selectedTags, setSelectedTags] = useState<VoterTag[]>([]);
 
   const [newCampaign, setNewCampaign] = useState({
     name: '',
     message: '',
     type: 'SMS' as 'SMS' | 'RoboCall',
     voiceUrl: '',
-    selectedZipCodes: [] as string[]
+    selectedZipCodes: [] as string[],
+    selectedTagIds: [] as number[]
   });
 
   useEffect(() => {
     fetchCampaigns();
     fetchAvailableZipCodes();
+    fetchAvailableTags();
   }, []);
 
   useEffect(() => {
-    // Update audience count when ZIP codes change
-    if (newCampaign.selectedZipCodes.length > 0) {
+    // Update audience count when ZIP codes or tags change
+    if (newCampaign.selectedZipCodes.length > 0 || newCampaign.selectedTagIds.length > 0) {
       previewAudienceCount();
     } else {
       setAudienceCount(0);
     }
-  }, [newCampaign.selectedZipCodes]);
+  }, [newCampaign.selectedZipCodes, newCampaign.selectedTagIds]);
 
   const fetchCampaigns = async () => {
     try {
@@ -162,17 +168,38 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
     }
   };
 
+  const fetchAvailableTags = async () => {
+    try {
+      const data = await ApiErrorHandler.makeAuthenticatedRequest(
+        `${API_BASE_URL}/api/votertags`
+      );
+      setAvailableTags(data);
+    } catch (error) {
+      if (error instanceof ApiError && error.isAuthError) {
+        return;
+      }
+      console.error('Failed to fetch tags:', error instanceof ApiError ? error.message : error);
+    }
+  };
+
   const previewAudienceCount = async () => {
     try {
-      const filterZipCodes = JSON.stringify(newCampaign.selectedZipCodes);
+      const queryParams = new URLSearchParams();
+      
+      if (newCampaign.selectedZipCodes.length > 0) {
+        queryParams.append('filterZipCodes', JSON.stringify(newCampaign.selectedZipCodes));
+      }
+      
+      if (newCampaign.selectedTagIds.length > 0) {
+        newCampaign.selectedTagIds.forEach(tagId => {
+          queryParams.append('filterTagIds', tagId.toString());
+        });
+      }
+      
       const data = await ApiErrorHandler.makeAuthenticatedRequest(
-        `${API_BASE_URL}/api/campaigns/preview-audience`,
-        {
-          method: 'POST',
-          body: JSON.stringify({ filterZipCodes })
-        }
+        `${API_BASE_URL}/api/campaigns/recipient-count?${queryParams}`
       );
-      setAudienceCount(data.count);
+      setAudienceCount(data);
     } catch (error) {
       if (error instanceof ApiError && error.isAuthError) {
         return;
@@ -197,8 +224,8 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
       errors.voiceUrl = 'Voice URL is required for robo calls';
     }
     
-    if (newCampaign.selectedZipCodes.length === 0) {
-      errors.zipCodes = 'Please select at least one ZIP code';
+    if (newCampaign.selectedZipCodes.length === 0 && newCampaign.selectedTagIds.length === 0) {
+      errors.audience = 'Please select at least one ZIP code or tag for targeting';
     }
     
     setValidationErrors(errors);
@@ -216,11 +243,12 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
         message: newCampaign.message,
         type: getCampaignTypeEnum(newCampaign.type),
         voiceUrl: newCampaign.voiceUrl || null,
-        filterZipCodes: JSON.stringify(newCampaign.selectedZipCodes),
+        filterZipCodes: newCampaign.selectedZipCodes.length > 0 ? JSON.stringify(newCampaign.selectedZipCodes) : null,
         filterVoteFrequency: null,
         filterMinAge: null,
         filterMaxAge: null,
-        filterVoterSupport: null
+        filterVoterSupport: null,
+        filterTagIds: newCampaign.selectedTagIds.length > 0 ? newCampaign.selectedTagIds : null
       };
       
       console.log('Sending campaign request:', requestBody);
@@ -240,8 +268,10 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
         message: '', 
         type: 'SMS', 
         voiceUrl: '',
-        selectedZipCodes: []
+        selectedZipCodes: [],
+        selectedTagIds: []
       });
+      setSelectedTags([]);
       setValidationErrors({});
       setAudienceCount(0);
       fetchCampaigns();
@@ -375,6 +405,13 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
     }
   };
 
+  const handleTagSelectionChange = (event: any, newValue: VoterTag[]) => {
+    setSelectedTags(newValue);
+    setNewCampaign(prev => ({
+      ...prev,
+      selectedTagIds: newValue.map(tag => tag.id)
+    }));
+  };
 
   const getStatusColor = (status: number): "default" | "primary" | "secondary" | "error" | "info" | "success" | "warning" => {
     switch (status) {
@@ -630,13 +667,13 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
 
             <Typography variant="subtitle1">Target Audience</Typography>
 
-            <FormControl fullWidth required>
-              <InputLabel>ZIP Codes</InputLabel>
+            <FormControl fullWidth>
+              <InputLabel>ZIP Codes (Optional)</InputLabel>
               <Select
                 multiple
                 value={newCampaign.selectedZipCodes}
                 onChange={(e) => setNewCampaign({ ...newCampaign, selectedZipCodes: e.target.value as string[] })}
-                input={<OutlinedInput label="ZIP Codes" />}
+                input={<OutlinedInput label="ZIP Codes (Optional)" />}
                 renderValue={(selected) => (
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                     {selected.map((value) => (
@@ -644,7 +681,6 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                     ))}
                   </Box>
                 )}
-                error={!!validationErrors.zipCodes}
               >
                 {availableZipCodes.length === 0 ? (
                   <MenuItem disabled>
@@ -659,12 +695,70 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                   ))
                 )}
               </Select>
-              {validationErrors.zipCodes && (
-                <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
-                  {validationErrors.zipCodes}
-                </Typography>
-              )}
             </FormControl>
+
+            <Typography variant="subtitle2" sx={{ mt: 2, mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <LocalOffer fontSize="small" />
+              Filter by Tags (Optional)
+            </Typography>
+            
+            <Autocomplete
+              multiple
+              size="small"
+              options={availableTags}
+              getOptionLabel={(option) => option.tagName}
+              value={selectedTags}
+              onChange={handleTagSelectionChange}
+              isOptionEqualToValue={(option, value) => option.id === value.id}
+              renderTags={(value, getTagProps) =>
+                value.map((option, index) => (
+                  <Chip
+                    {...getTagProps({ index })}
+                    key={option.id}
+                    label={option.tagName}
+                    size="small"
+                    sx={{
+                      backgroundColor: option.color || '#2196F3',
+                      color: 'white',
+                      '& .MuiChip-deleteIcon': {
+                        color: 'white'
+                      }
+                    }}
+                  />
+                ))
+              }
+              renderOption={(props, option) => (
+                <li {...props} key={option.id}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box
+                      sx={{
+                        width: 12,
+                        height: 12,
+                        borderRadius: '50%',
+                        backgroundColor: option.color || '#2196F3'
+                      }}
+                    />
+                    {option.tagName}
+                  </Box>
+                </li>
+              )}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  placeholder={selectedTags.length === 0 ? "Select tags to target specific voter groups..." : ""}
+                  variant="outlined"
+                  size="small"
+                  helperText="Select tags to target voters with specific characteristics"
+                />
+              )}
+              sx={{ mb: 2 }}
+            />
+
+            {validationErrors.audience && (
+              <Typography variant="caption" color="error" sx={{ mb: 1, display: 'block' }}>
+                {validationErrors.audience}
+              </Typography>
+            )}
 
             {audienceCount > 0 && (
               <Alert severity="info">
