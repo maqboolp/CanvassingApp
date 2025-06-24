@@ -55,6 +55,7 @@ interface Campaign {
   filterMinAge?: number;
   filterMaxAge?: number;
   filterVoterSupport?: number;
+  filterTags?: string;
 }
 
 interface CampaignDashboardProps {

@@ -20,6 +20,7 @@ export interface Voter {
   lastContactStatus?: ContactStatus;
   voterSupport?: VoterSupport;
   distanceKm?: number;
+  tags?: VoterTag[];
 }
 
 export interface Volunteer {
@@ -51,6 +52,19 @@ export interface Contact {
   };
 }
 
+export interface VoterTag {
+  id: number;
+  tagName: string;
+  color?: string;
+}
+
+export interface VoterTagDetail extends VoterTag {
+  description?: string;
+  voterCount: number;
+  createdAt: string;
+  createdBy?: string;
+}
+
 export interface VoterFilter {
   zipCode?: string;
   voteFrequency?: 'frequent' | 'infrequent' | 'non-voter';
@@ -58,6 +72,7 @@ export interface VoterFilter {
   contactStatus?: 'contacted' | 'not-contacted';
   searchName?: string;
   partyAffiliation?: string;
+  tagIds?: number[];
   sortBy?: string;
 }
 
