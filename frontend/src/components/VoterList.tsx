@@ -28,7 +28,9 @@ import {
   Typography,
   Box,
   CircularProgress,
-  Alert
+  Alert,
+  useMediaQuery,
+  useTheme
 } from '@mui/material';
 import {
   ContactPhone,
@@ -54,6 +56,9 @@ interface VoterListProps {
 }
 
 const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  
   const [voters, setVoters] = useState<Voter[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -67,7 +72,6 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
   });
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [useLocation, setUseLocation] = useState(false);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 600);
   const [availableTags, setAvailableTags] = useState<VoterTag[]>([]);
   const [selectedTags, setSelectedTags] = useState<VoterTag[]>([]);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
@@ -97,14 +101,6 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
     fetchAvailableTags();
   }, []);
 
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 600);
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
   const openInMaps = (voter: Voter) => {
     const address = `${voter.addressLine}, ${voter.city}, ${voter.state} ${voter.zip}`;
