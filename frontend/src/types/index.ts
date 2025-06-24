@@ -52,6 +52,30 @@ export interface Contact {
   };
 }
 
+// Backend ContactDto response format
+export interface ContactDto {
+  Id: string;
+  VoterId: string;
+  VolunteerId: string;
+  Status: string;
+  VoterSupport?: string;
+  Notes?: string;
+  Timestamp: string;
+  VoterName?: string;
+  VolunteerName?: string;
+  Location?: {
+    Latitude: number;
+    Longitude: number;
+  };
+}
+
+export interface ContactListResponse {
+  Contacts: ContactDto[];
+  Total: number;
+  Page: number;
+  TotalPages: number;
+}
+
 export interface VoterTag {
   id: number;
   tagName: string;

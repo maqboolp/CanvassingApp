@@ -43,7 +43,7 @@ import {
   LabelOff,
   DeleteForever
 } from '@mui/icons-material';
-import { Voter, VoterFilter, VoterListResponse, ContactStatus, VoterSupport, AuthUser, VoterTag } from '../types';
+import { Voter, VoterFilter, VoterListResponse, ContactStatus, VoterSupport, AuthUser, VoterTag, ContactDto, ContactListResponse } from '../types';
 import ContactModal from './ContactModal';
 import { API_BASE_URL } from '../config';
 
@@ -402,8 +402,8 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
     try {
       const token = user?.token || localStorage.getItem('auth_token');
       
-      // Get all contacts (SuperAdmin has access to all contacts now)
-      const contactsResponse = await fetch(`${API_BASE_URL}/api/contacts?page=1&limit=100`, {
+      // Get contacts for this specific voter
+      const contactsResponse = await fetch(`${API_BASE_URL}/api/contacts?voterId=${voterToUncontact.lalVoterId}&page=1&limit=100`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -413,23 +413,21 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
         throw new Error('Failed to fetch contacts');
       }
 
-      const contactsData = await contactsResponse.json();
+      const contactsData: ContactListResponse = await contactsResponse.json();
       
-      // Filter contacts for this specific voter and get the most recent one
-      const voterContacts = contactsData.contacts?.filter((contact: any) => 
-        contact.voterId === voterToUncontact.lalVoterId
-      );
+      // The contacts are already filtered by voter ID on the backend
+      const voterContacts = contactsData.Contacts;
       
       if (!voterContacts || voterContacts.length === 0) {
         throw new Error('No contacts found for this voter. This voter may not have been contacted yet.');
       }
 
       // Sort by timestamp descending and get the most recent
-      voterContacts.sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      voterContacts.sort((a: ContactDto, b: ContactDto) => new Date(b.Timestamp).getTime() - new Date(a.Timestamp).getTime());
       const latestContact = voterContacts[0];
 
       // Delete the contact
-      const deleteResponse = await fetch(`${API_BASE_URL}/api/contacts/${latestContact.id}`, {
+      const deleteResponse = await fetch(`${API_BASE_URL}/api/contacts/${latestContact.Id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
