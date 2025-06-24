@@ -57,7 +57,7 @@ interface VoterListProps {
 
 const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
   const [voters, setVoters] = useState<Voter[]>([]);
   const [loading, setLoading] = useState(false);
