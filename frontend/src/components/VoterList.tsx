@@ -711,8 +711,8 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
               {!isMobile && <TableCell>Distance</TableCell>}
               {!isMobile && <TableCell>Age</TableCell>}
               {!isMobile && <TableCell>Vote Frequency</TableCell>}
-              {!isMobile && <TableCell>Party</TableCell>}
-              <TableCell>Tags</TableCell>
+              <TableCell>Party</TableCell>
+              {!isMobile && <TableCell>Tags</TableCell>}
               <TableCell>Status</TableCell>
               {!isMobile && <TableCell>Contact Info</TableCell>}
               <TableCell>Actions</TableCell>
@@ -769,31 +769,6 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
                               <Typography variant="caption" color="primary" sx={{ display: 'block' }}>
                                 📞 {voter.cellPhone}
                               </Typography>
-                            )}
-                            {voter.tags && voter.tags.length > 0 && (
-                              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.25, mt: 0.5 }}>
-                                {voter.tags.slice(0, 2).map((tag: VoterTag) => (
-                                  <Chip
-                                    key={tag.id}
-                                    label={tag.tagName}
-                                    size="small"
-                                    sx={{
-                                      backgroundColor: tag.color || '#2196F3',
-                                      color: 'white',
-                                      fontSize: '0.6rem',
-                                      height: 16,
-                                      '& .MuiChip-label': {
-                                        px: 0.5
-                                      }
-                                    }}
-                                  />
-                                ))}
-                                {voter.tags.length > 2 && (
-                                  <Typography variant="caption" color="text.secondary">
-                                    +{voter.tags.length - 2}
-                                  </Typography>
-                                )}
-                              </Box>
                             )}
                           </>
                         )}
@@ -870,46 +845,46 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
                     </TableCell>
                   )}
                   
+                  <TableCell>
+                    {voter.partyAffiliation ? (
+                      <Typography variant="body2">
+                        {voter.partyAffiliation}
+                      </Typography>
+                    ) : (
+                      <Typography variant="caption" color="text.secondary">
+                        -
+                      </Typography>
+                    )}
+                  </TableCell>
+                  
                   {!isMobile && (
                     <TableCell>
-                      {voter.partyAffiliation ? (
-                        <Typography variant="body2">
-                          {voter.partyAffiliation}
-                        </Typography>
-                      ) : (
-                        <Typography variant="caption" color="text.secondary">
-                          -
-                        </Typography>
-                      )}
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, maxWidth: isMobile ? 120 : 200 }}>
+                        {voter.tags && voter.tags.length > 0 ? (
+                          voter.tags.map((tag: VoterTag) => (
+                            <Chip
+                              key={tag.id}
+                              label={tag.tagName}
+                              size="small"
+                              sx={{
+                                backgroundColor: tag.color || '#2196F3',
+                                color: 'white',
+                                fontSize: isMobile ? '0.6rem' : '0.7rem',
+                                height: isMobile ? 20 : 24,
+                                '& .MuiChip-label': {
+                                  px: isMobile ? 0.5 : 1
+                                }
+                              }}
+                            />
+                          ))
+                        ) : (
+                          <Typography variant="caption" color="text.secondary">
+                            -
+                          </Typography>
+                        )}
+                      </Box>
                     </TableCell>
                   )}
-                  
-                  <TableCell>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, maxWidth: isMobile ? 120 : 200 }}>
-                      {voter.tags && voter.tags.length > 0 ? (
-                        voter.tags.map((tag: VoterTag) => (
-                          <Chip
-                            key={tag.id}
-                            label={tag.tagName}
-                            size="small"
-                            sx={{
-                              backgroundColor: tag.color || '#2196F3',
-                              color: 'white',
-                              fontSize: isMobile ? '0.6rem' : '0.7rem',
-                              height: isMobile ? 20 : 24,
-                              '& .MuiChip-label': {
-                                px: isMobile ? 0.5 : 1
-                              }
-                            }}
-                          />
-                        ))
-                      ) : (
-                        <Typography variant="caption" color="text.secondary">
-                          -
-                        </Typography>
-                      )}
-                    </Box>
-                  </TableCell>
                   
                   <TableCell>
                     {voter.isContacted ? (
