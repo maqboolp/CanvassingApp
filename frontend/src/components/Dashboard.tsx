@@ -717,18 +717,32 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
               <Chip 
                 label={`Age: ${nearestVoter.voter.age}`} 
                 size="small" 
-                sx={{ mr: 1 }} 
+                sx={{ mr: 1, mb: 1 }} 
+              />
+              <Chip 
+                label={`Sex: ${nearestVoter.voter.gender}`} 
+                size="small" 
+                sx={{ mr: 1, mb: 1 }} 
               />
               <Chip 
                 label={`ZIP: ${nearestVoter.voter.zip}`} 
                 size="small" 
-                sx={{ mr: 1 }} 
+                sx={{ mr: 1, mb: 1 }} 
               />
+              {nearestVoter.voter.partyAffiliation && (
+                <Chip 
+                  label={nearestVoter.voter.partyAffiliation} 
+                  size="small" 
+                  color="secondary"
+                  sx={{ mr: 1, mb: 1 }}
+                />
+              )}
               {nearestVoter.voter.cellPhone && (
                 <Chip 
                   label={nearestVoter.voter.cellPhone} 
                   size="small" 
                   color="primary"
+                  sx={{ mb: 1 }}
                 />
               )}
             </Box>
