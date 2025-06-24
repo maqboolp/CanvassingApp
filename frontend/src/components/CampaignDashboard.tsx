@@ -340,14 +340,31 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
       }
     }
     
+    // Parse existing tags from JSON string
+    let selectedTagIds: number[] = [];
+    if (campaign.filterTags) {
+      try {
+        selectedTagIds = JSON.parse(campaign.filterTags);
+      } catch {
+        // If parsing fails, default to empty array
+        selectedTagIds = [];
+      }
+    }
+
     // Populate form with existing campaign data
     setNewCampaign({
       name: campaign.name,
       message: campaign.message,
       type: getCampaignTypeString(campaign.type) as 'SMS' | 'RoboCall',
       voiceUrl: campaign.voiceUrl || '',
-      selectedZipCodes
+      selectedZipCodes,
+      selectedTagIds
     });
+    
+    // Set selected tags for UI display
+    const campaignTags = availableTags.filter(tag => selectedTagIds.includes(tag.id));
+    setSelectedTags(campaignTags);
+    
     setEditDialogOpen(true);
     // Fetch ZIP codes when dialog opens to ensure we have fresh data
     if (availableZipCodes.length === 0) {
@@ -365,11 +382,12 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
         name: newCampaign.name,
         message: newCampaign.message,
         voiceUrl: newCampaign.voiceUrl || null,
-        filterZipCodes: JSON.stringify(newCampaign.selectedZipCodes),
+        filterZipCodes: newCampaign.selectedZipCodes.length > 0 ? JSON.stringify(newCampaign.selectedZipCodes) : null,
         filterVoteFrequency: null,
         filterMinAge: null,
         filterMaxAge: null,
-        filterVoterSupport: null
+        filterVoterSupport: null,
+        filterTagIds: newCampaign.selectedTagIds.length > 0 ? newCampaign.selectedTagIds : null
       };
       
       console.log('Updating campaign:', requestBody);
@@ -390,8 +408,10 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
         message: '', 
         type: 'SMS', 
         voiceUrl: '',
-        selectedZipCodes: []
+        selectedZipCodes: [],
+        selectedTagIds: []
       });
+      setSelectedTags([]);
       setValidationErrors({});
       setAudienceCount(0);
       fetchCampaigns();
