@@ -29,8 +29,7 @@ import {
   Box,
   CircularProgress,
   Alert,
-  useMediaQuery,
-  useTheme
+  useMediaQuery
 } from '@mui/material';
 import {
   ContactPhone,
@@ -56,8 +55,7 @@ interface VoterListProps {
 }
 
 const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isMobile = useMediaQuery('(max-width:480px)');
   
   const [voters, setVoters] = useState<Voter[]>([]);
   const [loading, setLoading] = useState(false);
