@@ -769,7 +769,7 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
                         {isMobile && (
                           <>
                             <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                              Age {voter.age} • {voter.gender}
+                              Age {voter.age} • {voter.gender}{voter.partyAffiliation && ` • ${voter.partyAffiliation}`}
                             </Typography>
                             {voter.cellPhone && (
                               <Typography variant="caption" color="primary" sx={{ display: 'block' }}>
