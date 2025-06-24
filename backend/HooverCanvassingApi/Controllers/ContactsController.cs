@@ -265,6 +265,7 @@ namespace HooverCanvassingApi.Controllers
             [FromQuery] int page = 1,
             [FromQuery] int limit = 25,
             [FromQuery] string? volunteerId = null,
+            [FromQuery] string? voterId = null,
             [FromQuery] string? status = null,
             [FromQuery] DateTime? fromDate = null,
             [FromQuery] DateTime? toDate = null)
@@ -277,7 +278,7 @@ namespace HooverCanvassingApi.Controllers
                 var query = _context.Contacts.Include(c => c.Voter).Include(c => c.Volunteer).AsQueryable();
 
                 // Apply access control
-                if (currentUserRole != "Admin")
+                if (currentUserRole != "Admin" && currentUserRole != "SuperAdmin")
                 {
                     query = query.Where(c => c.VolunteerId == currentUserId);
                 }
@@ -287,6 +288,16 @@ namespace HooverCanvassingApi.Controllers
                 }
 
                 // Apply filters
+                if (!string.IsNullOrEmpty(voterId))
+                {
+                    _logger.LogInformation("=== CONTACTS FILTER DEBUG ===");
+                    _logger.LogInformation("Filtering contacts by VoterId: '{VoterId}'", voterId);
+                    query = query.Where(c => c.VoterId == voterId);
+                    
+                    var contactCount = await query.CountAsync();
+                    _logger.LogInformation("Found {ContactCount} contacts for VoterId: '{VoterId}'", contactCount, voterId);
+                }
+
                 if (!string.IsNullOrEmpty(status) && Enum.TryParse<ContactStatus>(status, true, out var contactStatus))
                 {
                     query = query.Where(c => c.Status == contactStatus);
