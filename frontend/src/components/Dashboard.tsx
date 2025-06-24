@@ -724,11 +724,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                 size="small" 
                 sx={{ mr: 1, mb: 1 }} 
               />
-              <Chip 
-                label={`ZIP: ${nearestVoter.voter.zip}`} 
-                size="small" 
-                sx={{ mr: 1, mb: 1 }} 
-              />
               {nearestVoter.voter.partyAffiliation && (
                 <Chip 
                   label={nearestVoter.voter.partyAffiliation} 

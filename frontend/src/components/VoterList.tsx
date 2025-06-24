@@ -635,12 +635,13 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
                 startIcon={<Label />}
                 onClick={() => openBulkTagDialog('add')}
                 sx={{ 
-                  bgcolor: 'white', 
-                  color: 'primary.main',
-                  '&:hover': { bgcolor: 'grey.100' }
+                  bgcolor: 'success.main', 
+                  color: 'white',
+                  '&:hover': { bgcolor: 'success.dark' },
+                  boxShadow: 2
                 }}
               >
-                {isMobile ? "Add Tags" : "Add Tags"}
+                Add Tags
               </Button>
               
               <Button
@@ -649,12 +650,13 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
                 startIcon={<LabelOff />}
                 onClick={() => openBulkTagDialog('remove')}
                 sx={{ 
-                  bgcolor: 'white', 
-                  color: 'primary.main',
-                  '&:hover': { bgcolor: 'grey.100' }
+                  bgcolor: 'warning.main', 
+                  color: 'white',
+                  '&:hover': { bgcolor: 'warning.dark' },
+                  boxShadow: 2
                 }}
               >
-                {isMobile ? "Remove Tags" : "Remove Tags"}
+                Remove Tags
               </Button>
               
               <Button
