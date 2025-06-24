@@ -405,7 +405,7 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
     try {
       const token = user?.token || localStorage.getItem('auth_token');
       
-      // Get all contacts and filter for this voter (since backend may not support voterId filter)
+      // Get all contacts (SuperAdmin has access to all contacts now)
       const contactsResponse = await fetch(`${API_BASE_URL}/api/contacts?page=1&limit=100`, {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -421,13 +421,14 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
       // Filter contacts for this specific voter and get the most recent one
       const voterContacts = contactsData.contacts?.filter((contact: any) => 
         contact.voterId === voterToUncontact.lalVoterId
-      ).sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      );
       
       if (!voterContacts || voterContacts.length === 0) {
-        throw new Error('No contacts found for this voter');
+        throw new Error('No contacts found for this voter. This voter may not have been contacted yet.');
       }
 
-      // Get the most recent contact to delete
+      // Sort by timestamp descending and get the most recent
+      voterContacts.sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       const latestContact = voterContacts[0];
 
       // Delete the contact
