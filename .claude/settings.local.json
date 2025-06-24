@@ -4,7 +4,10 @@
       "Bash(doctl apps logs:*)",
       "Bash(git add:*)",
       "Bash(npm run build:*)",
-      "Bash(dotnet build)"
+      "Bash(dotnet build)",
+      "Bash(rg:*)",
+      "Bash(grep:*)",
+      "Bash(npm run type-check:*)"
     ],
     "deny": []
   }

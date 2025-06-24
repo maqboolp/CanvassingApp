@@ -42,6 +42,21 @@ public class EmailService : IEmailService
         return result;
     }
 
+    public async Task<bool> SendContactDeletionNotificationEmailAsync(string email, ContactDeletionNotificationData data)
+    {
+        var subject = "🗑️ Contact Deleted - Tanveer for Hoover Campaign";
+        var htmlContent = GenerateContactDeletionNotificationHtml(data);
+        var textContent = GenerateContactDeletionNotificationText(data);
+
+        _logger.LogInformation("=== EMAIL SERVICE: Sending contact deletion notification to {Email} ===", email);
+        _logger.LogInformation("Email subject: {Subject}", subject);
+        
+        var result = await SendEmailAsync(email, subject, htmlContent, textContent);
+        
+        _logger.LogInformation("Contact deletion email service result for {Email}: {Result}", email, result ? "SUCCESS" : "FAILED");
+        return result;
+    }
+
     public async Task<bool> SendInvitationEmailAsync(string email, string inviterName, string registrationUrl, string role)
     {
         var subject = "You're Invited to Join Tanveer for Hoover Campaign";
@@ -783,6 +798,177 @@ August 26, 2025 Election
 Paid for by Tanveer for Hoover
 
 This is an automated message. Please do not reply to this email.
+";
+    }
+
+    private string GenerateContactDeletionNotificationHtml(ContactDeletionNotificationData data)
+    {
+        var supportBadge = !string.IsNullOrEmpty(data.VoterSupport) 
+            ? $"<span style='background-color: {GetSupportColor(data.VoterSupport)}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;'>{data.VoterSupport.ToUpper()}</span>"
+            : "";
+
+        var statusBadge = $"<span style='background-color: {GetStatusColor(data.ContactStatus)}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;'>{data.ContactStatus.ToUpper()}</span>";
+
+        var newStatusBadge = data.VoterNewStatus == "Reset to Uncontacted" 
+            ? "<span style='background-color: #ffc107; color: #212529; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;'>RESET TO UNCONTACTED</span>"
+            : "<span style='background-color: #28a745; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;'>STILL CONTACTED</span>";
+
+        return $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {{ font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f5f5f5; }}
+        .container {{ max-width: 600px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+        .header {{ text-align: center; margin-bottom: 30px; }}
+        .content {{ line-height: 1.6; color: #333; }}
+        .contact-card {{ background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 20px; margin: 20px 0; }}
+        .detail-row {{ display: flex; justify-content: space-between; margin: 10px 0; padding: 5px 0; border-bottom: 1px solid #eee; }}
+        .detail-label {{ font-weight: bold; color: #555; }}
+        .detail-value {{ color: #333; }}
+        .footer {{ margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #666; text-align: center; }}
+        .alert {{ background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; padding: 15px; border-radius: 5px; margin: 20px 0; }}
+        .warning {{ background-color: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 15px; border-radius: 5px; margin: 20px 0; }}
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='header'>
+            <h1 style='color: #dc3545; margin: 0;'>🗑️ Contact Deleted</h1>
+            <p style='color: #666; margin: 5px 0 0 0;'>Tanveer for Hoover Campaign</p>
+        </div>
+        
+        <div class='content'>
+            <div class='alert'>
+                <strong>⚠️ Admin Alert:</strong> A voter contact record has been permanently deleted from the system by a SuperAdmin.
+            </div>
+            
+            <div class='contact-card'>
+                <h3 style='margin-top: 0; color: #dc3545;'>Deleted Contact Details</h3>
+                
+                <div class='detail-row'>
+                    <span class='detail-label'>🔑 Deleted By:</span>
+                    <span class='detail-value'>{data.DeletedByName} ({data.DeletedByEmail})</span>
+                </div>
+                
+                <div class='detail-row'>
+                    <span class='detail-label'>⏰ Deletion Time:</span>
+                    <span class='detail-value'>{data.DeletionTime:MMM dd, yyyy 'at' h:mm tt} UTC</span>
+                </div>
+                
+                <hr style='margin: 20px 0; border: none; border-top: 2px solid #dee2e6;'>
+                
+                <h4 style='color: #673ab7; margin: 15px 0 10px 0;'>Original Contact Information:</h4>
+                
+                <div class='detail-row'>
+                    <span class='detail-label'>👤 Volunteer:</span>
+                    <span class='detail-value'>{data.VolunteerName} ({data.VolunteerEmail})</span>
+                </div>
+                
+                <div class='detail-row'>
+                    <span class='detail-label'>🗳️ Voter:</span>
+                    <span class='detail-value'>{data.VoterName}</span>
+                </div>
+                
+                <div class='detail-row'>
+                    <span class='detail-label'>📍 Address:</span>
+                    <span class='detail-value'>{data.VoterAddress}</span>
+                </div>
+                
+                <div class='detail-row'>
+                    <span class='detail-label'>📞 Contact Status:</span>
+                    <span class='detail-value'>{statusBadge}</span>
+                </div>
+                
+                {(!string.IsNullOrEmpty(data.VoterSupport) ? $@"
+                <div class='detail-row'>
+                    <span class='detail-label'>💪 Voter Support:</span>
+                    <span class='detail-value'>{supportBadge}</span>
+                </div>" : "")}
+                
+                <div class='detail-row'>
+                    <span class='detail-label'>⏰ Original Contact Time:</span>
+                    <span class='detail-value'>{data.OriginalContactTime:MMM dd, yyyy 'at' h:mm tt} UTC</span>
+                </div>
+                
+                {(!string.IsNullOrEmpty(data.Location) ? $@"
+                <div class='detail-row'>
+                    <span class='detail-label'>📍 Location:</span>
+                    <span class='detail-value'>{data.Location}</span>
+                </div>" : "")}
+                
+                {(!string.IsNullOrEmpty(data.Notes) ? $@"
+                <div style='margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd;'>
+                    <div class='detail-label'>📝 Notes:</div>
+                    <div style='margin-top: 8px; padding: 10px; background-color: #fff; border: 1px solid #ddd; border-radius: 4px; font-style: italic;'>
+                        ""{data.Notes}""
+                    </div>
+                </div>" : "")}
+            </div>
+            
+            <div class='warning'>
+                <strong>📊 Voter Status Update:</strong> {newStatusBadge}
+                <br><br>
+                The voter's contact status has been automatically updated based on remaining contact records.
+            </div>
+            
+            <p><strong>Important:</strong> This action is permanent and cannot be undone. The contact record has been completely removed from the campaign management system.</p>
+            
+            <p>This notification is sent to all SuperAdmins for audit trail purposes.</p>
+        </div>
+        
+        <div class='footer'>
+            <p>Tanveer Patel for Hoover City Council<br>
+            August 26, 2025 Election<br>
+            Paid for by Tanveer for Hoover</p>
+            
+            <p>This is an automated audit notification. Please do not reply to this email.</p>
+        </div>
+    </div>
+</body>
+</html>";
+    }
+
+    private string GenerateContactDeletionNotificationText(ContactDeletionNotificationData data)
+    {
+        var supportText = !string.IsNullOrEmpty(data.VoterSupport) ? $"\nVoter Support: {data.VoterSupport.ToUpper()}" : "";
+        var locationText = !string.IsNullOrEmpty(data.Location) ? $"\nLocation: {data.Location}" : "";
+        var notesText = !string.IsNullOrEmpty(data.Notes) ? $"\nNotes: \"{data.Notes}\"" : "";
+
+        return $@"
+TANVEER FOR HOOVER CAMPAIGN - CONTACT DELETED
+
+⚠️ ADMIN ALERT: A voter contact record has been permanently deleted from the system by a SuperAdmin.
+
+DELETION DETAILS:
+================
+Deleted By: {data.DeletedByName} ({data.DeletedByEmail})
+Deletion Time: {data.DeletionTime:MMM dd, yyyy 'at' h:mm tt} UTC
+
+ORIGINAL CONTACT INFORMATION:
+============================
+Volunteer: {data.VolunteerName} ({data.VolunteerEmail})
+Voter: {data.VoterName}
+Address: {data.VoterAddress}
+Contact Status: {data.ContactStatus.ToUpper()}
+Original Contact Time: {data.OriginalContactTime:MMM dd, yyyy 'at' h:mm tt} UTC{supportText}{locationText}{notesText}
+
+VOTER STATUS UPDATE:
+===================
+{data.VoterNewStatus.ToUpper()}
+
+The voter's contact status has been automatically updated based on remaining contact records.
+
+IMPORTANT: This action is permanent and cannot be undone. The contact record has been completely removed from the campaign management system.
+
+This notification is sent to all SuperAdmins for audit trail purposes.
+
+---
+Tanveer Patel for Hoover City Council
+August 26, 2025 Election
+Paid for by Tanveer for Hoover
+
+This is an automated audit notification. Please do not reply to this email.
 ";
     }
 }

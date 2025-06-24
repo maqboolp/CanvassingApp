@@ -43,7 +43,8 @@ import {
   CheckBoxOutlineBlank,
   CheckBox,
   Label,
-  LabelOff
+  LabelOff,
+  DeleteForever
 } from '@mui/icons-material';
 import { Voter, VoterFilter, PaginationParams, VoterListResponse, ContactStatus, VoterSupport, AuthUser, VoterTag } from '../types';
 import ContactModal from './ContactModal';
@@ -79,6 +80,9 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
   const [bulkSelectedTags, setBulkSelectedTags] = useState<VoterTag[]>([]);
   const [bulkLoading, setBulkLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [uncontactDialogOpen, setUncontactDialogOpen] = useState(false);
+  const [voterToUncontact, setVoterToUncontact] = useState<Voter | null>(null);
+  const [uncontactLoading, setUncontactLoading] = useState(false);
 
   const [filterInputs, setFilterInputs] = useState({
     zipCode: '',
@@ -354,6 +358,11 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
     setContactModalOpen(true);
   };
 
+  const handleUncontactClick = (voter: Voter) => {
+    setVoterToUncontact(voter);
+    setUncontactDialogOpen(true);
+  };
+
   const handleContactSubmit = async (status: ContactStatus, notes: string, voterSupport?: VoterSupport) => {
     if (!selectedVoter) return;
 
@@ -384,6 +393,71 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
       fetchVoters(); // Refresh the list
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to log contact');
+    }
+  };
+
+  const handleUncontactConfirm = async () => {
+    if (!voterToUncontact) return;
+
+    setUncontactLoading(true);
+    setError(null);
+
+    try {
+      const token = user?.token || localStorage.getItem('auth_token');
+      
+      // Get all contacts and filter for this voter (since backend may not support voterId filter)
+      const contactsResponse = await fetch(`${API_BASE_URL}/api/contacts?page=1&limit=100`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!contactsResponse.ok) {
+        throw new Error('Failed to fetch contacts');
+      }
+
+      const contactsData = await contactsResponse.json();
+      
+      // Filter contacts for this specific voter and get the most recent one
+      const voterContacts = contactsData.contacts?.filter((contact: any) => 
+        contact.voterId === voterToUncontact.lalVoterId
+      ).sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      
+      if (!voterContacts || voterContacts.length === 0) {
+        throw new Error('No contacts found for this voter');
+      }
+
+      // Get the most recent contact to delete
+      const latestContact = voterContacts[0];
+
+      // Delete the contact
+      const deleteResponse = await fetch(`${API_BASE_URL}/api/contacts/${latestContact.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!deleteResponse.ok) {
+        const errorData = await deleteResponse.json();
+        throw new Error(errorData.error || 'Failed to uncontact voter');
+      }
+
+      // Success
+      setSuccessMessage(`Successfully uncontacted ${voterToUncontact.firstName} ${voterToUncontact.lastName}`);
+      setUncontactDialogOpen(false);
+      setVoterToUncontact(null);
+      
+      // Refresh the voter list
+      fetchVoters();
+      
+      // Clear success message after 5 seconds
+      setTimeout(() => setSuccessMessage(null), 5000);
+
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to uncontact voter');
+    } finally {
+      setUncontactLoading(false);
     }
   };
 
@@ -926,16 +1000,34 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
                   )}
                   
                   <TableCell>
-                    <Button
-                      variant="contained"
-                      size="small"
-                      startIcon={isMobile ? undefined : <ContactPhone />}
-                      onClick={() => handleContactClick(voter)}
-                      disabled={loading}
-                      sx={{ minWidth: isMobile ? '60px' : 'auto' }}
-                    >
-                      Contact
-                    </Button>
+                    <Box sx={{ display: 'flex', gap: 0.5, flexDirection: isMobile ? 'column' : 'row' }}>
+                      <Button
+                        variant="contained"
+                        size="small"
+                        startIcon={isMobile ? undefined : <ContactPhone />}
+                        onClick={() => handleContactClick(voter)}
+                        disabled={loading}
+                        sx={{ minWidth: isMobile ? '60px' : 'auto' }}
+                      >
+                        Contact
+                      </Button>
+                      
+                      {user?.role === 'superadmin' && voter.isContacted && (
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          color="warning"
+                          onClick={() => handleUncontactClick(voter)}
+                          disabled={loading}
+                          sx={{ 
+                            minWidth: isMobile ? '60px' : 'auto',
+                            fontSize: isMobile ? '0.7rem' : 'inherit'
+                          }}
+                        >
+                          Uncontact
+                        </Button>
+                      )}
+                    </Box>
                   </TableCell>
                 </TableRow>
               ))
@@ -1077,6 +1169,74 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
           </Button>
         </DialogActions>
       </Dialog>
+      )}
+
+      {/* Uncontact Confirmation Dialog - Only for SuperAdmin */}
+      {user?.role === 'superadmin' && (
+        <Dialog open={uncontactDialogOpen} onClose={() => {
+          if (!uncontactLoading) {
+            setUncontactDialogOpen(false);
+            setVoterToUncontact(null);
+          }
+        }} maxWidth="sm" fullWidth>
+          <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <DeleteForever color="warning" />
+            Uncontact Voter
+          </DialogTitle>
+          <DialogContent>
+            {voterToUncontact && (
+              <>
+                <Alert severity="warning" sx={{ mb: 2 }}>
+                  <strong>Warning:</strong> This action will permanently delete the most recent contact record for this voter.
+                </Alert>
+                
+                <Typography variant="body1" paragraph>
+                  Are you sure you want to uncontact <strong>{voterToUncontact.firstName} {voterToUncontact.lastName}</strong>?
+                </Typography>
+                
+                <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1, mb: 2 }}>
+                  <Typography variant="body2">
+                    <strong>Voter:</strong> {voterToUncontact.firstName} {voterToUncontact.lastName}
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>Address:</strong> {voterToUncontact.addressLine}, {voterToUncontact.city}, {voterToUncontact.state} {voterToUncontact.zip}
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>Current Status:</strong> {voterToUncontact.lastContactStatus || 'Contacted'}
+                  </Typography>
+                </Box>
+                
+                <Typography variant="body2" color="text.secondary">
+                  This will delete the most recent contact record and may reset the voter to "uncontacted" status if no other contacts exist. 
+                  This action cannot be undone and all SuperAdmins will be notified.
+                </Typography>
+              </>
+            )}
+
+            {error && (
+              <Alert severity="error" sx={{ mt: 2 }}>
+                {error}
+              </Alert>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => {
+              setUncontactDialogOpen(false);
+              setVoterToUncontact(null);
+            }} disabled={uncontactLoading}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleUncontactConfirm}
+              variant="contained" 
+              color="warning"
+              disabled={uncontactLoading}
+              startIcon={uncontactLoading ? <CircularProgress size={20} /> : <DeleteForever />}
+            >
+              {uncontactLoading ? 'Uncontacting...' : 'Uncontact Voter'}
+            </Button>
+          </DialogActions>
+        </Dialog>
       )}
     </Paper>
   );

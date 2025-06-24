@@ -410,6 +410,96 @@ namespace HooverCanvassingApi.Controllers
             }
         }
 
+        [HttpDelete("{id}")]
+        [Authorize(Roles = "SuperAdmin")]
+        public async Task<ActionResult> DeleteContact(string id)
+        {
+            try
+            {
+                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var currentUserEmail = User.FindFirst(ClaimTypes.Email)?.Value;
+                
+                _logger.LogInformation("=== CONTACT DELETION STARTED ===");
+                _logger.LogInformation("Contact deletion request received from SuperAdmin {UserId} ({UserEmail}) for contact {ContactId}", 
+                    currentUserId, currentUserEmail, id);
+
+                var contact = await _context.Contacts
+                    .Include(c => c.Voter)
+                    .Include(c => c.Volunteer)
+                    .FirstOrDefaultAsync(c => c.Id == id);
+
+                if (contact == null)
+                {
+                    _logger.LogWarning("Contact deletion failed: Contact {ContactId} not found", id);
+                    return NotFound(new { error = "Contact not found" });
+                }
+
+                _logger.LogInformation("Contact found: {ContactId} for voter {VoterName} by volunteer {VolunteerName}", 
+                    contact.Id, $"{contact.Voter.FirstName} {contact.Voter.LastName}", 
+                    $"{contact.Volunteer.FirstName} {contact.Volunteer.LastName}");
+
+                // Store voter reference before deletion
+                var voter = contact.Voter;
+                var voterId = contact.VoterId;
+
+                // Remove the contact
+                _context.Contacts.Remove(contact);
+                
+                // Check if this voter has any other contacts remaining
+                var remainingContacts = await _context.Contacts
+                    .Where(c => c.VoterId == voterId && c.Id != id)
+                    .OrderByDescending(c => c.Timestamp)
+                    .ToListAsync();
+
+                if (!remainingContacts.Any())
+                {
+                    // No other contacts exist - reset voter to uncontacted state
+                    _logger.LogInformation("No remaining contacts for voter {VoterId} - resetting to uncontacted state", voterId);
+                    voter.IsContacted = false;
+                    voter.LastContactStatus = null;
+                    voter.VoterSupport = null;
+                }
+                else
+                {
+                    // Update voter status to reflect the most recent remaining contact
+                    var latestContact = remainingContacts.First();
+                    _logger.LogInformation("Updating voter {VoterId} status to reflect latest remaining contact {LatestContactId}", 
+                        voterId, latestContact.Id);
+                    voter.LastContactStatus = latestContact.Status;
+                    
+                    // Update voter support if the latest contact has support info
+                    if (latestContact.VoterSupport.HasValue)
+                    {
+                        voter.VoterSupport = latestContact.VoterSupport.Value;
+                    }
+                    else
+                    {
+                        // Find the most recent contact with voter support
+                        var contactWithSupport = remainingContacts
+                            .FirstOrDefault(c => c.VoterSupport.HasValue);
+                        voter.VoterSupport = contactWithSupport?.VoterSupport;
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+                
+                _logger.LogInformation("Contact {ContactId} deleted successfully by SuperAdmin {UserEmail}", id, currentUserEmail);
+                _logger.LogInformation("Voter {VoterId} status updated - IsContacted: {IsContacted}, LastStatus: {LastStatus}", 
+                    voterId, voter.IsContacted, voter.LastContactStatus);
+
+                // Send notification to all super admins about the deletion
+                await SendContactDeletionNotificationToSuperAdmins(contact, voter, currentUserId);
+
+                _logger.LogInformation("=== CONTACT DELETION COMPLETED SUCCESSFULLY ===");
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting contact {ContactId}", id);
+                return StatusCode(500, new { error = "Failed to delete contact" });
+            }
+        }
+
         private async Task SendContactNotificationToSuperAdmins(Contact contact, Voter voter, string volunteerId)
         {
             try
@@ -494,6 +584,82 @@ namespace HooverCanvassingApi.Controllers
                 // Don't throw - we don't want notification failures to break contact creation
             }
         }
+
+        private async Task SendContactDeletionNotificationToSuperAdmins(Contact contact, Voter voter, string superAdminId)
+        {
+            try
+            {
+                _logger.LogInformation("=== CONTACT DELETION NOTIFICATION PROCESS STARTED ===");
+                _logger.LogInformation("Attempting to send deletion notifications for contact {ContactId}", contact.Id);
+                
+                // Get all super admins
+                var superAdmins = await _userManager.GetUsersInRoleAsync("SuperAdmin");
+                _logger.LogInformation("Found {SuperAdminCount} super admins for deletion notification", superAdmins.Count);
+                
+                if (!superAdmins.Any())
+                {
+                    _logger.LogWarning("No super admins found to notify about contact deletion {ContactId}", contact.Id);
+                    return;
+                }
+
+                // Get the super admin who performed the deletion
+                var deletingAdmin = await _userManager.FindByIdAsync(superAdminId);
+                if (deletingAdmin == null)
+                {
+                    _logger.LogError("Deleting SuperAdmin {SuperAdminId} not found for deletion notification", superAdminId);
+                    return;
+                }
+
+                // Get volunteer details
+                var volunteer = contact.Volunteer;
+                
+                // Prepare deletion notification data
+                var voterAddress = $"{voter.AddressLine}, {voter.City}, {voter.State} {voter.Zip}";
+                var location = contact.LocationLatitude.HasValue && contact.LocationLongitude.HasValue 
+                    ? $"{contact.LocationLatitude:F6}, {contact.LocationLongitude:F6}"
+                    : null;
+
+                var deletionData = new ContactDeletionNotificationData
+                {
+                    DeletedByName = $"{deletingAdmin.FirstName} {deletingAdmin.LastName}",
+                    DeletedByEmail = deletingAdmin.Email!,
+                    VolunteerName = $"{volunteer.FirstName} {volunteer.LastName}",
+                    VolunteerEmail = volunteer.Email!,
+                    VoterName = $"{voter.FirstName} {voter.LastName}",
+                    VoterAddress = voterAddress,
+                    ContactStatus = contact.Status.ToString(),
+                    VoterSupport = contact.VoterSupport?.ToString(),
+                    Notes = contact.Notes,
+                    OriginalContactTime = contact.Timestamp,
+                    DeletionTime = DateTime.UtcNow,
+                    Location = location,
+                    VoterNewStatus = voter.IsContacted ? "Still Contacted" : "Reset to Uncontacted"
+                };
+
+                _logger.LogInformation("Prepared deletion notification data - Deleted by: {DeletedBy}, Contact: {ContactId}", 
+                    deletionData.DeletedByName, contact.Id);
+
+                // Send notifications to all super admins
+                var notificationTasks = superAdmins.Select(admin => {
+                    _logger.LogInformation("Queuing deletion notification email to super admin: {AdminEmail}", admin.Email);
+                    return _emailService.SendContactDeletionNotificationEmailAsync(admin.Email!, deletionData);
+                }).ToArray();
+
+                var results = await Task.WhenAll(notificationTasks);
+                var successCount = results.Count(r => r);
+                var failureCount = results.Length - successCount;
+
+                _logger.LogInformation("Contact deletion notification sent: {SuccessCount} succeeded, {FailureCount} failed for contact {ContactId}", 
+                    successCount, failureCount, contact.Id);
+
+                _logger.LogInformation("=== CONTACT DELETION NOTIFICATION PROCESS COMPLETED ===");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send contact deletion notifications for contact {ContactId}", contact.Id);
+                // Don't throw - we don't want notification failures to break contact deletion
+            }
+        }
     }
 
     public class CreateContactRequest
@@ -538,4 +704,5 @@ namespace HooverCanvassingApi.Controllers
         public int Page { get; set; }
         public int TotalPages { get; set; }
     }
+
 }
