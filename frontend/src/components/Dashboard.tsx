@@ -30,9 +30,7 @@ import {
 import {
   ExitToApp,
   AccountCircle,
-  HowToVote,
   ContactPhone,
-  Analytics,
   LocationOn,
   Refresh,
   Lock,

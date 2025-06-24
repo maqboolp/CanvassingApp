@@ -20,7 +20,6 @@ import {
   Fade,
   Button,
   Chip,
-  IconButton,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -40,13 +39,11 @@ import {
   Email,
   LocalOffer,
   ExpandMore,
-  CheckBoxOutlineBlank,
-  CheckBox,
   Label,
   LabelOff,
   DeleteForever
 } from '@mui/icons-material';
-import { Voter, VoterFilter, PaginationParams, VoterListResponse, ContactStatus, VoterSupport, AuthUser, VoterTag } from '../types';
+import { Voter, VoterFilter, VoterListResponse, ContactStatus, VoterSupport, AuthUser, VoterTag } from '../types';
 import ContactModal from './ContactModal';
 import { API_BASE_URL } from '../config';
 

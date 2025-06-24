@@ -48,7 +48,6 @@ import {
   Upload,
   Analytics,
   People,
-  Assignment,
   GetApp,
   LocationOn,
   Lock,
@@ -75,7 +74,6 @@ import {
   Add,
   Edit,
   Delete,
-  ColorLens,
   Schedule
 } from '@mui/icons-material';
 import { AuthUser, Voter, ContactStatus, VoterSupport, VoterTagDetail } from '../types';
@@ -147,7 +145,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
     email: '',
     role: 'Volunteer'
   });
-  const [showVolunteerPassword, setShowVolunteerPassword] = useState(false);
   const [adminForm, setAdminForm] = useState({
     firstName: '',
     lastName: '',

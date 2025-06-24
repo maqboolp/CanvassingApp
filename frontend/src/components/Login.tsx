@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import QRCode from 'react-qr-code';
 import VersionInfo from './VersionInfo';
 import {
-  Paper,
   TextField,
   Button,
   Typography,
@@ -23,7 +22,7 @@ import {
 } from '@mui/material';
 import { 
   Login as LoginIcon, 
-  HowToVote, 
+ 
   Visibility, 
   VisibilityOff,
   Language,
