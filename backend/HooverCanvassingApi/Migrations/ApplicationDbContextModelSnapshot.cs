@@ -510,6 +510,9 @@ namespace HooverCanvassingApi.Migrations
                     b.Property<string>("MiddleName")
                         .HasColumnType("text");
 
+                    b.Property<string>("PartyAffiliation")
+                        .HasColumnType("text");
+
                     b.Property<int>("SmsCount")
                         .HasColumnType("integer");
 

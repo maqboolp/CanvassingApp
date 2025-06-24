@@ -35,7 +35,8 @@ namespace HooverCanvassingApi.Controllers
             [FromQuery] string? sortOrder = "asc",
             [FromQuery] double? latitude = null,
             [FromQuery] double? longitude = null,
-            [FromQuery] double radiusKm = 1.0)
+            [FromQuery] double radiusKm = 1.0,
+            [FromQuery] string? partyAffiliation = null)
         {
             try
             {
@@ -93,6 +94,11 @@ namespace HooverCanvassingApi.Controllers
                             query = query.Where(v => !v.IsContacted);
                             break;
                     }
+                }
+
+                if (!string.IsNullOrEmpty(partyAffiliation))
+                {
+                    query = query.Where(v => v.PartyAffiliation == partyAffiliation);
                 }
 
                 // Apply location filtering if coordinates are provided
@@ -176,6 +182,7 @@ namespace HooverCanvassingApi.Controllers
                             Ethnicity = v.Ethnicity,
                             Gender = v.Gender,
                             VoteFrequency = v.VoteFrequency.ToString().ToLower(),
+                            PartyAffiliation = v.PartyAffiliation,
                             CellPhone = v.CellPhone,
                             Email = v.Email,
                             Latitude = v.Latitude,
@@ -231,6 +238,7 @@ namespace HooverCanvassingApi.Controllers
                     Ethnicity = voter.Ethnicity,
                     Gender = voter.Gender,
                     VoteFrequency = voter.VoteFrequency.ToString().ToLower(),
+                    PartyAffiliation = voter.PartyAffiliation,
                     CellPhone = voter.CellPhone,
                     Email = voter.Email,
                     Latitude = voter.Latitude,
@@ -318,6 +326,7 @@ namespace HooverCanvassingApi.Controllers
                     Ethnicity = voter.Ethnicity,
                     Gender = voter.Gender,
                     VoteFrequency = voter.VoteFrequency.ToString().ToLower(),
+                    PartyAffiliation = voter.PartyAffiliation,
                     CellPhone = voter.CellPhone,
                     Email = voter.Email,
                     Latitude = voter.Latitude,
@@ -410,6 +419,7 @@ namespace HooverCanvassingApi.Controllers
         public string? Ethnicity { get; set; }
         public string Gender { get; set; } = string.Empty;
         public string VoteFrequency { get; set; } = string.Empty;
+        public string? PartyAffiliation { get; set; }
         public string? CellPhone { get; set; }
         public string? Email { get; set; }
         public double? Latitude { get; set; }

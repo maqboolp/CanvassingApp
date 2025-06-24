@@ -11,6 +11,7 @@ export interface Voter {
   ethnicity?: string;
   gender: string;
   voteFrequency: 'frequent' | 'infrequent' | 'non-voter';
+  partyAffiliation?: string;
   cellPhone?: string;
   email?: string;
   latitude?: number;
@@ -56,6 +57,7 @@ export interface VoterFilter {
   ageGroup?: '18-30' | '31-50' | '51+';
   contactStatus?: 'contacted' | 'not-contacted';
   searchName?: string;
+  partyAffiliation?: string;
   sortBy?: string;
 }
 

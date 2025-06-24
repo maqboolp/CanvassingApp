@@ -63,7 +63,8 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
     voteFrequency: '',
     ageGroup: '',
     contactStatus: 'not-contacted',
-    searchName: ''
+    searchName: '',
+    partyAffiliation: ''
   });
 
   useEffect(() => {
@@ -146,6 +147,7 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
         ...(filters.ageGroup && { ageGroup: filters.ageGroup }),
         ...(filters.contactStatus && { contactStatus: filters.contactStatus }),
         ...(filters.searchName && { searchName: filters.searchName }),
+        ...(filters.partyAffiliation && { partyAffiliation: filters.partyAffiliation }),
         ...(filters.sortBy && { sortBy: filters.sortBy }),
         sortOrder: 'asc',
         ...(useLocation && location && !filters.zipCode && { 
@@ -196,7 +198,8 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
       voteFrequency: filterInputs.voteFrequency as any || undefined,
       ageGroup: filterInputs.ageGroup as any || undefined,
       contactStatus: filterInputs.contactStatus as any || undefined,
-      searchName: filterInputs.searchName || undefined
+      searchName: filterInputs.searchName || undefined,
+      partyAffiliation: filterInputs.partyAffiliation || undefined
     });
     setPage(0);
   };
@@ -207,7 +210,8 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
       voteFrequency: '',
       ageGroup: '',
       contactStatus: 'not-contacted',
-      searchName: ''
+      searchName: '',
+      partyAffiliation: ''
     });
     setFilters({
       contactStatus: 'not-contacted'
@@ -325,6 +329,23 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
             </Select>
           </FormControl>
           
+          <FormControl size="small" sx={{ minWidth: { xs: 100, sm: 140 }, flex: { xs: '1 1 auto', sm: 'none' } }}>
+            <InputLabel>Party</InputLabel>
+            <Select
+              value={filterInputs.partyAffiliation}
+              label="Party"
+              onChange={(e) => handleFilterChange('partyAffiliation', e.target.value)}
+            >
+              <MenuItem value="">All</MenuItem>
+              <MenuItem value="DEM">Democrat</MenuItem>
+              <MenuItem value="REP">Republican</MenuItem>
+              <MenuItem value="IND">Independent</MenuItem>
+              <MenuItem value="GRN">Green</MenuItem>
+              <MenuItem value="LIB">Libertarian</MenuItem>
+              <MenuItem value="OTH">Other</MenuItem>
+            </Select>
+          </FormControl>
+          
           <Button
             variant="contained"
             startIcon={<FilterList />}
@@ -390,6 +411,7 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
               {!isMobile && <TableCell>Distance</TableCell>}
               {!isMobile && <TableCell>Age</TableCell>}
               {!isMobile && <TableCell>Vote Frequency</TableCell>}
+              {!isMobile && <TableCell>Party</TableCell>}
               <TableCell>Status</TableCell>
               {!isMobile && <TableCell>Contact Info</TableCell>}
               <TableCell>Actions</TableCell>
@@ -507,6 +529,20 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
                         size="small"
                         variant="outlined"
                       />
+                    </TableCell>
+                  )}
+                  
+                  {!isMobile && (
+                    <TableCell>
+                      {voter.partyAffiliation ? (
+                        <Typography variant="body2">
+                          {voter.partyAffiliation}
+                        </Typography>
+                      ) : (
+                        <Typography variant="caption" color="text.secondary">
+                          -
+                        </Typography>
+                      )}
                     </TableCell>
                   )}
                   
