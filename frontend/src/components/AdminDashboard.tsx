@@ -1344,10 +1344,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                 {user.email}
               </Typography>
             </MenuItem>
-            <MenuItem onClick={() => { setResourcesDialog(true); handleMenuClose(); }}>
-              <MenuBook sx={{ mr: 1 }} />
-              Volunteer Resources
-            </MenuItem>
             <MenuItem onClick={() => { setChangePasswordDialog(true); handleMenuClose(); }}>
               <Lock sx={{ mr: 1 }} />
               Change Password

@@ -45,7 +45,6 @@ import {
   Phone,
   Help,
   OpenInNew,
-  MenuBook,
   Visibility,
   VisibilityOff,
   Edit
@@ -539,10 +538,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
               <Typography variant="body2" color="text.secondary">
                 {user.email}
               </Typography>
-            </MenuItem>
-            <MenuItem onClick={() => { setResourcesDialog(true); handleMenuClose(); }}>
-              <MenuBook sx={{ mr: 1 }} />
-              Volunteer Resources
             </MenuItem>
             <MenuItem onClick={() => { setChangePasswordDialog(true); handleMenuClose(); }}>
               <Lock sx={{ mr: 1 }} />
