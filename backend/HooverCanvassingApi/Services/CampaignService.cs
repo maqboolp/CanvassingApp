@@ -230,7 +230,7 @@ namespace HooverCanvassingApi.Services
             return await query.CountAsync();
         }
 
-        public async Task<int> GetRecipientCountAsync(string? filterZipCodes, VoteFrequency? filterVoteFrequency, int? filterMinAge, int? filterMaxAge, VoterSupport? filterVoterSupport)
+        public async Task<int> GetRecipientCountAsync(string? filterZipCodes, VoteFrequency? filterVoteFrequency, int? filterMinAge, int? filterMaxAge, VoterSupport? filterVoterSupport, List<int>? filterTagIds = null)
         {
             var query = _context.Voters.AsQueryable();
 
@@ -265,6 +265,12 @@ namespace HooverCanvassingApi.Services
             if (filterVoterSupport.HasValue)
             {
                 query = query.Where(v => v.VoterSupport == filterVoterSupport.Value);
+            }
+
+            // Filter by tags
+            if (filterTagIds != null && filterTagIds.Any())
+            {
+                query = query.Where(v => v.TagAssignments.Any(ta => filterTagIds.Contains(ta.TagId)));
             }
 
             // Only count voters with valid cell phone numbers
@@ -332,6 +338,16 @@ namespace HooverCanvassingApi.Services
             if (campaign.FilterVoterSupport.HasValue)
             {
                 query = query.Where(v => v.VoterSupport == campaign.FilterVoterSupport.Value);
+            }
+
+            // Filter by tags
+            if (!string.IsNullOrEmpty(campaign.FilterTags))
+            {
+                var tagIds = JsonSerializer.Deserialize<int[]>(campaign.FilterTags);
+                if (tagIds != null && tagIds.Length > 0)
+                {
+                    query = query.Where(v => v.TagAssignments.Any(ta => tagIds.Contains(ta.TagId)));
+                }
             }
 
             // Only include voters with phone numbers

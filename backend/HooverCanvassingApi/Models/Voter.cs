@@ -39,6 +39,7 @@ namespace HooverCanvassingApi.Models
         
         public ICollection<Contact> Contacts { get; set; } = new List<Contact>();
         public ICollection<CampaignMessage> CampaignMessages { get; set; } = new List<CampaignMessage>();
+        public ICollection<VoterTagAssignment> TagAssignments { get; set; } = new List<VoterTagAssignment>();
     }
 
     public enum VoteFrequency

@@ -36,7 +36,8 @@ namespace HooverCanvassingApi.Controllers
             [FromQuery] double? latitude = null,
             [FromQuery] double? longitude = null,
             [FromQuery] double radiusKm = 1.0,
-            [FromQuery] string? partyAffiliation = null)
+            [FromQuery] string? partyAffiliation = null,
+            [FromQuery] List<int>? tagIds = null)
         {
             try
             {
@@ -101,6 +102,12 @@ namespace HooverCanvassingApi.Controllers
                     query = query.Where(v => v.PartyAffiliation == partyAffiliation);
                 }
 
+                // Filter by tags
+                if (tagIds != null && tagIds.Any())
+                {
+                    query = query.Where(v => v.TagAssignments.Any(ta => tagIds.Contains(ta.TagId)));
+                }
+
                 // Apply location filtering if coordinates are provided
                 // For now, we'll just filter to voters with coordinates and do distance filtering in memory
                 if (latitude.HasValue && longitude.HasValue)
@@ -129,6 +136,8 @@ namespace HooverCanvassingApi.Controllers
                 };
 
                 var voters = await query
+                    .Include(v => v.TagAssignments)
+                        .ThenInclude(ta => ta.Tag)
                     .ToListAsync();
 
                 // Apply distance filtering and sorting in memory if location is provided
@@ -189,6 +198,12 @@ namespace HooverCanvassingApi.Controllers
                             Longitude = v.Longitude,
                             IsContacted = v.IsContacted,
                             LastContactStatus = v.LastContactStatus?.ToString().ToLower(),
+                            Tags = v.TagAssignments.Select(ta => new TagDto
+                            {
+                                Id = ta.Tag.Id,
+                                TagName = ta.Tag.TagName,
+                                Color = ta.Tag.Color
+                            }).ToList(),
                             VoterSupport = v.VoterSupport?.ToString().ToLower(),
                             DistanceKm = distance
                         };
@@ -217,6 +232,8 @@ namespace HooverCanvassingApi.Controllers
 
                 var voter = await _context.Voters
                     .Include(v => v.Contacts.OrderByDescending(c => c.Timestamp))
+                    .Include(v => v.TagAssignments)
+                        .ThenInclude(ta => ta.Tag)
                     .FirstOrDefaultAsync(v => v.LalVoterId == id);
 
                 if (voter == null)
@@ -245,7 +262,13 @@ namespace HooverCanvassingApi.Controllers
                     Longitude = voter.Longitude,
                     IsContacted = voter.IsContacted,
                     LastContactStatus = voter.LastContactStatus?.ToString().ToLower(),
-                    VoterSupport = voter.VoterSupport?.ToString().ToLower()
+                    VoterSupport = voter.VoterSupport?.ToString().ToLower(),
+                    Tags = voter.TagAssignments.Select(ta => new TagDto
+                    {
+                        Id = ta.Tag.Id,
+                        TagName = ta.Tag.TagName,
+                        Color = ta.Tag.Color
+                    }).ToList()
                 };
 
                 return Ok(voterDto);
@@ -333,7 +356,13 @@ namespace HooverCanvassingApi.Controllers
                     Longitude = voter.Longitude,
                     IsContacted = voter.IsContacted,
                     LastContactStatus = voter.LastContactStatus?.ToString().ToLower(),
-                    VoterSupport = voter.VoterSupport?.ToString().ToLower()
+                    VoterSupport = voter.VoterSupport?.ToString().ToLower(),
+                    Tags = voter.TagAssignments.Select(ta => new TagDto
+                    {
+                        Id = ta.Tag.Id,
+                        TagName = ta.Tag.TagName,
+                        Color = ta.Tag.Color
+                    }).ToList()
                 };
 
                 return Ok(new { voter = voterDto, distance = votersWithDistance.Distance });
@@ -403,6 +432,82 @@ namespace HooverCanvassingApi.Controllers
                 return StatusCode(500, new { error = "Failed to get debug stats" });
             }
         }
+
+        // POST: api/voters/{id}/tags
+        [HttpPost("{id}/tags")]
+        [Authorize(Roles = "Admin,SuperAdmin")]
+        public async Task<IActionResult> AddTagsToVoter(string id, [FromBody] AddTagsRequest request)
+        {
+            try
+            {
+                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(currentUserId))
+                {
+                    return Unauthorized();
+                }
+
+                var voter = await _context.Voters.FindAsync(id);
+                if (voter == null)
+                {
+                    return NotFound(new { error = "Voter not found" });
+                }
+
+                // Get existing assignments to avoid duplicates
+                var existingTagIds = await _context.VoterTagAssignments
+                    .Where(vta => vta.VoterId == id && request.TagIds.Contains(vta.TagId))
+                    .Select(vta => vta.TagId)
+                    .ToListAsync();
+
+                var newTagIds = request.TagIds.Except(existingTagIds).ToList();
+
+                if (newTagIds.Any())
+                {
+                    var assignments = newTagIds.Select(tagId => new VoterTagAssignment
+                    {
+                        VoterId = id,
+                        TagId = tagId,
+                        AssignedAt = DateTime.UtcNow,
+                        AssignedById = currentUserId
+                    });
+
+                    _context.VoterTagAssignments.AddRange(assignments);
+                    await _context.SaveChangesAsync();
+                }
+
+                return Ok(new { addedCount = newTagIds.Count, skippedCount = existingTagIds.Count });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error adding tags to voter {VoterId}", id);
+                return StatusCode(500, new { error = "Failed to add tags" });
+            }
+        }
+
+        // DELETE: api/voters/{id}/tags
+        [HttpDelete("{id}/tags")]
+        [Authorize(Roles = "Admin,SuperAdmin")]
+        public async Task<IActionResult> RemoveTagsFromVoter(string id, [FromBody] RemoveTagsRequest request)
+        {
+            try
+            {
+                var assignments = await _context.VoterTagAssignments
+                    .Where(vta => vta.VoterId == id && request.TagIds.Contains(vta.TagId))
+                    .ToListAsync();
+
+                if (assignments.Any())
+                {
+                    _context.VoterTagAssignments.RemoveRange(assignments);
+                    await _context.SaveChangesAsync();
+                }
+
+                return Ok(new { removedCount = assignments.Count });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error removing tags from voter {VoterId}", id);
+                return StatusCode(500, new { error = "Failed to remove tags" });
+            }
+        }
     }
 
     public class VoterDto
@@ -426,8 +531,16 @@ namespace HooverCanvassingApi.Controllers
         public double? Longitude { get; set; }
         public bool IsContacted { get; set; }
         public string? LastContactStatus { get; set; }
+        public List<TagDto> Tags { get; set; } = new List<TagDto>();
         public string? VoterSupport { get; set; }
         public double? DistanceKm { get; set; }
+    }
+
+    public class TagDto
+    {
+        public int Id { get; set; }
+        public string TagName { get; set; } = string.Empty;
+        public string? Color { get; set; }
     }
 
     public class VoterListResponse
@@ -436,5 +549,15 @@ namespace HooverCanvassingApi.Controllers
         public int Total { get; set; }
         public int Page { get; set; }
         public int TotalPages { get; set; }
+    }
+
+    public class AddTagsRequest
+    {
+        public List<int> TagIds { get; set; } = new List<int>();
+    }
+
+    public class RemoveTagsRequest
+    {
+        public List<int> TagIds { get; set; } = new List<int>();
     }
 }

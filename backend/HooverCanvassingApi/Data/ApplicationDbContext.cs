@@ -18,6 +18,8 @@ namespace HooverCanvassingApi.Data
         public DbSet<Campaign> Campaigns { get; set; }
         public DbSet<CampaignMessage> CampaignMessages { get; set; }
         public DbSet<VolunteerResource> VolunteerResources { get; set; }
+        public DbSet<VoterTag> VoterTags { get; set; }
+        public DbSet<VoterTagAssignment> VoterTagAssignments { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -166,6 +168,50 @@ namespace HooverCanvassingApi.Data
                 entity.Property(vr => vr.Content).IsRequired();
                 entity.HasIndex(vr => vr.ResourceType).IsUnique();
             });
+
+            // Configure VoterTag entity
+            builder.Entity<VoterTag>(entity =>
+            {
+                entity.HasKey(vt => vt.Id);
+                entity.Property(vt => vt.TagName).IsRequired().HasMaxLength(50);
+                entity.HasIndex(vt => vt.TagName).IsUnique();
+                entity.Property(vt => vt.Description).HasMaxLength(200);
+                entity.Property(vt => vt.Color).HasMaxLength(7);
+            });
+
+            // Configure VoterTagAssignment entity
+            builder.Entity<VoterTagAssignment>(entity =>
+            {
+                entity.HasKey(vta => new { vta.VoterId, vta.TagId });
+                entity.HasIndex(vta => vta.TagId);
+                entity.HasIndex(vta => vta.AssignedAt);
+            });
+
+            // Configure VoterTag relationships
+            builder.Entity<VoterTag>()
+                .HasOne(vt => vt.CreatedBy)
+                .WithMany()
+                .HasForeignKey(vt => vt.CreatedById)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // Configure VoterTagAssignment relationships
+            builder.Entity<VoterTagAssignment>()
+                .HasOne(vta => vta.Voter)
+                .WithMany(v => v.TagAssignments)
+                .HasForeignKey(vta => vta.VoterId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<VoterTagAssignment>()
+                .HasOne(vta => vta.Tag)
+                .WithMany(t => t.VoterAssignments)
+                .HasForeignKey(vta => vta.TagId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<VoterTagAssignment>()
+                .HasOne(vta => vta.AssignedBy)
+                .WithMany()
+                .HasForeignKey(vta => vta.AssignedById)
+                .OnDelete(DeleteBehavior.SetNull);
         }
     }
 }

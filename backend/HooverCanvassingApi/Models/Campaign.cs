@@ -23,6 +23,7 @@ namespace HooverCanvassingApi.Models
         public int? FilterMinAge { get; set; }
         public int? FilterMaxAge { get; set; }
         public VoterSupport? FilterVoterSupport { get; set; }
+        public string? FilterTags { get; set; } // JSON array of tag IDs
         
         // Campaign stats
         public int TotalRecipients { get; set; }

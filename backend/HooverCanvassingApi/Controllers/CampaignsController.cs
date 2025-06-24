@@ -55,7 +55,10 @@ namespace HooverCanvassingApi.Controllers
                 FilterVoteFrequency = request.FilterVoteFrequency,
                 FilterMinAge = request.FilterMinAge,
                 FilterMaxAge = request.FilterMaxAge,
-                FilterVoterSupport = request.FilterVoterSupport
+                FilterVoterSupport = request.FilterVoterSupport,
+                FilterTags = request.FilterTagIds != null && request.FilterTagIds.Any() 
+                    ? System.Text.Json.JsonSerializer.Serialize(request.FilterTagIds) 
+                    : null
             };
 
             var createdCampaign = await _campaignService.CreateCampaignAsync(campaign);
@@ -199,7 +202,8 @@ namespace HooverCanvassingApi.Controllers
                     request.FilterVoteFrequency,
                     request.FilterMinAge,
                     request.FilterMaxAge,
-                    request.FilterVoterSupport
+                    request.FilterVoterSupport,
+                    request.FilterTagIds
                 );
                 return Ok(count);
             }
@@ -222,6 +226,7 @@ namespace HooverCanvassingApi.Controllers
         public int? FilterMinAge { get; set; }
         public int? FilterMaxAge { get; set; }
         public VoterSupport? FilterVoterSupport { get; set; }
+        public List<int>? FilterTagIds { get; set; }
     }
 
     public class UpdateCampaignRequest
@@ -234,6 +239,7 @@ namespace HooverCanvassingApi.Controllers
         public int? FilterMinAge { get; set; }
         public int? FilterMaxAge { get; set; }
         public VoterSupport? FilterVoterSupport { get; set; }
+        public List<int>? FilterTagIds { get; set; }
     }
 
     public class ScheduleCampaignRequest
@@ -253,5 +259,6 @@ namespace HooverCanvassingApi.Controllers
         public int? FilterMinAge { get; set; }
         public int? FilterMaxAge { get; set; }
         public VoterSupport? FilterVoterSupport { get; set; }
+        public List<int>? FilterTagIds { get; set; }
     }
 }
