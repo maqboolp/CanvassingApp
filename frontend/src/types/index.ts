@@ -52,28 +52,28 @@ export interface Contact {
   };
 }
 
-// Backend ContactDto response format
+// Backend ContactDto response format (JSON camelCase)
 export interface ContactDto {
-  Id: string;
-  VoterId: string;
-  VolunteerId: string;
-  Status: string;
-  VoterSupport?: string;
-  Notes?: string;
-  Timestamp: string;
-  VoterName?: string;
-  VolunteerName?: string;
-  Location?: {
-    Latitude: number;
-    Longitude: number;
+  id: string;
+  voterId: string;
+  volunteerId: string;
+  status: string;
+  voterSupport?: string;
+  notes?: string;
+  timestamp: string;
+  voterName?: string;
+  volunteerName?: string;
+  location?: {
+    latitude: number;
+    longitude: number;
   };
 }
 
 export interface ContactListResponse {
-  Contacts: ContactDto[];
-  Total: number;
-  Page: number;
-  TotalPages: number;
+  contacts: ContactDto[];
+  total: number;
+  page: number;
+  totalPages: number;
 }
 
 export interface VoterTag {

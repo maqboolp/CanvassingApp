@@ -410,24 +410,24 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
       });
 
       if (!contactsResponse.ok) {
-        throw new Error('Failed to fetch contacts');
+        throw new Error(`Failed to fetch contacts: ${contactsResponse.status}`);
       }
 
       const contactsData: ContactListResponse = await contactsResponse.json();
       
       // The contacts are already filtered by voter ID on the backend
-      const voterContacts = contactsData.Contacts;
+      const voterContacts = contactsData.contacts;
       
       if (!voterContacts || voterContacts.length === 0) {
-        throw new Error('No contacts found for this voter. This voter may not have been contacted yet.');
+        throw new Error(`No contact records found for ${voterToUncontact.firstName} ${voterToUncontact.lastName}. This voter shows as contacted but has no contact history in the database. Please contact an administrator to resolve this data inconsistency.`);
       }
 
       // Sort by timestamp descending and get the most recent
-      voterContacts.sort((a: ContactDto, b: ContactDto) => new Date(b.Timestamp).getTime() - new Date(a.Timestamp).getTime());
+      voterContacts.sort((a: ContactDto, b: ContactDto) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       const latestContact = voterContacts[0];
 
       // Delete the contact
-      const deleteResponse = await fetch(`${API_BASE_URL}/api/contacts/${latestContact.Id}`, {
+      const deleteResponse = await fetch(`${API_BASE_URL}/api/contacts/${latestContact.id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
