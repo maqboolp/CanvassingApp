@@ -231,6 +231,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteResult, setDeleteResult] = useState<any>(null);
 
+  // Volunteer resources state
+  const [volunteerResources, setVolunteerResources] = useState<{
+    quickTips: string;
+    script: string;
+  }>({
+    quickTips: '',
+    script: ''
+  });
+  const [editResourceDialog, setEditResourceDialog] = useState(false);
+  const [editingResourceType, setEditingResourceType] = useState<'quickTips' | 'script'>('quickTips');
+  const [editResourceContent, setEditResourceContent] = useState('');
+  const [resourceSaving, setResourceSaving] = useState(false);
+
   useEffect(() => {
     if (currentTab === getTabIndex('analytics')) {
       fetchAnalytics();
@@ -244,6 +257,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
       fetchVolunteers();
     } else if (currentTab === getTabIndex('tags') && (user.role === 'admin' || user.role === 'superadmin')) {
       fetchTags();
+    } else if (currentTab === getTabIndex('resources')) {
+      fetchVolunteerResources();
     } else if (currentTab === getTabIndex('dataManagement') && user.role === 'superadmin') {
       fetchGeocodingStatus();
     }
@@ -1092,6 +1107,68 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
     }
   };
 
+  const fetchVolunteerResources = async () => {
+    try {
+      const [quickTipsResponse, scriptResponse] = await Promise.all([
+        fetch(`${API_BASE_URL}/api/volunteerresources/QuickTips`, {
+          headers: { 'Authorization': `Bearer ${user.token}` }
+        }),
+        fetch(`${API_BASE_URL}/api/volunteerresources/Script`, {
+          headers: { 'Authorization': `Bearer ${user.token}` }
+        })
+      ]);
+
+      if (quickTipsResponse.ok && scriptResponse.ok) {
+        const [quickTipsData, scriptData] = await Promise.all([
+          quickTipsResponse.json(),
+          scriptResponse.json()
+        ]);
+
+        setVolunteerResources({
+          quickTips: quickTipsData.content,
+          script: scriptData.content
+        });
+      }
+    } catch (error) {
+      console.error('Failed to fetch volunteer resources:', error);
+    }
+  };
+
+  const handleEditResource = (resourceType: 'quickTips' | 'script') => {
+    setEditingResourceType(resourceType);
+    setEditResourceContent(volunteerResources[resourceType]);
+    setEditResourceDialog(true);
+  };
+
+  const handleSaveResource = async () => {
+    setResourceSaving(true);
+    try {
+      const apiResourceType = editingResourceType === 'quickTips' ? 'QuickTips' : 'Script';
+      const response = await fetch(`${API_BASE_URL}/api/volunteerresources/${apiResourceType}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.token}`
+        },
+        body: JSON.stringify({
+          content: editResourceContent
+        })
+      });
+
+      if (response.ok) {
+        setVolunteerResources(prev => ({
+          ...prev,
+          [editingResourceType]: editResourceContent
+        }));
+        setEditResourceDialog(false);
+      }
+    } catch (error) {
+      console.error('Failed to save resource:', error);
+    } finally {
+      setResourceSaving(false);
+    }
+  };
+
   const handleSendEngagementEmail = async () => {
     if (!emailSubject.trim() || !emailContent.trim()) {
       setEmailResult({ error: 'Subject and content are required' });
@@ -1338,8 +1415,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
         sx={{ 
           mt: 3, 
           mb: 3,
-          px: { xs: 0.5, sm: 2, md: 3 }, // Reduced mobile padding for more space
-          maxWidth: { xs: '100%', lg: '1200px' }, // Full width on mobile, max width on desktop
+          px: { xs: 1, sm: 2, md: 3 }, // Slightly more padding for better content spacing
+          maxWidth: { xs: '100%', lg: '1400px' }, // Increased max width to reduce white space
           mx: 'auto' // Center the container
         }}
       >
@@ -1431,14 +1508,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                   sx={{ mr: 1, mb: 1 }}
                 />
               )}
-              {nearestVoter.voter.cellPhone && (
-                <Chip 
-                  label={nearestVoter.voter.cellPhone} 
-                  size="small" 
-                  color="primary"
-                  sx={{ mb: 1 }}
-                />
-              )}
             </Box>
             <Box sx={{ mt: 2 }}>
               <Button
@@ -1486,13 +1555,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                 </Button>
               )}
             </Box>
-            {locationError && (
-              <Box sx={{ mt: 2 }}>
-                <Typography variant="body2" color="text.secondary">
-                  💡 Tip: Make sure to allow location permissions when your browser asks. Location requests may take up to 30 seconds in some cases.
-                </Typography>
-              </Box>
-            )}
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="body2" color="text.secondary">
+                💡 Tip: Make sure to allow location permissions when your browser asks. Location requests may take up to 30 seconds in some cases.
+              </Typography>
+            </Box>
           </Alert>
         )}
 
@@ -2427,6 +2494,64 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                   </Typography>
                 </Box>
               </Box>
+            </CardContent>
+          </Card>
+
+          {/* Quick Tips */}
+          <Card sx={{ mb: 3 }}>
+            <CardContent sx={{ 
+              background: 'rgba(47, 28, 106, 0.05)',
+              border: '1px solid rgba(47, 28, 106, 0.1)'
+            }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6" sx={{ fontWeight: 600, color: '#2f1c6a' }}>
+                  Canvassing Quick Tips
+                </Typography>
+                {user.role === 'superadmin' && (
+                  <IconButton 
+                    size="small" 
+                    onClick={() => handleEditResource('quickTips')}
+                    sx={{ color: '#2f1c6a' }}
+                  >
+                    <Edit fontSize="small" />
+                  </IconButton>
+                )}
+              </Box>
+              <Typography 
+                variant="body2" 
+                sx={{ color: '#2f1c6a', lineHeight: 1.6, whiteSpace: 'pre-line' }}
+              >
+                {volunteerResources.quickTips || 'No quick tips available yet.'}
+              </Typography>
+            </CardContent>
+          </Card>
+
+          {/* Volunteer Script */}
+          <Card>
+            <CardContent sx={{ 
+              background: 'rgba(47, 28, 106, 0.05)',
+              border: '1px solid rgba(47, 28, 106, 0.1)'
+            }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6" sx={{ fontWeight: 600, color: '#2f1c6a' }}>
+                  Volunteer Script
+                </Typography>
+                {user.role === 'superadmin' && (
+                  <IconButton 
+                    size="small" 
+                    onClick={() => handleEditResource('script')}
+                    sx={{ color: '#2f1c6a' }}
+                  >
+                    <Edit fontSize="small" />
+                  </IconButton>
+                )}
+              </Box>
+              <Typography 
+                variant="body2" 
+                sx={{ color: '#2f1c6a', lineHeight: 1.6, whiteSpace: 'pre-line' }}
+              >
+                {volunteerResources.script || 'No volunteer script available yet.'}
+              </Typography>
             </CardContent>
           </Card>
         </TabPanel>
@@ -3636,6 +3761,40 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
             startIcon={tagLoading ? <CircularProgress size={20} /> : (editingTag ? <Edit /> : <Add />)}
           >
             {tagLoading ? (editingTag ? 'Updating...' : 'Creating...') : (editingTag ? 'Update Tag' : 'Create Tag')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Edit Resource Dialog */}
+      <Dialog open={editResourceDialog} onClose={() => setEditResourceDialog(false)} maxWidth="md" fullWidth>
+        <DialogTitle>
+          Edit {editingResourceType === 'quickTips' ? 'Quick Tips' : 'Volunteer Script'}
+        </DialogTitle>
+        <DialogContent>
+          <TextField
+            fullWidth
+            multiline
+            rows={10}
+            value={editResourceContent}
+            onChange={(e) => setEditResourceContent(e.target.value)}
+            placeholder={editingResourceType === 'quickTips' 
+              ? 'Enter quick tips for volunteers...'
+              : 'Enter the volunteer script...'
+            }
+            sx={{ mt: 1 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEditResourceDialog(false)} disabled={resourceSaving}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleSaveResource} 
+            variant="contained" 
+            disabled={resourceSaving}
+            startIcon={resourceSaving ? <CircularProgress size={20} /> : undefined}
+          >
+            {resourceSaving ? 'Saving...' : 'Save'}
           </Button>
         </DialogActions>
       </Dialog>

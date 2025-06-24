@@ -612,9 +612,10 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
           </Box>
         </Collapse>
         
-        {/* Bulk Operations Toolbar */}
-        <Fade in={selectedVoters.length > 0}>
-          <Toolbar
+        {/* Bulk Operations Toolbar - Only for Admin/SuperAdmin */}
+        {(user?.role === 'admin' || user?.role === 'superadmin') && (
+          <Fade in={selectedVoters.length > 0}>
+            <Toolbar
             sx={{
               bgcolor: 'primary.light',
               color: 'primary.contrastText',
@@ -629,35 +630,39 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
             </Typography>
             
             <Box sx={{ display: 'flex', gap: 1 }}>
-              <Button
-                variant="contained"
-                size={isMobile ? "small" : "medium"}
-                startIcon={<Label />}
-                onClick={() => openBulkTagDialog('add')}
-                sx={{ 
-                  bgcolor: 'success.main', 
-                  color: 'white',
-                  '&:hover': { bgcolor: 'success.dark' },
-                  boxShadow: 2
-                }}
-              >
-                Add Tags
-              </Button>
-              
-              <Button
-                variant="contained"
-                size={isMobile ? "small" : "medium"}
-                startIcon={<LabelOff />}
-                onClick={() => openBulkTagDialog('remove')}
-                sx={{ 
-                  bgcolor: 'warning.main', 
-                  color: 'white',
-                  '&:hover': { bgcolor: 'warning.dark' },
-                  boxShadow: 2
-                }}
-              >
-                Remove Tags
-              </Button>
+              {(user?.role === 'admin' || user?.role === 'superadmin') && (
+                <>
+                  <Button
+                    variant="contained"
+                    size={isMobile ? "small" : "medium"}
+                    startIcon={<Label />}
+                    onClick={() => openBulkTagDialog('add')}
+                    sx={{ 
+                      bgcolor: 'success.main', 
+                      color: 'white',
+                      '&:hover': { bgcolor: 'success.dark' },
+                      boxShadow: 2
+                    }}
+                  >
+                    Add Tags
+                  </Button>
+                  
+                  <Button
+                    variant="contained"
+                    size={isMobile ? "small" : "medium"}
+                    startIcon={<LabelOff />}
+                    onClick={() => openBulkTagDialog('remove')}
+                    sx={{ 
+                      bgcolor: 'warning.main', 
+                      color: 'white',
+                      '&:hover': { bgcolor: 'warning.dark' },
+                      boxShadow: 2
+                    }}
+                  >
+                    Remove Tags
+                  </Button>
+                </>
+              )}
               
               <Button
                 variant="text"
@@ -673,6 +678,7 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
             </Box>
           </Toolbar>
         </Fade>
+        )}
       </Box>
 
       {error && (
@@ -696,14 +702,16 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
         <Table stickyHeader size={isMobile ? "small" : "medium"}>
           <TableHead>
             <TableRow>
-              <TableCell padding="checkbox">
-                <Checkbox
-                  indeterminate={selectedVoters.length > 0 && selectedVoters.length < voters.length}
-                  checked={voters.length > 0 && selectedVoters.length === voters.length}
-                  onChange={handleSelectAllVoters}
-                  inputProps={{ 'aria-label': 'select all voters' }}
-                />
-              </TableCell>
+              {(user?.role === 'admin' || user?.role === 'superadmin') && (
+                <TableCell padding="checkbox">
+                  <Checkbox
+                    indeterminate={selectedVoters.length > 0 && selectedVoters.length < voters.length}
+                    checked={voters.length > 0 && selectedVoters.length === voters.length}
+                    onChange={handleSelectAllVoters}
+                    inputProps={{ 'aria-label': 'select all voters' }}
+                  />
+                </TableCell>
+              )}
               <TableCell>Name</TableCell>
               <TableCell>Address</TableCell>
               {!isMobile && <TableCell>Distance</TableCell>}
@@ -719,13 +727,13 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={isMobile ? 6 : 10} sx={{ textAlign: 'center', py: 4 }}>
+                <TableCell colSpan={(user?.role === 'admin' || user?.role === 'superadmin') ? (isMobile ? 6 : 10) : (isMobile ? 5 : 9)} sx={{ textAlign: 'center', py: 4 }}>
                   <CircularProgress />
                 </TableCell>
               </TableRow>
             ) : voters.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={isMobile ? 6 : 10} sx={{ textAlign: 'center', py: 4 }}>
+                <TableCell colSpan={(user?.role === 'admin' || user?.role === 'superadmin') ? (isMobile ? 6 : 10) : (isMobile ? 5 : 9)} sx={{ textAlign: 'center', py: 4 }}>
                   No voters found
                 </TableCell>
               </TableRow>
@@ -738,13 +746,15 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
                     bgcolor: selectedVoters.includes(voter.lalVoterId) ? 'action.selected' : 'inherit'
                   }}
                 >
-                  <TableCell padding="checkbox">
-                    <Checkbox
-                      checked={selectedVoters.includes(voter.lalVoterId)}
-                      onChange={() => handleSelectVoter(voter.lalVoterId)}
-                      inputProps={{ 'aria-label': `select voter ${voter.firstName} ${voter.lastName}` }}
-                    />
-                  </TableCell>
+                  {(user?.role === 'admin' || user?.role === 'superadmin') && (
+                    <TableCell padding="checkbox">
+                      <Checkbox
+                        checked={selectedVoters.includes(voter.lalVoterId)}
+                        onChange={() => handleSelectVoter(voter.lalVoterId)}
+                        inputProps={{ 'aria-label': `select voter ${voter.firstName} ${voter.lastName}` }}
+                      />
+                    </TableCell>
+                  )}
                   <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <Box>
@@ -987,8 +997,9 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
         onSubmit={handleContactSubmit}
       />
 
-      {/* Bulk Tag Operations Dialog */}
-      <Dialog open={bulkTagDialog} onClose={() => {
+      {/* Bulk Tag Operations Dialog - Only for Admin/SuperAdmin */}
+      {(user?.role === 'admin' || user?.role === 'superadmin') && (
+        <Dialog open={bulkTagDialog} onClose={() => {
         if (!bulkLoading) {
           setBulkTagDialog(false);
           setBulkSelectedTags([]);
@@ -1097,6 +1108,7 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
           </Button>
         </DialogActions>
       </Dialog>
+      )}
     </Paper>
   );
 };
