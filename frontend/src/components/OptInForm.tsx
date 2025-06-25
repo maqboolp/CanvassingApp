@@ -163,7 +163,7 @@ const OptInForm: React.FC = () => {
           <Box sx={{ textAlign: 'center', mb: 4 }}>
             <Box
               component="img"
-              src="/logo-full.png"
+              src="/campaign-logo.png"
               alt="Tanveer for Hoover"
               sx={{ 
                 height: 100, 
