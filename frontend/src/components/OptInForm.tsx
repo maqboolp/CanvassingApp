@@ -339,7 +339,7 @@ const OptInForm: React.FC = () => {
 
             <Box sx={{ textAlign: 'center', mt: 3, pt: 2, borderTop: 1, borderColor: 'divider' }}>
               <Typography variant="caption" color="text.secondary">
-                You can also text JOIN to (205) 555-1234 to opt in
+                You can also text JOIN to (205) 922-7271 to opt in
                 <br />
                 Reply STOP to opt out at any time
               </Typography>
