@@ -20,6 +20,7 @@ namespace HooverCanvassingApi.Data
         public DbSet<VolunteerResource> VolunteerResources { get; set; }
         public DbSet<VoterTag> VoterTags { get; set; }
         public DbSet<VoterTagAssignment> VoterTagAssignments { get; set; }
+        public DbSet<ConsentRecord> ConsentRecords { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -39,9 +40,12 @@ namespace HooverCanvassingApi.Data
                 entity.Property(v => v.VoteFrequency).HasConversion<string>();
                 entity.Property(v => v.LastContactStatus).HasConversion<string>();
                 entity.Property(v => v.VoterSupport).HasConversion<string>();
+                entity.Property(v => v.SmsConsentStatus).HasConversion<string>();
+                entity.Property(v => v.SmsOptInMethod).HasConversion<string>();
                 entity.HasIndex(v => v.Zip);
                 entity.HasIndex(v => v.VoteFrequency);
                 entity.HasIndex(v => v.IsContacted);
+                entity.HasIndex(v => v.SmsConsentStatus);
             });
 
             // Configure Volunteer entity
@@ -212,6 +216,33 @@ namespace HooverCanvassingApi.Data
                 .WithMany()
                 .HasForeignKey(vta => vta.AssignedById)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            // Configure ConsentRecord entity
+            builder.Entity<ConsentRecord>(entity =>
+            {
+                entity.HasKey(cr => cr.Id);
+                entity.Property(cr => cr.VoterId).IsRequired();
+                entity.Property(cr => cr.Action).HasConversion<string>();
+                entity.Property(cr => cr.Method).HasConversion<string>();
+                entity.Property(cr => cr.Timestamp).IsRequired();
+                entity.Property(cr => cr.Source).HasMaxLength(255);
+                entity.Property(cr => cr.Details).HasMaxLength(500);
+                entity.Property(cr => cr.RawMessage).HasMaxLength(1600);
+                entity.Property(cr => cr.IpAddress).HasMaxLength(45);
+                entity.Property(cr => cr.UserAgent).HasMaxLength(500);
+                entity.Property(cr => cr.FormUrl).HasMaxLength(255);
+                entity.Property(cr => cr.ConsentLanguage).HasMaxLength(1000);
+                entity.HasIndex(cr => cr.VoterId);
+                entity.HasIndex(cr => cr.Timestamp);
+                entity.HasIndex(cr => cr.Action);
+            });
+
+            // Configure ConsentRecord relationships
+            builder.Entity<ConsentRecord>()
+                .HasOne(cr => cr.Voter)
+                .WithMany(v => v.ConsentRecords)
+                .HasForeignKey(cr => cr.VoterId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

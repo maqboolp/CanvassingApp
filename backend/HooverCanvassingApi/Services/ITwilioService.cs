@@ -5,10 +5,12 @@ namespace HooverCanvassingApi.Services
     public interface ITwilioService
     {
         Task<bool> SendSmsAsync(string toPhoneNumber, string message, int campaignMessageId);
+        Task<bool> SendSmsAsync(string toPhoneNumber, string message); // Overload for non-campaign messages
         Task<List<bool>> SendBulkSmsAsync(List<(string phoneNumber, string message, int campaignMessageId)> messages);
         Task<bool> MakeRoboCallAsync(string toPhoneNumber, string voiceUrl, int campaignMessageId);
         Task<CampaignMessage?> GetMessageStatusAsync(string twilioSid);
         Task<bool> ValidatePhoneNumberAsync(string phoneNumber);
         string FormatPhoneNumber(string phoneNumber);
+        Task<bool> CheckOptInStatusAsync(string phoneNumber); // Check if phone is opted in
     }
 }

@@ -10,6 +10,7 @@ using HooverCanvassingApi.Models;
 using HooverCanvassingApi.Services;
 using HooverCanvassingApi.Middleware;
 using HooverCanvassingApi;
+using HooverCanvassingApi.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -152,6 +153,7 @@ builder.Services.AddAuthorization();
 builder.Services.AddScoped<VoterImportService>();
 builder.Services.AddScoped<ITwilioService, TwilioService>();
 builder.Services.AddScoped<ICampaignService, CampaignService>();
+builder.Services.AddScoped<IOptInInvitationService, OptInInvitationService>();
 builder.Services.AddHttpClient();
 
 // Configure Email Service
@@ -166,6 +168,9 @@ builder.Services.Configure<EmailSettings>(options =>
     }
 });
 builder.Services.AddTransient<IEmailService, EmailService>();
+
+// Configure Opt-In Settings
+builder.Services.Configure<OptInSettings>(builder.Configuration.GetSection("OptInSettings"));
 
 var app = builder.Build();
 

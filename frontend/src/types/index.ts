@@ -179,3 +179,18 @@ export interface ApiResponse<T> {
   error?: string;
   message?: string;
 }
+
+export interface OptInRequest {
+  phoneNumber: string;
+  consentGiven: boolean;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  zipCode?: string;
+}
+
+export interface OptInResponse {
+  success: boolean;
+  message: string;
+  voterId?: string;
+}

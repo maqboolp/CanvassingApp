@@ -290,12 +290,7 @@ namespace HooverCanvassingApi.Controllers
                 // Apply filters
                 if (!string.IsNullOrEmpty(voterId))
                 {
-                    _logger.LogInformation("=== CONTACTS FILTER DEBUG ===");
-                    _logger.LogInformation("Filtering contacts by VoterId: '{VoterId}'", voterId);
                     query = query.Where(c => c.VoterId == voterId);
-                    
-                    var contactCount = await query.CountAsync();
-                    _logger.LogInformation("Found {ContactCount} contacts for VoterId: '{VoterId}'", contactCount, voterId);
                 }
 
                 if (!string.IsNullOrEmpty(status) && Enum.TryParse<ContactStatus>(status, true, out var contactStatus))

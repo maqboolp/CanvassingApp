@@ -56,6 +56,28 @@ namespace HooverCanvassingApi.Services
             {
                 _logger.LogInformation($"Attempting to send SMS to {toPhoneNumber} for campaign message {campaignMessageId}");
                 var formattedNumber = FormatPhoneNumber(toPhoneNumber);
+                
+                // Check opt-in status
+                if (!await CheckOptInStatusAsync(formattedNumber))
+                {
+                    _logger.LogWarning($"Cannot send SMS to {formattedNumber} - user is not opted in");
+                    
+                    // Update campaign message as failed due to opt-out
+                    using var optInScope = _serviceScopeFactory.CreateScope();
+                    var optInContext = optInScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                    var optInCampaignMessage = await optInContext.CampaignMessages
+                        .FirstOrDefaultAsync(cm => cm.Id == campaignMessageId);
+                    
+                    if (optInCampaignMessage != null)
+                    {
+                        optInCampaignMessage.Status = MessageStatus.Failed;
+                        optInCampaignMessage.ErrorMessage = "Recipient has not opted in to receive SMS messages";
+                        optInCampaignMessage.FailedAt = DateTime.UtcNow;
+                        await optInContext.SaveChangesAsync();
+                    }
+                    
+                    return false;
+                }
                 _logger.LogInformation($"Formatted phone number: {formattedNumber}");
                 
                 MessageResource messageResource;
@@ -303,6 +325,74 @@ namespace HooverCanvassingApi.Services
             finally
             {
                 semaphore.Release();
+            }
+        }
+        
+        // Overload for non-campaign messages (welcome messages, etc.)
+        public async Task<bool> SendSmsAsync(string toPhoneNumber, string message)
+        {
+            try
+            {
+                _logger.LogInformation($"Attempting to send non-campaign SMS to {toPhoneNumber}");
+                var formattedNumber = FormatPhoneNumber(toPhoneNumber);
+                _logger.LogInformation($"Formatted phone number: {formattedNumber}");
+                
+                MessageResource messageResource;
+                
+                // Use Messaging Service if available for better bulk performance
+                if (!string.IsNullOrEmpty(_messagingServiceSid))
+                {
+                    _logger.LogInformation($"Using Messaging Service SID: ***{_messagingServiceSid.Substring(Math.Max(0, _messagingServiceSid.Length - 4))}");
+                    messageResource = await MessageResource.CreateAsync(
+                        body: message,
+                        messagingServiceSid: _messagingServiceSid,
+                        to: new PhoneNumber(formattedNumber)
+                    );
+                }
+                else
+                {
+                    _logger.LogInformation($"Using From Phone Number: {_fromPhoneNumber}");
+                    messageResource = await MessageResource.CreateAsync(
+                        body: message,
+                        from: new PhoneNumber(_fromPhoneNumber),
+                        to: new PhoneNumber(formattedNumber)
+                    );
+                }
+
+                _logger.LogInformation($"SMS sent successfully to {formattedNumber}, SID: {messageResource.Sid}");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Failed to send SMS to {toPhoneNumber}");
+                return false;
+            }
+        }
+        
+        public async Task<bool> CheckOptInStatusAsync(string phoneNumber)
+        {
+            try
+            {
+                var formattedNumber = FormatPhoneNumber(phoneNumber);
+                
+                using var scope = _serviceScopeFactory.CreateScope();
+                var scopedContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                
+                var voter = await scopedContext.Voters
+                    .FirstOrDefaultAsync(v => v.CellPhone == formattedNumber);
+                
+                if (voter == null)
+                {
+                    _logger.LogDebug($"No voter found with phone number {formattedNumber}");
+                    return false; // No voter record means not opted in
+                }
+                
+                return voter.SmsConsentStatus == SmsConsentStatus.OptedIn;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error checking opt-in status for {phoneNumber}");
+                return false; // Fail safe - don't send if we can't verify opt-in
             }
         }
     }

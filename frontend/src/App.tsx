@@ -12,6 +12,7 @@ import AdminDashboard from './components/AdminDashboard';
 import ResetPassword from './components/ResetPassword';
 import CompleteRegistration from './components/CompleteRegistration';
 import SelfRegistration from './components/SelfRegistration';
+import OptInForm from './components/OptInForm';
 
 // Create Material-UI theme matching tanveer4hoover.com
 const theme = createTheme({
@@ -209,6 +210,11 @@ function App() {
                 <SelfRegistration />
               )
             }
+          />
+
+          <Route
+            path="/opt-in"
+            element={<OptInForm />}
           />
 
           {/* Protected routes */}

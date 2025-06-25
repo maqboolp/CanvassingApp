@@ -37,9 +37,17 @@ namespace HooverCanvassingApi.Models
         public int SmsCount { get; set; } = 0;
         public int CallCount { get; set; } = 0;
         
+        // SMS Opt-in/Opt-out tracking
+        public SmsConsentStatus SmsConsentStatus { get; set; } = SmsConsentStatus.Unknown;
+        public DateTime? SmsOptInAt { get; set; }
+        public DateTime? SmsOptOutAt { get; set; }
+        public ConsentMethod? SmsOptInMethod { get; set; }
+        public string? SmsOptInSource { get; set; } // IP address or phone number source
+        
         public ICollection<Contact> Contacts { get; set; } = new List<Contact>();
         public ICollection<CampaignMessage> CampaignMessages { get; set; } = new List<CampaignMessage>();
         public ICollection<VoterTagAssignment> TagAssignments { get; set; } = new List<VoterTagAssignment>();
+        public ICollection<ConsentRecord> ConsentRecords { get; set; } = new List<ConsentRecord>();
     }
 
     public enum VoteFrequency
@@ -64,5 +72,20 @@ namespace HooverCanvassingApi.Models
         Undecided,      // Undecided - they won't share or say they need to do research (even if they seem somewhat positive)
         LeaningNo,      // Leaning against - Not into Tanveer
         StrongNo        // Strong no - Definitely not voting for Tanveer
+    }
+
+    public enum SmsConsentStatus
+    {
+        Unknown,        // No explicit consent or opt-out recorded
+        OptedIn,        // User has explicitly opted in to receive SMS
+        OptedOut        // User has opted out of SMS communications
+    }
+
+    public enum ConsentMethod
+    {
+        WebForm,        // Opted in via website form
+        TextMessage,    // Opted in via SMS (JOIN keyword)
+        Import,         // Imported with existing consent
+        Manual          // Manually added by campaign staff
     }
 }
