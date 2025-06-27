@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using HooverCanvassingApi.Data;
 using HooverCanvassingApi.Models;
 using System.Security.Claims;
+using System.Linq;
 
 namespace HooverCanvassingApi.Controllers
 {
@@ -517,6 +518,25 @@ namespace HooverCanvassingApi.Controllers
                 // Generate a unique voter ID
                 var voterId = $"MAN-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString("N").Substring(0, 8).ToUpper()}";
                 
+                // Format phone number if provided
+                string? formattedPhone = null;
+                if (!string.IsNullOrEmpty(request.CellPhone))
+                {
+                    var digits = new string(request.CellPhone.Where(char.IsDigit).ToArray());
+                    if (digits.Length == 10)
+                    {
+                        formattedPhone = $"+1{digits}";
+                    }
+                    else if (digits.Length == 11 && digits.StartsWith("1"))
+                    {
+                        formattedPhone = $"+{digits}";
+                    }
+                    else
+                    {
+                        formattedPhone = request.CellPhone;
+                    }
+                }
+
                 var voter = new Voter
                 {
                     LalVoterId = voterId,
@@ -530,7 +550,7 @@ namespace HooverCanvassingApi.Controllers
                     Gender = request.Gender ?? "Unknown",
                     VoteFrequency = request.VoteFrequency ?? VoteFrequency.NonVoter,
                     PartyAffiliation = request.PartyAffiliation,
-                    CellPhone = request.CellPhone,
+                    CellPhone = formattedPhone,
                     Email = request.Email,
                     IsContacted = false,
                     SmsConsentStatus = SmsConsentStatus.Unknown,
