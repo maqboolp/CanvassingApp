@@ -86,7 +86,7 @@ namespace HooverCanvassingApi.Services
             return true;
         }
 
-        public async Task<bool> SendCampaignAsync(int campaignId)
+        public async Task<bool> SendCampaignAsync(int campaignId, bool overrideOptIn = false)
         {
             var campaign = await GetCampaignAsync(campaignId);
             if (campaign == null)
@@ -127,11 +127,11 @@ namespace HooverCanvassingApi.Services
             await _context.SaveChangesAsync();
 
             // Send messages in background with new scope
-            _logger.LogInformation($"Starting background task for campaign {campaignId}");
+            _logger.LogInformation($"Starting background task for campaign {campaignId} with overrideOptIn={overrideOptIn}");
             _ = Task.Run(async () => 
             {
                 _logger.LogInformation($"Background task started for campaign {campaignId}");
-                await ProcessCampaignMessagesWithScopeAsync(campaignId);
+                await ProcessCampaignMessagesWithScopeAsync(campaignId, overrideOptIn);
             });
 
             _logger.LogInformation($"Campaign {campaignId} started with {campaignMessages.Count} recipients");
@@ -482,9 +482,9 @@ namespace HooverCanvassingApi.Services
             await _context.SaveChangesAsync();
         }
 
-        private async Task ProcessCampaignMessagesWithScopeAsync(int campaignId)
+        private async Task ProcessCampaignMessagesWithScopeAsync(int campaignId, bool overrideOptIn = false)
         {
-            _logger.LogInformation($"ProcessCampaignMessagesWithScopeAsync called for campaign {campaignId}");
+            _logger.LogInformation($"ProcessCampaignMessagesWithScopeAsync called for campaign {campaignId} with overrideOptIn={overrideOptIn}");
             
             try
             {
@@ -523,7 +523,7 @@ namespace HooverCanvassingApi.Services
                             .Select(m => (m.RecipientPhone, campaign.Message, m.Id))
                             .ToList();
 
-                        var results = await scopedTwilioService.SendBulkSmsAsync(smsMessages);
+                        var results = await scopedTwilioService.SendBulkSmsAsync(smsMessages, overrideOptIn);
                         
                         // Process results and update voter stats
                         for (int i = 0; i < results.Count; i++)

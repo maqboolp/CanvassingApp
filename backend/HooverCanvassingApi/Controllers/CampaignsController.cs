@@ -146,9 +146,9 @@ namespace HooverCanvassingApi.Controllers
 
         [HttpPost("{id}/send")]
         [Authorize(Roles = "SuperAdmin")]
-        public async Task<ActionResult> SendCampaign(int id)
+        public async Task<ActionResult> SendCampaign(int id, SendCampaignRequest request)
         {
-            var success = await _campaignService.SendCampaignAsync(id);
+            var success = await _campaignService.SendCampaignAsync(id, request?.OverrideOptIn ?? false);
             if (!success)
                 return BadRequest("Campaign cannot be sent");
 
@@ -245,6 +245,11 @@ namespace HooverCanvassingApi.Controllers
     public class ScheduleCampaignRequest
     {
         public DateTime ScheduledTime { get; set; }
+    }
+
+    public class SendCampaignRequest
+    {
+        public bool OverrideOptIn { get; set; }
     }
 
     public class PreviewAudienceRequest

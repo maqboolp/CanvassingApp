@@ -9,7 +9,7 @@ namespace HooverCanvassingApi.Services
         Task<IEnumerable<Campaign>> GetCampaignsAsync();
         Task<Campaign> UpdateCampaignAsync(Campaign campaign);
         Task<bool> DeleteCampaignAsync(int id);
-        Task<bool> SendCampaignAsync(int campaignId);
+        Task<bool> SendCampaignAsync(int campaignId, bool overrideOptIn = false);
         Task<bool> ScheduleCampaignAsync(int campaignId, DateTime scheduledTime);
         Task<bool> CancelCampaignAsync(int campaignId);
         Task<IEnumerable<Voter>> GetCampaignRecipientsAsync(int campaignId);

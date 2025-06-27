@@ -6,7 +6,7 @@ namespace HooverCanvassingApi.Services
     {
         Task<bool> SendSmsAsync(string toPhoneNumber, string message, int campaignMessageId);
         Task<bool> SendSmsAsync(string toPhoneNumber, string message); // Overload for non-campaign messages
-        Task<List<bool>> SendBulkSmsAsync(List<(string phoneNumber, string message, int campaignMessageId)> messages);
+        Task<List<bool>> SendBulkSmsAsync(List<(string phoneNumber, string message, int campaignMessageId)> messages, bool overrideOptIn = false);
         Task<bool> MakeRoboCallAsync(string toPhoneNumber, string voiceUrl, int campaignMessageId);
         Task<CampaignMessage?> GetMessageStatusAsync(string twilioSid);
         Task<bool> ValidatePhoneNumberAsync(string phoneNumber);

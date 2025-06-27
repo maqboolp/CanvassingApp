@@ -289,9 +289,9 @@ namespace HooverCanvassingApi.Services
             };
         }
 
-        public async Task<List<bool>> SendBulkSmsAsync(List<(string phoneNumber, string message, int campaignMessageId)> messages)
+        public async Task<List<bool>> SendBulkSmsAsync(List<(string phoneNumber, string message, int campaignMessageId)> messages, bool overrideOptIn = false)
         {
-            _logger.LogInformation($"Starting bulk SMS for {messages.Count} messages");
+            _logger.LogInformation($"Starting bulk SMS for {messages.Count} messages with overrideOptIn={overrideOptIn}");
             _logger.LogInformation($"Twilio AccountSid configured: {!string.IsNullOrEmpty(_accountSid)}");
             _logger.LogInformation($"Twilio AuthToken configured: {!string.IsNullOrEmpty(_authToken)}");
             _logger.LogInformation($"Twilio FromPhone configured: {!string.IsNullOrEmpty(_fromPhoneNumber)}");
@@ -303,7 +303,7 @@ namespace HooverCanvassingApi.Services
             foreach (var (phoneNumber, message, campaignMessageId) in messages)
             {
                 _logger.LogInformation($"Queuing SMS for {phoneNumber}, message ID: {campaignMessageId}");
-                tasks.Add(SendSmsWithSemaphoreAsync(phoneNumber, message, campaignMessageId, semaphore));
+                tasks.Add(SendSmsWithSemaphoreAsync(phoneNumber, message, campaignMessageId, semaphore, overrideOptIn));
             }
 
             var taskResults = await Task.WhenAll(tasks);
@@ -313,11 +313,22 @@ namespace HooverCanvassingApi.Services
             return results;
         }
 
-        private async Task<bool> SendSmsWithSemaphoreAsync(string phoneNumber, string message, int campaignMessageId, SemaphoreSlim semaphore)
+        private async Task<bool> SendSmsWithSemaphoreAsync(string phoneNumber, string message, int campaignMessageId, SemaphoreSlim semaphore, bool overrideOptIn = false)
         {
             await semaphore.WaitAsync();
             try
             {
+                // Check opt-in status unless override is specified
+                if (!overrideOptIn)
+                {
+                    var isOptedIn = await CheckOptInStatusAsync(phoneNumber);
+                    if (!isOptedIn)
+                    {
+                        _logger.LogWarning($"Cannot send SMS to {phoneNumber} - user is not opted in");
+                        return false;
+                    }
+                }
+                
                 // Small delay to avoid hitting rate limits
                 await Task.Delay(100);
                 return await SendSmsAsync(phoneNumber, message, campaignMessageId);

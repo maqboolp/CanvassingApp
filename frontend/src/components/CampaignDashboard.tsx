@@ -21,7 +21,8 @@ import {
   Checkbox,
   ListItemText,
   OutlinedInput,
-  Autocomplete
+  Autocomplete,
+  FormControlLabel
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -59,6 +60,12 @@ interface Campaign {
 
 interface CampaignDashboardProps {
   user: AuthUser;
+}
+
+interface SendDialogState {
+  open: boolean;
+  campaignId: number | null;
+  overrideOptIn: boolean;
 }
 
 const getCampaignTypeEnum = (value: string): number => {
@@ -104,6 +111,11 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
   const [audienceCount, setAudienceCount] = useState<number>(0);
   const [availableTags, setAvailableTags] = useState<VoterTag[]>([]);
   const [selectedTags, setSelectedTags] = useState<VoterTag[]>([]);
+  const [sendDialog, setSendDialog] = useState<SendDialogState>({
+    open: false,
+    campaignId: null,
+    overrideOptIn: false
+  });
 
   const [newCampaign, setNewCampaign] = useState({
     name: '',
@@ -282,16 +294,20 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
     }
   };
 
-  const sendCampaign = async (campaignId: number) => {
+  const sendCampaign = async () => {
+    if (!sendDialog.campaignId) return;
+    
     try {
       await ApiErrorHandler.makeAuthenticatedRequest(
-        `${API_BASE_URL}/api/campaigns/${campaignId}/send`,
+        `${API_BASE_URL}/api/campaigns/${sendDialog.campaignId}/send`,
         {
-          method: 'POST'
+          method: 'POST',
+          body: JSON.stringify({ overrideOptIn: sendDialog.overrideOptIn })
         }
       );
 
       setSuccess('Campaign is being sent');
+      setSendDialog({ open: false, campaignId: null, overrideOptIn: false });
       fetchCampaigns();
     } catch (error) {
       if (error instanceof ApiError && error.isAuthError) {
@@ -584,7 +600,11 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                     <Button
                       size="small"
                       startIcon={<SendIcon />}
-                      onClick={() => sendCampaign(campaign.id)}
+                      onClick={() => setSendDialog({ 
+                        open: true, 
+                        campaignId: campaign.id, 
+                        overrideOptIn: false 
+                      })}
                       variant="contained"
                       color="primary"
                     >
@@ -905,6 +925,63 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
             variant="contained"
           >
             Update Campaign
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Send Campaign Confirmation Dialog */}
+      <Dialog 
+        open={sendDialog.open} 
+        onClose={() => setSendDialog({ open: false, campaignId: null, overrideOptIn: false })}
+        maxWidth="sm" 
+        fullWidth
+      >
+        <DialogTitle>Confirm Campaign Send</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ pt: 2 }}>
+            <Alert severity="warning">
+              Are you sure you want to send this campaign? This action cannot be undone.
+            </Alert>
+            
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={sendDialog.overrideOptIn}
+                  onChange={(e) => setSendDialog({ ...sendDialog, overrideOptIn: e.target.checked })}
+                  color="warning"
+                />
+              }
+              label={
+                <Box>
+                  <Typography variant="body2">
+                    Override opt-in status (Send to all recipients)
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    By default, SMS messages are only sent to opted-in users. Check this to send to all recipients regardless of opt-in status.
+                  </Typography>
+                </Box>
+              }
+            />
+            
+            {sendDialog.overrideOptIn && (
+              <Alert severity="error">
+                Warning: Sending messages to users who haven't opted in may violate TCPA regulations and could result in legal penalties.
+              </Alert>
+            )}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => setSendDialog({ open: false, campaignId: null, overrideOptIn: false })}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={sendCampaign} 
+            variant="contained"
+            color={sendDialog.overrideOptIn ? "warning" : "primary"}
+          >
+            {sendDialog.overrideOptIn ? "Send to All" : "Send Campaign"}
           </Button>
         </DialogActions>
       </Dialog>
