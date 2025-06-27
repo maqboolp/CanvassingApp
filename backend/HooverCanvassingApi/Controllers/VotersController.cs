@@ -53,10 +53,11 @@ namespace HooverCanvassingApi.Controllers
                 // Apply filters
                 if (!string.IsNullOrEmpty(searchName))
                 {
+                    var searchLower = searchName.ToLower();
                     query = query.Where(v => 
-                        v.FirstName.Contains(searchName) || 
-                        v.LastName.Contains(searchName) ||
-                        (v.FirstName + " " + v.LastName).Contains(searchName));
+                        v.FirstName.ToLower().Contains(searchLower) || 
+                        v.LastName.ToLower().Contains(searchLower) ||
+                        (v.FirstName + " " + v.LastName).ToLower().Contains(searchLower));
                 }
 
                 if (!string.IsNullOrEmpty(zipCode))
