@@ -508,6 +508,80 @@ namespace HooverCanvassingApi.Controllers
                 return StatusCode(500, new { error = "Failed to remove tags" });
             }
         }
+
+        [HttpPost]
+        public async Task<ActionResult<VoterDto>> CreateVoter(CreateVoterRequest request)
+        {
+            try
+            {
+                // Generate a unique voter ID
+                var voterId = $"MAN-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString("N").Substring(0, 8).ToUpper()}";
+                
+                var voter = new Voter
+                {
+                    LalVoterId = voterId,
+                    FirstName = request.FirstName,
+                    LastName = request.LastName,
+                    AddressLine = request.AddressLine,
+                    City = request.City,
+                    State = request.State,
+                    Zip = request.Zip,
+                    Age = request.Age,
+                    Gender = request.Gender ?? "Unknown",
+                    VoteFrequency = request.VoteFrequency ?? VoteFrequency.NonVoter,
+                    PartyAffiliation = request.PartyAffiliation,
+                    CellPhone = request.CellPhone,
+                    Email = request.Email,
+                    IsContacted = false,
+                    SmsConsentStatus = SmsConsentStatus.Unknown,
+                    TotalCampaignContacts = 0,
+                    SmsCount = 0,
+                    CallCount = 0
+                };
+
+                _context.Voters.Add(voter);
+                await _context.SaveChangesAsync();
+
+                var createdVoter = await _context.Voters
+                    .Include(v => v.TagAssignments)
+                    .ThenInclude(ta => ta.Tag)
+                    .FirstOrDefaultAsync(v => v.LalVoterId == voterId);
+
+                var voterDto = new VoterDto
+                {
+                    LalVoterId = createdVoter!.LalVoterId,
+                    FirstName = createdVoter.FirstName,
+                    MiddleName = createdVoter.MiddleName,
+                    LastName = createdVoter.LastName,
+                    AddressLine = createdVoter.AddressLine,
+                    City = createdVoter.City,
+                    State = createdVoter.State,
+                    Zip = createdVoter.Zip,
+                    Age = createdVoter.Age,
+                    Ethnicity = createdVoter.Ethnicity,
+                    Gender = createdVoter.Gender,
+                    VoteFrequency = createdVoter.VoteFrequency.ToString().ToLower(),
+                    PartyAffiliation = createdVoter.PartyAffiliation,
+                    CellPhone = createdVoter.CellPhone,
+                    Email = createdVoter.Email,
+                    Latitude = createdVoter.Latitude,
+                    Longitude = createdVoter.Longitude,
+                    IsContacted = createdVoter.IsContacted,
+                    LastContactStatus = createdVoter.LastContactStatus?.ToString().ToLower(),
+                    VoterSupport = createdVoter.VoterSupport?.ToString().ToLower(),
+                    Tags = new List<TagDto>()
+                };
+
+                _logger.LogInformation("Voter {VoterId} created manually by user {UserId}", voterId, User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+                
+                return CreatedAtAction(nameof(GetVoter), new { id = voter.LalVoterId }, voterDto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating voter");
+                return StatusCode(500, new { error = "Failed to create voter" });
+            }
+        }
     }
 
     public class VoterDto
@@ -559,5 +633,21 @@ namespace HooverCanvassingApi.Controllers
     public class RemoveTagsRequest
     {
         public List<int> TagIds { get; set; } = new List<int>();
+    }
+
+    public class CreateVoterRequest
+    {
+        public string FirstName { get; set; } = string.Empty;
+        public string LastName { get; set; } = string.Empty;
+        public string AddressLine { get; set; } = string.Empty;
+        public string City { get; set; } = string.Empty;
+        public string State { get; set; } = string.Empty;
+        public string Zip { get; set; } = string.Empty;
+        public int Age { get; set; }
+        public string? Gender { get; set; }
+        public VoteFrequency? VoteFrequency { get; set; }
+        public string? PartyAffiliation { get; set; }
+        public string? CellPhone { get; set; }
+        public string? Email { get; set; }
     }
 }

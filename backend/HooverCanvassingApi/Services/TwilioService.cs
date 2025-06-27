@@ -50,15 +50,15 @@ namespace HooverCanvassingApi.Services
             _logger.LogInformation("TwilioClient initialized successfully");
         }
 
-        public async Task<bool> SendSmsAsync(string toPhoneNumber, string message, int campaignMessageId)
+        public async Task<bool> SendSmsAsync(string toPhoneNumber, string message, int campaignMessageId, bool overrideOptIn = false)
         {
             try
             {
                 _logger.LogInformation($"Attempting to send SMS to {toPhoneNumber} for campaign message {campaignMessageId}");
                 var formattedNumber = FormatPhoneNumber(toPhoneNumber);
                 
-                // Check opt-in status
-                if (!await CheckOptInStatusAsync(formattedNumber))
+                // Check opt-in status unless override is specified
+                if (!overrideOptIn && !await CheckOptInStatusAsync(formattedNumber))
                 {
                     _logger.LogWarning($"Cannot send SMS to {formattedNumber} - user is not opted in");
                     
@@ -318,20 +318,9 @@ namespace HooverCanvassingApi.Services
             await semaphore.WaitAsync();
             try
             {
-                // Check opt-in status unless override is specified
-                if (!overrideOptIn)
-                {
-                    var isOptedIn = await CheckOptInStatusAsync(phoneNumber);
-                    if (!isOptedIn)
-                    {
-                        _logger.LogWarning($"Cannot send SMS to {phoneNumber} - user is not opted in");
-                        return false;
-                    }
-                }
-                
                 // Small delay to avoid hitting rate limits
                 await Task.Delay(100);
-                return await SendSmsAsync(phoneNumber, message, campaignMessageId);
+                return await SendSmsAsync(phoneNumber, message, campaignMessageId, overrideOptIn);
             }
             finally
             {

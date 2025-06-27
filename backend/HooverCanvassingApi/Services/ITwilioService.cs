@@ -4,7 +4,7 @@ namespace HooverCanvassingApi.Services
 {
     public interface ITwilioService
     {
-        Task<bool> SendSmsAsync(string toPhoneNumber, string message, int campaignMessageId);
+        Task<bool> SendSmsAsync(string toPhoneNumber, string message, int campaignMessageId, bool overrideOptIn = false);
         Task<bool> SendSmsAsync(string toPhoneNumber, string message); // Overload for non-campaign messages
         Task<List<bool>> SendBulkSmsAsync(List<(string phoneNumber, string message, int campaignMessageId)> messages, bool overrideOptIn = false);
         Task<bool> MakeRoboCallAsync(string toPhoneNumber, string voiceUrl, int campaignMessageId);
