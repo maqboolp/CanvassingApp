@@ -512,10 +512,19 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
       }
 
       const voterData = {
-        ...newVoter,
+        firstName: newVoter.firstName,
+        lastName: newVoter.lastName,
+        addressLine: newVoter.addressLine,
+        city: newVoter.city,
+        state: newVoter.state,
+        zip: newVoter.zip,
         age: parseInt(newVoter.age),
+        gender: newVoter.gender,
+        cellPhone: newVoter.cellPhone,
+        email: newVoter.email,
         voteFrequency: newVoter.voteFrequency === 'NonVoter' ? 0 : 
-                       newVoter.voteFrequency === 'Infrequent' ? 1 : 2
+                       newVoter.voteFrequency === 'Infrequent' ? 1 : 2,
+        partyAffiliation: newVoter.partyAffiliation
       };
 
       const response = await fetch(`${API_BASE_URL}/api/voters`, {
