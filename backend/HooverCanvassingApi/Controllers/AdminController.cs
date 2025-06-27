@@ -31,7 +31,7 @@ namespace HooverCanvassingApi.Controllers
         }
 
         [HttpPost("import-voters")]
-        [Authorize(Roles = "SuperAdmin")]
+        [Authorize(Roles = "Admin,SuperAdmin")]
         public async Task<ActionResult<ImportResult>> ImportVoters(IFormFile file, [FromQuery] bool enableGeocoding = false)
         {
             try

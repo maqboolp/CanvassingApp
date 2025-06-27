@@ -128,7 +128,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
       ...(user.role === 'admin' || user.role === 'superadmin' ? ['tags'] : []),
       'resources',
       'engagement',
-      ...(user.role === 'superadmin' ? ['dataManagement'] : [])
+      ...(user.role === 'admin' || user.role === 'superadmin' ? ['dataManagement'] : [])
     ];
     return tabs.indexOf(tabName);
   };
@@ -256,7 +256,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
       fetchTags();
     } else if (currentTab === getTabIndex('resources')) {
       fetchVolunteerResources();
-    } else if (currentTab === getTabIndex('dataManagement') && user.role === 'superadmin') {
+    } else if (currentTab === getTabIndex('dataManagement') && (user.role === 'admin' || user.role === 'superadmin')) {
       fetchGeocodingStatus();
     }
   }, [currentTab, user.role]);
@@ -787,6 +787,23 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
     } catch (error) {
       console.error('Failed to fetch geocoding status:', error);
     }
+  };
+
+  const handleDownloadSampleCsv = () => {
+    const csvContent = `FirstName,LastName,AddressLine,City,State,Zip,Age,Gender,CellPhone,Email,VoteFrequency,PartyAffiliation
+John,Doe,123 Main St,Birmingham,AL,35201,45,Male,+12055551234,john.doe@email.com,Frequent,Democrat
+Jane,Smith,456 Oak Ave,Birmingham,AL,35202,38,Female,+12055555678,jane.smith@email.com,Infrequent,Republican
+Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'voter_import_sample.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleGeocodeVoters = async () => {
@@ -1397,7 +1414,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
               margin: { xs: '0 2px', sm: 0 }
             }}
           />
-          {user.role === 'superadmin' && (
+          {(user.role === 'admin' || user.role === 'superadmin') && (
             <Tab label="Data Mgmt" icon={<Upload />} />
           )}
         </Tabs>
@@ -2717,8 +2734,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
           </Box>
         </TabPanel>
 
-        {/* Data Management Tab - Only for SuperAdmins */}
-        {user.role === 'superadmin' && (
+        {/* Data Management Tab - For Admins and SuperAdmins */}
+        {(user.role === 'admin' || user.role === 'superadmin') && (
           <TabPanel value={currentTab} index={getTabIndex('dataManagement')}>
           <Typography variant="h5" gutterBottom>
             Data Management
@@ -2804,7 +2821,28 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
         <DialogTitle>Import Voter Data</DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary" paragraph>
-            Select a CSV file with voter data. The file should include columns for voter ID, names, addresses, and other voter information.
+            Upload a CSV file with voter data. The file should have the following columns:
+          </Typography>
+          
+          <Box sx={{ mb: 2, p: 2, bgcolor: 'grey.100', borderRadius: 1 }}>
+            <Typography variant="caption" component="div" sx={{ fontFamily: 'monospace' }}>
+              FirstName, LastName, AddressLine, City, State, Zip, Age, Gender, CellPhone, Email, VoteFrequency, PartyAffiliation
+            </Typography>
+          </Box>
+          
+          <Box sx={{ mb: 3 }}>
+            <Button
+              variant="outlined"
+              startIcon={<GetApp />}
+              onClick={handleDownloadSampleCsv}
+              size="small"
+            >
+              Download Sample CSV
+            </Button>
+          </Box>
+          
+          <Typography variant="body2" color="text.secondary" paragraph>
+            <strong>Note:</strong> VoteFrequency should be one of: Frequent, Infrequent, or NonVoter
           </Typography>
           
           {importLoading && (

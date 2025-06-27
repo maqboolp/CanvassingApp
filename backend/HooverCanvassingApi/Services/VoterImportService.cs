@@ -29,8 +29,27 @@ namespace HooverCanvassingApi.Services
             try
             {
                 using var reader = new StreamReader(csvStream);
+                
+                // Peek at the header to determine format
+                var firstLine = reader.ReadLine();
+                if (string.IsNullOrEmpty(firstLine))
+                {
+                    result.Errors.Add("CSV file is empty");
+                    return result;
+                }
+                
+                // Reset stream
+                csvStream.Position = 0;
+                reader.DiscardBufferedData();
+                
+                // Check if it's the simplified format
+                if (firstLine.Contains("FirstName") && firstLine.Contains("LastName") && !firstLine.Contains("LALVOTERID"))
+                {
+                    return await ImportSimplifiedCsvAsync(csvStream, enableGeocoding);
+                }
+                
+                // Otherwise use the original format
                 using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
-
                 csv.Context.RegisterClassMap<VoterCsvMap>();
 
                 await foreach (var record in csv.GetRecordsAsync<VoterCsvRecord>())
@@ -83,6 +102,139 @@ namespace HooverCanvassingApi.Services
             return result;
         }
 
+        private async Task<ImportResult> ImportSimplifiedCsvAsync(Stream csvStream, bool enableGeocoding)
+        {
+            var result = new ImportResult();
+            var voters = new List<Voter>();
+
+            try
+            {
+                using var reader = new StreamReader(csvStream);
+                using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
+
+                csv.Context.RegisterClassMap<SimplifiedVoterCsvMap>();
+
+                await foreach (var record in csv.GetRecordsAsync<SimplifiedVoterCsvRecord>())
+                {
+                    try
+                    {
+                        // Validate required fields
+                        if (string.IsNullOrWhiteSpace(record.FirstName) ||
+                            string.IsNullOrWhiteSpace(record.LastName) ||
+                            string.IsNullOrWhiteSpace(record.AddressLine) ||
+                            string.IsNullOrWhiteSpace(record.City) ||
+                            string.IsNullOrWhiteSpace(record.State) ||
+                            string.IsNullOrWhiteSpace(record.Zip))
+                        {
+                            result.SkippedCount++;
+                            result.Errors.Add($"Row {result.ProcessedCount + result.SkippedCount + result.ErrorCount}: Missing required fields");
+                            continue;
+                        }
+
+                        // Generate unique voter ID
+                        var voterId = $"IMP-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString("N").Substring(0, 8).ToUpper()}";
+                        
+                        // Check if a voter with same name and address already exists
+                        var existingVoter = await _context.Voters.FirstOrDefaultAsync(v => 
+                            v.FirstName == record.FirstName && 
+                            v.LastName == record.LastName && 
+                            v.AddressLine == record.AddressLine);
+                            
+                        if (existingVoter != null)
+                        {
+                            result.SkippedCount++;
+                            _logger.LogInformation("Skipping duplicate voter: {FirstName} {LastName} at {Address}", 
+                                record.FirstName, record.LastName, record.AddressLine);
+                            continue;
+                        }
+
+                        var voter = new Voter
+                        {
+                            LalVoterId = voterId,
+                            FirstName = record.FirstName,
+                            LastName = record.LastName,
+                            AddressLine = record.AddressLine,
+                            City = record.City,
+                            State = record.State,
+                            Zip = record.Zip,
+                            Age = record.Age ?? 0,
+                            Gender = record.Gender ?? "Unknown",
+                            CellPhone = record.CellPhone,
+                            Email = record.Email,
+                            VoteFrequency = ParseVoteFrequency(record.VoteFrequency),
+                            PartyAffiliation = record.PartyAffiliation,
+                            IsContacted = false,
+                            SmsConsentStatus = SmsConsentStatus.Unknown,
+                            TotalCampaignContacts = 0,
+                            SmsCount = 0,
+                            CallCount = 0
+                        };
+
+                        // Geocode if enabled
+                        if (enableGeocoding && !string.IsNullOrEmpty(voter.AddressLine))
+                        {
+                            var coordinates = await GeocodeAddress(voter.AddressLine, voter.City, voter.State, voter.Zip);
+                            if (coordinates != null)
+                            {
+                                voter.Latitude = coordinates.Value.Latitude;
+                                voter.Longitude = coordinates.Value.Longitude;
+                            }
+                        }
+
+                        voters.Add(voter);
+                        result.ProcessedCount++;
+
+                        // Add delay for geocoding rate limiting
+                        if (enableGeocoding && result.ProcessedCount % 10 == 0)
+                        {
+                            await Task.Delay(1000); // 1 second delay every 10 records
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to process voter record: {FirstName} {LastName}", 
+                            record.FirstName, record.LastName);
+                        result.ErrorCount++;
+                        result.Errors.Add($"Row {result.ProcessedCount + result.SkippedCount + result.ErrorCount}: {ex.Message}");
+                    }
+                }
+
+                // Batch insert voters
+                if (voters.Any())
+                {
+                    await _context.Voters.AddRangeAsync(voters);
+                    await _context.SaveChangesAsync();
+                    result.ImportedCount = voters.Count;
+                }
+
+                _logger.LogInformation("Simplified CSV import completed. Imported: {ImportedCount}, Errors: {ErrorCount}, Skipped: {SkippedCount}",
+                    result.ImportedCount, result.ErrorCount, result.SkippedCount);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Fatal error during simplified CSV import");
+                result.Errors.Add($"Fatal error: {ex.Message}");
+                throw;
+            }
+
+            return result;
+        }
+
+        private VoteFrequency ParseVoteFrequency(string? frequency)
+        {
+            if (string.IsNullOrEmpty(frequency))
+                return VoteFrequency.NonVoter;
+                
+            return frequency.ToLower() switch
+            {
+                "frequent" => VoteFrequency.Frequent,
+                "infrequent" => VoteFrequency.Infrequent,
+                "nonvoter" => VoteFrequency.NonVoter,
+                "non-voter" => VoteFrequency.NonVoter,
+                _ => VoteFrequency.NonVoter
+            };
+        }
+
         private async Task<Voter?> ConvertCsvRecordToVoter(VoterCsvRecord record, bool enableGeocoding)
         {
             // Validate required fields
@@ -133,31 +285,6 @@ namespace HooverCanvassingApi.Services
             return voter;
         }
 
-        private static VoteFrequency ParseVoteFrequency(string? voteFrequency)
-        {
-            if (string.IsNullOrWhiteSpace(voteFrequency))
-                return VoteFrequency.NonVoter;
-
-            // Parse based on common patterns in voter data
-            var freq = voteFrequency.Trim().ToLower();
-            
-            // Look for numeric patterns (e.g., "3", "4+", etc.)
-            if (int.TryParse(freq.Replace("+", ""), out var number))
-            {
-                return number >= 3 ? VoteFrequency.Frequent : 
-                       number >= 1 ? VoteFrequency.Infrequent : 
-                       VoteFrequency.NonVoter;
-            }
-
-            // Look for text patterns
-            return freq switch
-            {
-                var f when f.Contains("frequent") || f.Contains("high") || f.Contains("regular") => VoteFrequency.Frequent,
-                var f when f.Contains("occasional") || f.Contains("sometimes") || f.Contains("moderate") => VoteFrequency.Infrequent,
-                var f when f.Contains("never") || f.Contains("none") || f.Contains("non") => VoteFrequency.NonVoter,
-                _ => VoteFrequency.NonVoter
-            };
-        }
 
         private static string? FormatPhoneNumber(string? phone)
         {
@@ -432,5 +559,40 @@ namespace HooverCanvassingApi.Services
         public DateTime? EndTime { get; set; }
         
         public TimeSpan Duration => EndTime?.Subtract(StartTime) ?? TimeSpan.Zero;
+    }
+
+    public class SimplifiedVoterCsvRecord
+    {
+        public string FirstName { get; set; } = string.Empty;
+        public string LastName { get; set; } = string.Empty;
+        public string AddressLine { get; set; } = string.Empty;
+        public string City { get; set; } = string.Empty;
+        public string State { get; set; } = string.Empty;
+        public string Zip { get; set; } = string.Empty;
+        public int? Age { get; set; }
+        public string? Gender { get; set; }
+        public string? CellPhone { get; set; }
+        public string? Email { get; set; }
+        public string? VoteFrequency { get; set; }
+        public string? PartyAffiliation { get; set; }
+    }
+
+    public class SimplifiedVoterCsvMap : ClassMap<SimplifiedVoterCsvRecord>
+    {
+        public SimplifiedVoterCsvMap()
+        {
+            Map(m => m.FirstName).Name("FirstName");
+            Map(m => m.LastName).Name("LastName");
+            Map(m => m.AddressLine).Name("AddressLine");
+            Map(m => m.City).Name("City");
+            Map(m => m.State).Name("State");
+            Map(m => m.Zip).Name("Zip");
+            Map(m => m.Age).Name("Age");
+            Map(m => m.Gender).Name("Gender");
+            Map(m => m.CellPhone).Name("CellPhone");
+            Map(m => m.Email).Name("Email");
+            Map(m => m.VoteFrequency).Name("VoteFrequency");
+            Map(m => m.PartyAffiliation).Name("PartyAffiliation");
+        }
     }
 }

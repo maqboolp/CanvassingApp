@@ -499,7 +499,7 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
     setError(null);
 
     try {
-      const token = localStorage.getItem('authToken');
+      const token = user?.token || localStorage.getItem('auth_token');
       if (!token) {
         throw new Error('Not authenticated');
       }
