@@ -2560,7 +2560,9 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
                 variant="body2" 
                 sx={{ color: '#2f1c6a', lineHeight: 1.6, whiteSpace: 'pre-line' }}
               >
-                {volunteerResources.script || 'No volunteer script available yet.'}
+                {volunteerResources.script ? 
+                  volunteerResources.script.replace('[Volunteer Name]', `${user.firstName} ${user.lastName}`) : 
+                  'No volunteer script available yet.'}
               </Typography>
             </CardContent>
           </Card>

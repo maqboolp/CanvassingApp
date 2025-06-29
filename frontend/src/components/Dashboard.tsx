@@ -1064,7 +1064,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                 variant="body2" 
                 sx={{ color: '#2f1c6a', lineHeight: 1.6, whiteSpace: 'pre-line' }}
               >
-                {volunteerResources.script}
+                {volunteerResources.script.replace('[Volunteer Name]', `${user.firstName} ${user.lastName}`)}
               </Typography>
             </CardContent>
           </Card>
