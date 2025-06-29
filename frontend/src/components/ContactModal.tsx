@@ -115,7 +115,26 @@ const ContactModal: React.FC<ContactModalProps> = ({
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
+      
+      // Check for MediaRecorder support and determine mime type
+      let mimeType = 'audio/webm';
+      const options: MediaRecorderOptions = {};
+      
+      if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+        options.mimeType = 'audio/webm;codecs=opus';
+      } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+        options.mimeType = 'audio/webm';
+      } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+        // iOS Safari fallback
+        options.mimeType = 'audio/mp4';
+        mimeType = 'audio/mp4';
+      } else if (MediaRecorder.isTypeSupported('audio/aac')) {
+        // Another iOS fallback
+        options.mimeType = 'audio/aac';
+        mimeType = 'audio/aac';
+      }
+      
+      const mediaRecorder = new MediaRecorder(stream, options);
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
 
@@ -126,13 +145,21 @@ const ContactModal: React.FC<ContactModalProps> = ({
       };
 
       mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
         setAudioBlob(audioBlob);
         setAudioUrl(URL.createObjectURL(audioBlob));
         stream.getTracks().forEach(track => track.stop());
       };
 
-      mediaRecorder.start();
+      mediaRecorder.onerror = (event: any) => {
+        console.error('MediaRecorder error:', event.error);
+        alert('Recording error occurred. Please try again.');
+        stream.getTracks().forEach(track => track.stop());
+        setIsRecording(false);
+      };
+
+      // Use timeslice for iOS compatibility
+      mediaRecorder.start(1000); // Collect data every second
       setIsRecording(true);
       setRecordingTime(0);
       

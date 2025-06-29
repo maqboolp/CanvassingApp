@@ -122,11 +122,26 @@ namespace HooverCanvassingApi.Controllers
                     return BadRequest(new { error = "No audio file provided" });
                 }
 
-                // Validate file type
-                var allowedTypes = new[] { "audio/webm", "audio/mp4", "audio/mpeg", "audio/wav", "audio/ogg" };
+                // Validate file type - include iOS formats
+                var allowedTypes = new[] { 
+                    "audio/webm", 
+                    "audio/mp4", 
+                    "audio/mpeg", 
+                    "audio/wav", 
+                    "audio/ogg",
+                    "audio/aac",
+                    "audio/m4a",
+                    "audio/x-m4a",
+                    "audio/mp4a-latm"
+                };
+                
+                // Log the content type for debugging
+                _logger.LogInformation("Audio upload - Content Type: {ContentType}, File Name: {FileName}", 
+                    audioFile.ContentType, audioFile.FileName);
+                
                 if (!allowedTypes.Contains(audioFile.ContentType))
                 {
-                    return BadRequest(new { error = "Invalid audio file type" });
+                    return BadRequest(new { error = $"Invalid audio file type: {audioFile.ContentType}. Allowed types: {string.Join(", ", allowedTypes)}" });
                 }
 
                 // Limit file size to 10MB
@@ -137,7 +152,23 @@ namespace HooverCanvassingApi.Controllers
 
                 using (var stream = audioFile.OpenReadStream())
                 {
-                    var fileName = $"{Path.GetFileNameWithoutExtension(audioFile.FileName)}.webm";
+                    // Keep the original file extension for iOS compatibility
+                    var fileName = Path.GetFileName(audioFile.FileName);
+                    if (string.IsNullOrEmpty(Path.GetExtension(fileName)))
+                    {
+                        // Add extension based on content type if missing
+                        var extension = audioFile.ContentType switch
+                        {
+                            "audio/mp4" => ".mp4",
+                            "audio/aac" => ".aac",
+                            "audio/m4a" => ".m4a",
+                            "audio/x-m4a" => ".m4a",
+                            "audio/mp4a-latm" => ".mp4",
+                            _ => ".webm"
+                        };
+                        fileName = $"{Path.GetFileNameWithoutExtension(fileName)}{extension}";
+                    }
+                    
                     var audioUrl = await _fileStorageService.UploadAudioAsync(stream, fileName);
                     
                     return Ok(new AudioUploadResponse

@@ -67,12 +67,24 @@ namespace HooverCanvassingApi.Services
                 // Generate unique key
                 var key = $"{_audioPrefix}{Guid.NewGuid()}_{DateTime.UtcNow:yyyyMMddHHmmss}_{fileName}";
                 
+                // Determine content type from file extension
+                var contentType = Path.GetExtension(fileName).ToLower() switch
+                {
+                    ".mp4" => "audio/mp4",
+                    ".m4a" => "audio/m4a",
+                    ".aac" => "audio/aac",
+                    ".wav" => "audio/wav",
+                    ".mp3" => "audio/mpeg",
+                    ".ogg" => "audio/ogg",
+                    _ => "audio/webm"
+                };
+                
                 var request = new PutObjectRequest
                 {
                     BucketName = _bucketName,
                     Key = key,
                     InputStream = audioStream,
-                    ContentType = "audio/webm",
+                    ContentType = contentType,
                     ServerSideEncryptionMethod = ServerSideEncryptionMethod.AES256,
                     CannedACL = S3CannedACL.PublicRead // Make files publicly readable
                 };
