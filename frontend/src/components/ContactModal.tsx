@@ -200,6 +200,13 @@ const ContactModal: React.FC<ContactModalProps> = ({
           </Box>
         </Box>
 
+        {/* Quick Reminder */}
+        <Box sx={{ mb: 2, p: 1.5, bgcolor: 'info.light', borderRadius: 1 }}>
+          <Typography variant="body2" color="info.contrastText">
+            <strong>Tip:</strong> Keep it brief and friendly! See the Resources tab for your script.
+          </Typography>
+        </Box>
+
         {/* Voter Information */}
         <Box sx={{ mb: 3, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
@@ -331,13 +338,6 @@ const ContactModal: React.FC<ContactModalProps> = ({
           variant="outlined"
         />
 
-        {/* Instructions */}
-        <Box sx={{ mt: 2, p: 2, bgcolor: 'info.light', borderRadius: 1 }}>
-          <Typography variant="body2" color="info.contrastText">
-            <strong>Reminder:</strong> Keep interactions brief and professional. 
-            Focus on voter registration and encourage participation in the democratic process.
-          </Typography>
-        </Box>
       </DialogContent>
       
       <DialogActions sx={{ p: 2 }}>
