@@ -57,7 +57,7 @@ const ContactModal: React.FC<ContactModalProps> = ({
 
   // Check location when modal opens
   React.useEffect(() => {
-    if (open && voter?.latitude && voter?.longitude && user?.role !== 'superadmin') {
+    if (open && voter?.latitude && voter?.longitude) {
       setCheckingLocation(true);
       setLocationError(null);
       
@@ -96,7 +96,7 @@ const ContactModal: React.FC<ContactModalProps> = ({
         }
       );
     }
-  }, [open, voter, user?.role]);
+  }, [open, voter]);
 
   const handleSubmit = async () => {
     if (!voter) return;
@@ -124,9 +124,10 @@ const ContactModal: React.FC<ContactModalProps> = ({
     onClose();
   };
 
-  const isProximityRequired = user?.role !== 'superadmin';
+  const isAdmin = user?.role === 'admin' || user?.role === 'superadmin';
+  const isVolunteer = user?.role === 'volunteer';
   const isWithinProximity = distance !== null && distance <= 100;
-  const canSubmit = !isProximityRequired || isWithinProximity;
+  const canSubmit = !isVolunteer || isWithinProximity || locationError !== null;
 
   if (!voter) return null;
 
@@ -144,43 +145,60 @@ const ContactModal: React.FC<ContactModalProps> = ({
       
       <DialogContent>
         {/* Proximity Warning/Status */}
-        {isProximityRequired && (
-          <Box sx={{ 
-            mb: 2, 
-            p: 2, 
-            bgcolor: checkingLocation ? 'info.light' : 
-                     locationError ? 'error.light' :
-                     isWithinProximity ? 'success.light' : 'warning.light', 
-            borderRadius: 1 
-          }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <LocationOn color={
-                checkingLocation ? "info" :
-                locationError ? "error" :
-                isWithinProximity ? "success" : "warning"
-              } />
+        <Box sx={{ 
+          mb: 2, 
+          p: 2, 
+          bgcolor: checkingLocation ? 'info.light' : 
+                   locationError ? (isAdmin ? 'warning.light' : 'error.light') :
+                   isWithinProximity ? 'success.light' : 
+                   (isAdmin ? 'warning.light' : 'error.light'), 
+          borderRadius: 1 
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <LocationOn color={
+              checkingLocation ? "info" :
+              locationError ? (isAdmin ? "warning" : "error") :
+              isWithinProximity ? "success" : 
+              (isAdmin ? "warning" : "error")
+            } />
+            <Box>
               <Typography variant="body2" color={
                 checkingLocation ? "info.dark" :
-                locationError ? "error.dark" :
-                isWithinProximity ? "success.dark" : "warning.dark"
+                locationError ? (isAdmin ? "warning.dark" : "error.dark") :
+                isWithinProximity ? "success.dark" : 
+                (isAdmin ? "warning.dark" : "error.dark")
               }>
                 {checkingLocation ? (
                   <>Checking your location...</>
                 ) : locationError ? (
-                  <>{locationError}</>
+                  isAdmin ? (
+                    <>{locationError} As an admin, you can override this requirement.</>
+                  ) : (
+                    <>{locationError}</>
+                  )
                 ) : distance !== null ? (
                   isWithinProximity ? (
                     <>You are {distance} meters from the voter - within the required 100 meter range</>
                   ) : (
-                    <>You are {distance} meters from the voter - you must be within 100 meters to log this contact</>
+                    isAdmin ? (
+                      <>You are {distance} meters from the voter - outside the 100 meter range. As an admin, you can override this requirement.</>
+                    ) : (
+                      <>You are {distance} meters from the voter - you must be within 100 meters to log this contact</>
+                    )
                   )
                 ) : (
                   <>Location check required</>
                 )}
               </Typography>
+              {/* Show override notice for admins when outside proximity */}
+              {isAdmin && distance !== null && !isWithinProximity && (
+                <Typography variant="caption" color="warning.dark" sx={{ mt: 0.5, display: 'block' }}>
+                  <strong>Admin Override:</strong> You can proceed despite being outside the proximity requirement.
+                </Typography>
+              )}
             </Box>
           </Box>
-        )}
+        </Box>
 
         {/* Voter Information */}
         <Box sx={{ mb: 3, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
@@ -334,10 +352,13 @@ const ContactModal: React.FC<ContactModalProps> = ({
           variant="contained"
           disabled={submitting || !canSubmit || checkingLocation}
           startIcon={<ContactPhone />}
+          color={isAdmin && distance !== null && !isWithinProximity ? "warning" : "primary"}
         >
           {submitting ? 'Logging Contact...' : 
            checkingLocation ? 'Checking Location...' :
-           !canSubmit ? 'Too Far Away' : 'Log Contact'}
+           !canSubmit ? 'Too Far Away' : 
+           (isAdmin && distance !== null && !isWithinProximity) ? 'Override & Log Contact' : 
+           'Log Contact'}
         </Button>
       </DialogActions>
     </Dialog>
