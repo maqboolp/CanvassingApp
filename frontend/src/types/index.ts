@@ -60,6 +60,8 @@ export interface ContactDto {
   status: string;
   voterSupport?: string;
   notes?: string;
+  audioFileUrl?: string;
+  audioDurationSeconds?: number;
   timestamp: string;
   voterName?: string;
   volunteerName?: string;

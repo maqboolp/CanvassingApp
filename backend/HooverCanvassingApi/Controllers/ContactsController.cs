@@ -19,14 +19,22 @@ namespace HooverCanvassingApi.Controllers
         private readonly IEmailService _emailService;
         private readonly UserManager<Volunteer> _userManager;
         private readonly IConfiguration _configuration;
+        private readonly IFileStorageService _fileStorageService;
 
-        public ContactsController(ApplicationDbContext context, ILogger<ContactsController> logger, IEmailService emailService, UserManager<Volunteer> userManager, IConfiguration configuration)
+        public ContactsController(
+            ApplicationDbContext context, 
+            ILogger<ContactsController> logger, 
+            IEmailService emailService, 
+            UserManager<Volunteer> userManager, 
+            IConfiguration configuration,
+            IFileStorageService fileStorageService)
         {
             _context = context;
             _logger = logger;
             _emailService = emailService;
             _userManager = userManager;
             _configuration = configuration;
+            _fileStorageService = fileStorageService;
         }
 
         [HttpGet("test")]
@@ -94,6 +102,55 @@ namespace HooverCanvassingApi.Controllers
             {
                 _logger.LogError(ex, "Error debugging super admins");
                 return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpPost("upload-audio")]
+        public async Task<ActionResult<AudioUploadResponse>> UploadAudio([FromForm] IFormFile audioFile)
+        {
+            try
+            {
+                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                
+                if (string.IsNullOrEmpty(currentUserId))
+                {
+                    return Unauthorized();
+                }
+
+                if (audioFile == null || audioFile.Length == 0)
+                {
+                    return BadRequest(new { error = "No audio file provided" });
+                }
+
+                // Validate file type
+                var allowedTypes = new[] { "audio/webm", "audio/mp4", "audio/mpeg", "audio/wav", "audio/ogg" };
+                if (!allowedTypes.Contains(audioFile.ContentType))
+                {
+                    return BadRequest(new { error = "Invalid audio file type" });
+                }
+
+                // Limit file size to 10MB
+                if (audioFile.Length > 10 * 1024 * 1024)
+                {
+                    return BadRequest(new { error = "Audio file too large. Maximum size is 10MB" });
+                }
+
+                using (var stream = audioFile.OpenReadStream())
+                {
+                    var fileName = $"{Path.GetFileNameWithoutExtension(audioFile.FileName)}.webm";
+                    var audioUrl = await _fileStorageService.UploadAudioAsync(stream, fileName);
+                    
+                    return Ok(new AudioUploadResponse
+                    {
+                        AudioUrl = audioUrl,
+                        FileName = fileName
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error uploading audio file");
+                return StatusCode(500, new { error = "Failed to upload audio file" });
             }
         }
 
@@ -206,6 +263,8 @@ namespace HooverCanvassingApi.Controllers
                     Status = contactStatus,
                     VoterSupport = voterSupport,
                     Notes = request.Notes,
+                    AudioFileUrl = request.AudioFileUrl,
+                    AudioDurationSeconds = request.AudioDurationSeconds,
                     Timestamp = DateTime.UtcNow,
                     LocationLatitude = request.Location?.Latitude,
                     LocationLongitude = request.Location?.Longitude
@@ -238,6 +297,8 @@ namespace HooverCanvassingApi.Controllers
                     Status = contact.Status.ToString().ToLower(),
                     VoterSupport = contact.VoterSupport?.ToString().ToLower(),
                     Notes = contact.Notes,
+                    AudioFileUrl = contact.AudioFileUrl,
+                    AudioDurationSeconds = contact.AudioDurationSeconds,
                     Timestamp = contact.Timestamp,
                     Location = contact.LocationLatitude.HasValue && contact.LocationLongitude.HasValue
                         ? new LocationDto
@@ -292,6 +353,8 @@ namespace HooverCanvassingApi.Controllers
                     VolunteerId = contact.VolunteerId,
                     Status = contact.Status.ToString().ToLower(),
                     Notes = contact.Notes,
+                    AudioFileUrl = contact.AudioFileUrl,
+                    AudioDurationSeconds = contact.AudioDurationSeconds,
                     Timestamp = contact.Timestamp,
                     Location = contact.LocationLatitude.HasValue && contact.LocationLongitude.HasValue
                         ? new LocationDto
@@ -378,6 +441,8 @@ namespace HooverCanvassingApi.Controllers
                         Status = c.Status.ToString().ToLower(),
                         VoterSupport = c.VoterSupport?.ToString().ToLower(),
                         Notes = c.Notes,
+                        AudioFileUrl = c.AudioFileUrl,
+                        AudioDurationSeconds = c.AudioDurationSeconds,
                         Timestamp = c.Timestamp,
                         VoterName = $"{c.Voter.FirstName} {c.Voter.LastName}",
                         VolunteerName = $"{c.Volunteer.FirstName} {c.Volunteer.LastName}",
@@ -448,6 +513,8 @@ namespace HooverCanvassingApi.Controllers
                     VolunteerId = contact.VolunteerId,
                     Status = contact.Status.ToString().ToLower(),
                     Notes = contact.Notes,
+                    AudioFileUrl = contact.AudioFileUrl,
+                    AudioDurationSeconds = contact.AudioDurationSeconds,
                     Timestamp = contact.Timestamp,
                     Location = contact.LocationLatitude.HasValue && contact.LocationLongitude.HasValue
                         ? new LocationDto
@@ -748,6 +815,8 @@ namespace HooverCanvassingApi.Controllers
         public string Status { get; set; } = string.Empty;
         public string? VoterSupport { get; set; }
         public string? Notes { get; set; }
+        public string? AudioFileUrl { get; set; }
+        public int? AudioDurationSeconds { get; set; }
         public LocationDto? Location { get; set; }
     }
 
@@ -765,6 +834,8 @@ namespace HooverCanvassingApi.Controllers
         public string Status { get; set; } = string.Empty;
         public string? VoterSupport { get; set; }
         public string? Notes { get; set; }
+        public string? AudioFileUrl { get; set; }
+        public int? AudioDurationSeconds { get; set; }
         public DateTime Timestamp { get; set; }
         public string? VoterName { get; set; }
         public string? VolunteerName { get; set; }
@@ -785,4 +856,9 @@ namespace HooverCanvassingApi.Controllers
         public int TotalPages { get; set; }
     }
 
+    public class AudioUploadResponse
+    {
+        public string AudioUrl { get; set; } = string.Empty;
+        public string FileName { get; set; } = string.Empty;
+    }
 }

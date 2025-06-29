@@ -20,12 +20,13 @@ import {
 } from '@mui/material';
 import { ContactPhone, Person, LocationOn, Mic, Stop, Delete } from '@mui/icons-material';
 import { Voter, ContactStatus, VoterSupport, AuthUser } from '../types';
+import { API_BASE_URL } from '../config';
 
 interface ContactModalProps {
   open: boolean;
   voter: Voter | null;
   onClose: () => void;
-  onSubmit: (status: ContactStatus, notes: string, voterSupport?: VoterSupport) => void;
+  onSubmit: (status: ContactStatus, notes: string, voterSupport?: VoterSupport, audioUrl?: string, audioDuration?: number) => void;
   user?: AuthUser;
 }
 
@@ -174,20 +175,39 @@ const ContactModal: React.FC<ContactModalProps> = ({
     
     setSubmitting(true);
     try {
-      // If there's an audio recording, convert it to base64 and append to notes
-      let finalNotes = notes;
+      let audioUrl: string | undefined;
+      let audioDuration: number | undefined;
+      
+      // Upload audio if present
       if (audioBlob) {
-        const reader = new FileReader();
-        const base64Audio = await new Promise<string>((resolve) => {
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.readAsDataURL(audioBlob);
-        });
-        finalNotes = notes + (notes ? '\n\n' : '') + `[Voice Memo: ${formatTime(recordingTime)}]`;
-        // In a real implementation, you'd upload the audio file to a server
-        // For now, we'll just append a note about the voice memo
+        try {
+          const formData = new FormData();
+          formData.append('audioFile', audioBlob, 'voice-memo.webm');
+          
+          const token = localStorage.getItem('auth_token');
+          const response = await fetch(`${API_BASE_URL}/api/contacts/upload-audio`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            },
+            body: formData
+          });
+          
+          if (response.ok) {
+            const result = await response.json();
+            audioUrl = result.audioUrl;
+            audioDuration = recordingTime;
+          } else {
+            console.error('Failed to upload audio');
+          }
+        } catch (error) {
+          console.error('Error uploading audio:', error);
+        }
       }
       
-      await onSubmit(status, finalNotes, voterSupport);
+      // Pass audio info to parent
+      await onSubmit(status, notes, voterSupport, audioUrl, audioDuration);
+      
       // Reset form
       setStatus('reached');
       setNotes('');

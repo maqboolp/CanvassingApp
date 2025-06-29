@@ -11,6 +11,8 @@ namespace HooverCanvassingApi.Models
         public ContactStatus Status { get; set; }
         public VoterSupport? VoterSupport { get; set; }
         public string? Notes { get; set; }
+        public string? AudioFileUrl { get; set; }
+        public int? AudioDurationSeconds { get; set; }
         public DateTime Timestamp { get; set; } = DateTime.UtcNow;
         public double? LocationLatitude { get; set; }
         public double? LocationLongitude { get; set; }

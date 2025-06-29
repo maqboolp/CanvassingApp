@@ -25,7 +25,8 @@ import {
   Clear,
   FilterList,
   Person,
-  CalendarToday
+  CalendarToday,
+  VolumeUp
 } from '@mui/icons-material';
 import { AuthUser, ContactStatus, VoterSupport } from '../types';
 import { API_BASE_URL } from '../config';
@@ -45,6 +46,8 @@ interface ContactHistoryItem {
   status: ContactStatus;
   voterSupport?: VoterSupport;
   notes?: string;
+  audioFileUrl?: string;
+  audioDurationSeconds?: number;
 }
 
 interface ContactHistoryResponse {
@@ -341,9 +344,27 @@ const VoterContactHistory: React.FC<VoterContactHistoryProps> = ({ user }) => {
                         )}
                       </TableCell>
                       <TableCell>
-                        <Typography variant="body2" sx={{ maxWidth: 300 }}>
-                          {contact.notes || '-'}
-                        </Typography>
+                        <Box sx={{ maxWidth: 300 }}>
+                          {contact.audioFileUrl && (
+                            <Box sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Chip
+                                icon={<VolumeUp />}
+                                label={`Voice Memo (${contact.audioDurationSeconds ? Math.floor(contact.audioDurationSeconds / 60) + ':' + (contact.audioDurationSeconds % 60).toString().padStart(2, '0') : '0:00'})`}
+                                size="small"
+                                color="primary"
+                                variant="outlined"
+                              />
+                              <audio 
+                                controls 
+                                src={`${API_BASE_URL}${contact.audioFileUrl}`} 
+                                style={{ height: '30px', maxWidth: '200px' }}
+                              />
+                            </Box>
+                          )}
+                          <Typography variant="body2">
+                            {contact.notes || '-'}
+                          </Typography>
+                        </Box>
                       </TableCell>
                     </TableRow>
                   ))

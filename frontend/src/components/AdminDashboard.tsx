@@ -1085,7 +1085,7 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
     setContactModalOpen(true);
   };
 
-  const handleContactSubmit = async (status: ContactStatus, notes: string, voterSupport?: VoterSupport) => {
+  const handleContactSubmit = async (status: ContactStatus, notes: string, voterSupport?: VoterSupport, audioUrl?: string, audioDuration?: number) => {
     if (!selectedVoterForContact) return;
 
     try {
@@ -1100,6 +1100,8 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
           status,
           voterSupport,
           notes,
+          audioFileUrl: audioUrl,
+          audioDurationSeconds: audioDuration,
           location: location
         })
       });

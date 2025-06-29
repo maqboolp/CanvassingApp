@@ -438,7 +438,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     handleMenuClose();
   };
 
-  const handleContactSubmit = async (status: ContactStatus, notes: string, voterSupport?: VoterSupport) => {
+  const handleContactSubmit = async (status: ContactStatus, notes: string, voterSupport?: VoterSupport, audioUrl?: string, audioDuration?: number) => {
     if (!selectedVoterForContact) return;
 
     try {
@@ -453,6 +453,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
           status,
           voterSupport,
           notes,
+          audioFileUrl: audioUrl,
+          audioDurationSeconds: audioDuration,
           location: location
         })
       });

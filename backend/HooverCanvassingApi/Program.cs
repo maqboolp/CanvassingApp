@@ -154,6 +154,7 @@ builder.Services.AddScoped<VoterImportService>();
 builder.Services.AddScoped<ITwilioService, TwilioService>();
 builder.Services.AddScoped<ICampaignService, CampaignService>();
 builder.Services.AddScoped<IOptInInvitationService, OptInInvitationService>();
+builder.Services.AddScoped<IFileStorageService, FileStorageService>();
 builder.Services.AddHttpClient();
 
 // Configure Email Service
@@ -183,6 +184,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// Serve static files (for uploaded audio)
+app.UseStaticFiles();
 
 // Add request logging middleware
 app.Use(async (context, next) =>
