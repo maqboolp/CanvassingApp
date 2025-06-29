@@ -154,7 +154,21 @@ builder.Services.AddScoped<VoterImportService>();
 builder.Services.AddScoped<ITwilioService, TwilioService>();
 builder.Services.AddScoped<ICampaignService, CampaignService>();
 builder.Services.AddScoped<IOptInInvitationService, OptInInvitationService>();
-builder.Services.AddScoped<IFileStorageService, FileStorageService>();
+
+// Configure file storage based on settings
+var useS3 = builder.Configuration.GetValue<bool>("AWS:S3:UseS3");
+if (useS3)
+{
+    builder.Services.AddScoped<IFileStorageService, S3FileStorageService>();
+}
+else
+{
+    builder.Services.AddScoped<IFileStorageService, FileStorageService>();
+}
+
+// Add audio cleanup service (runs in background)
+builder.Services.AddHostedService<AudioCleanupService>();
+
 builder.Services.AddHttpClient();
 
 // Configure Email Service
@@ -235,6 +249,24 @@ using (var scope = app.Services.CreateScope())
         
         // Seed initial data (roles and default users)
         await SeedData.InitializeAsync(app.Services);
+        
+        // Ensure S3 bucket exists if using S3
+        if (useS3)
+        {
+            try
+            {
+                var s3Service = scope.ServiceProvider.GetService<IFileStorageService>() as S3FileStorageService;
+                if (s3Service != null)
+                {
+                    await s3Service.EnsureBucketExistsAsync();
+                    Console.WriteLine("S3 bucket configured successfully.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Warning: Could not configure S3 bucket: {ex.Message}");
+            }
+        }
     }
     catch (Exception ex)
     {
