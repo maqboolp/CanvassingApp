@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -13,9 +13,12 @@ import {
   TextField,
   Typography,
   Box,
-  Divider
+  Divider,
+  IconButton,
+  Chip,
+  CircularProgress
 } from '@mui/material';
-import { ContactPhone, Person, LocationOn } from '@mui/icons-material';
+import { ContactPhone, Person, LocationOn, Mic, Stop, Delete } from '@mui/icons-material';
 import { Voter, ContactStatus, VoterSupport, AuthUser } from '../types';
 
 interface ContactModalProps {
@@ -41,6 +44,15 @@ const ContactModal: React.FC<ContactModalProps> = ({
   const [locationError, setLocationError] = useState<string | null>(null);
   const [checkingLocation, setCheckingLocation] = useState(false);
   const [distance, setDistance] = useState<number | null>(null);
+  
+  // Voice recording states
+  const [isRecording, setIsRecording] = useState(false);
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Calculate distance between two coordinates using Haversine formula
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
@@ -98,16 +110,89 @@ const ContactModal: React.FC<ContactModalProps> = ({
     }
   }, [open, voter]);
 
+  // Voice recording functions
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        setAudioBlob(audioBlob);
+        setAudioUrl(URL.createObjectURL(audioBlob));
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      setRecordingTime(0);
+      
+      // Start timer
+      recordingIntervalRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
+    } catch (error) {
+      console.error('Error starting recording:', error);
+      alert('Unable to access microphone. Please check your permissions.');
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+        recordingIntervalRef.current = null;
+      }
+    }
+  };
+
+  const deleteRecording = () => {
+    setAudioBlob(null);
+    setAudioUrl(null);
+    setRecordingTime(0);
+  };
+
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
   const handleSubmit = async () => {
     if (!voter) return;
     
     setSubmitting(true);
     try {
-      await onSubmit(status, notes, voterSupport);
+      // If there's an audio recording, convert it to base64 and append to notes
+      let finalNotes = notes;
+      if (audioBlob) {
+        const reader = new FileReader();
+        const base64Audio = await new Promise<string>((resolve) => {
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(audioBlob);
+        });
+        finalNotes = notes + (notes ? '\n\n' : '') + `[Voice Memo: ${formatTime(recordingTime)}]`;
+        // In a real implementation, you'd upload the audio file to a server
+        // For now, we'll just append a note about the voice memo
+      }
+      
+      await onSubmit(status, finalNotes, voterSupport);
       // Reset form
       setStatus('reached');
       setNotes('');
       setVoterSupport(undefined);
+      deleteRecording();
     } finally {
       setSubmitting(false);
     }
@@ -121,6 +206,10 @@ const ContactModal: React.FC<ContactModalProps> = ({
     setLocationError(null);
     setDistance(null);
     setCheckingLocation(false);
+    deleteRecording();
+    if (recordingIntervalRef.current) {
+      clearInterval(recordingIntervalRef.current);
+    }
     onClose();
   };
 
@@ -327,16 +416,73 @@ const ContactModal: React.FC<ContactModalProps> = ({
         )}
 
         {/* Notes */}
-        <TextField
-          fullWidth
-          multiline
-          rows={4}
-          label="Notes (Optional)"
-          placeholder="Add any relevant notes about the interaction, voter feedback, concerns, etc."
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          variant="outlined"
-        />
+        <Box sx={{ mb: 2 }}>
+          <Typography variant="subtitle2" gutterBottom>
+            Notes (Optional)
+          </Typography>
+          
+          {/* Voice Recording Controls */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+            {!isRecording && !audioUrl && (
+              <Button
+                variant="outlined"
+                startIcon={<Mic />}
+                onClick={startRecording}
+                size="small"
+              >
+                Record Voice Memo
+              </Button>
+            )}
+            
+            {isRecording && (
+              <>
+                <Button
+                  variant="contained"
+                  color="error"
+                  startIcon={<Stop />}
+                  onClick={stopRecording}
+                  size="small"
+                >
+                  Stop Recording
+                </Button>
+                <Chip
+                  label={formatTime(recordingTime)}
+                  color="error"
+                  size="small"
+                  icon={<CircularProgress size={16} color="inherit" />}
+                />
+              </>
+            )}
+            
+            {audioUrl && !isRecording && (
+              <>
+                <audio controls src={audioUrl} style={{ height: '35px' }} />
+                <Chip
+                  label={formatTime(recordingTime)}
+                  size="small"
+                  color="success"
+                />
+                <IconButton
+                  size="small"
+                  onClick={deleteRecording}
+                  color="error"
+                >
+                  <Delete />
+                </IconButton>
+              </>
+            )}
+          </Box>
+          
+          <TextField
+            fullWidth
+            multiline
+            rows={4}
+            placeholder="Add any written notes about the interaction, voter feedback, concerns, etc."
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            variant="outlined"
+          />
+        </Box>
 
       </DialogContent>
       
