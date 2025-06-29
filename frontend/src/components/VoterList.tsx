@@ -1197,6 +1197,7 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
           setSelectedVoter(null);
         }}
         onSubmit={handleContactSubmit}
+        user={user}
       />
 
       {/* Bulk Tag Operations Dialog - Only for Admin/SuperAdmin */}

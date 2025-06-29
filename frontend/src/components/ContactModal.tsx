@@ -16,25 +16,87 @@ import {
   Divider
 } from '@mui/material';
 import { ContactPhone, Person, LocationOn } from '@mui/icons-material';
-import { Voter, ContactStatus, VoterSupport } from '../types';
+import { Voter, ContactStatus, VoterSupport, AuthUser } from '../types';
 
 interface ContactModalProps {
   open: boolean;
   voter: Voter | null;
   onClose: () => void;
   onSubmit: (status: ContactStatus, notes: string, voterSupport?: VoterSupport) => void;
+  user?: AuthUser;
 }
 
 const ContactModal: React.FC<ContactModalProps> = ({
   open,
   voter,
   onClose,
-  onSubmit
+  onSubmit,
+  user
 }) => {
   const [status, setStatus] = useState<ContactStatus>('reached');
   const [notes, setNotes] = useState('');
   const [voterSupport, setVoterSupport] = useState<VoterSupport | undefined>(undefined);
   const [submitting, setSubmitting] = useState(false);
+  const [currentLocation, setCurrentLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [checkingLocation, setCheckingLocation] = useState(false);
+  const [distance, setDistance] = useState<number | null>(null);
+
+  // Calculate distance between two coordinates using Haversine formula
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const R = 6371; // Earth's radius in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c * 1000; // Convert to meters
+  };
+
+  // Check location when modal opens
+  React.useEffect(() => {
+    if (open && voter?.latitude && voter?.longitude && user?.role !== 'superadmin') {
+      setCheckingLocation(true);
+      setLocationError(null);
+      
+      if (!navigator.geolocation) {
+        setLocationError('Geolocation is not supported by your browser');
+        setCheckingLocation(false);
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const location = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude
+          };
+          setCurrentLocation(location);
+          
+          // Calculate distance to voter
+          const dist = calculateDistance(
+            location.latitude,
+            location.longitude,
+            voter.latitude!,
+            voter.longitude!
+          );
+          setDistance(Math.round(dist));
+          setCheckingLocation(false);
+        },
+        (error) => {
+          setLocationError('Unable to get your location. Please enable location services.');
+          setCheckingLocation(false);
+        },
+        { 
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0 
+        }
+      );
+    }
+  }, [open, voter, user?.role]);
 
   const handleSubmit = async () => {
     if (!voter) return;
@@ -55,8 +117,16 @@ const ContactModal: React.FC<ContactModalProps> = ({
     setStatus('reached');
     setNotes('');
     setVoterSupport(undefined);
+    setCurrentLocation(null);
+    setLocationError(null);
+    setDistance(null);
+    setCheckingLocation(false);
     onClose();
   };
+
+  const isProximityRequired = user?.role !== 'superadmin';
+  const isWithinProximity = distance !== null && distance <= 100;
+  const canSubmit = !isProximityRequired || isWithinProximity;
 
   if (!voter) return null;
 
@@ -73,15 +143,44 @@ const ContactModal: React.FC<ContactModalProps> = ({
       </DialogTitle>
       
       <DialogContent>
-        {/* Proximity Warning */}
-        <Box sx={{ mb: 2, p: 2, bgcolor: 'warning.light', borderRadius: 1 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <LocationOn color="warning" />
-            <Typography variant="body2" color="warning.dark">
-              You must be within 100 meters of the voter's location to log this contact
-            </Typography>
+        {/* Proximity Warning/Status */}
+        {isProximityRequired && (
+          <Box sx={{ 
+            mb: 2, 
+            p: 2, 
+            bgcolor: checkingLocation ? 'info.light' : 
+                     locationError ? 'error.light' :
+                     isWithinProximity ? 'success.light' : 'warning.light', 
+            borderRadius: 1 
+          }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <LocationOn color={
+                checkingLocation ? "info" :
+                locationError ? "error" :
+                isWithinProximity ? "success" : "warning"
+              } />
+              <Typography variant="body2" color={
+                checkingLocation ? "info.dark" :
+                locationError ? "error.dark" :
+                isWithinProximity ? "success.dark" : "warning.dark"
+              }>
+                {checkingLocation ? (
+                  <>Checking your location...</>
+                ) : locationError ? (
+                  <>{locationError}</>
+                ) : distance !== null ? (
+                  isWithinProximity ? (
+                    <>You are {distance} meters from the voter - within the required 100 meter range</>
+                  ) : (
+                    <>You are {distance} meters from the voter - you must be within 100 meters to log this contact</>
+                  )
+                ) : (
+                  <>Location check required</>
+                )}
+              </Typography>
+            </Box>
           </Box>
-        </Box>
+        )}
 
         {/* Voter Information */}
         <Box sx={{ mb: 3, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
@@ -233,10 +332,12 @@ const ContactModal: React.FC<ContactModalProps> = ({
         <Button
           onClick={handleSubmit}
           variant="contained"
-          disabled={submitting}
+          disabled={submitting || !canSubmit || checkingLocation}
           startIcon={<ContactPhone />}
         >
-          {submitting ? 'Logging Contact...' : 'Log Contact'}
+          {submitting ? 'Logging Contact...' : 
+           checkingLocation ? 'Checking Location...' :
+           !canSubmit ? 'Too Far Away' : 'Log Contact'}
         </Button>
       </DialogActions>
     </Dialog>

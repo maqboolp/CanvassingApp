@@ -1229,6 +1229,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
           setSelectedVoterForContact(null);
         }}
         onSubmit={handleContactSubmit}
+        user={user}
       />
 
       {/* Resources Dialog */}

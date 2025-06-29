@@ -3341,6 +3341,7 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
           setSelectedVoterForContact(null);
         }}
         onSubmit={handleContactSubmit}
+        user={user}
       />
 
       {/* Resources Dialog */}
