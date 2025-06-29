@@ -18,13 +18,15 @@ namespace HooverCanvassingApi.Controllers
         private readonly ILogger<ContactsController> _logger;
         private readonly IEmailService _emailService;
         private readonly UserManager<Volunteer> _userManager;
+        private readonly IConfiguration _configuration;
 
-        public ContactsController(ApplicationDbContext context, ILogger<ContactsController> logger, IEmailService emailService, UserManager<Volunteer> userManager)
+        public ContactsController(ApplicationDbContext context, ILogger<ContactsController> logger, IEmailService emailService, UserManager<Volunteer> userManager, IConfiguration configuration)
         {
             _context = context;
             _logger = logger;
             _emailService = emailService;
             _userManager = userManager;
+            _configuration = configuration;
         }
 
         [HttpGet("test")]
@@ -128,6 +130,55 @@ namespace HooverCanvassingApi.Controllers
                 
                 _logger.LogInformation("Voter found: {VoterName} at {VoterAddress}", 
                     $"{voter.FirstName} {voter.LastName}", voter.AddressLine);
+
+                // Check proximity if enabled
+                var proximityConfig = _configuration.GetSection("ContactProximity");
+                var enableProximityCheck = proximityConfig.GetValue<bool>("EnableProximityCheck", true);
+                var maxDistanceMeters = proximityConfig.GetValue<double>("MaxDistanceMeters", 100);
+                var bypassRoles = proximityConfig.GetSection("BypassForRoles").Get<string[]>() ?? new string[] { "SuperAdmin" };
+                
+                var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
+                var shouldCheckProximity = enableProximityCheck && !bypassRoles.Contains(userRole, StringComparer.OrdinalIgnoreCase);
+                
+                if (shouldCheckProximity)
+                {
+                    // Validate that location was provided
+                    if (request.Location == null)
+                    {
+                        _logger.LogWarning("Contact creation failed: Location not provided for user {UserId}", currentUserId);
+                        return BadRequest(new { error = "Location is required to create a contact", requiresLocation = true });
+                    }
+                    
+                    // Validate that voter has coordinates
+                    if (!voter.Latitude.HasValue || !voter.Longitude.HasValue)
+                    {
+                        _logger.LogWarning("Contact creation failed: Voter {VoterId} has no coordinates", request.VoterId);
+                        return BadRequest(new { error = "Cannot verify proximity - voter location not available" });
+                    }
+                    
+                    // Calculate distance
+                    var distance = CalculateDistance(
+                        request.Location.Latitude,
+                        request.Location.Longitude,
+                        voter.Latitude.Value,
+                        voter.Longitude.Value
+                    );
+                    
+                    _logger.LogInformation("Proximity check: User is {Distance}m from voter (max allowed: {MaxDistance}m)", 
+                        Math.Round(distance), maxDistanceMeters);
+                    
+                    if (distance > maxDistanceMeters)
+                    {
+                        _logger.LogWarning("Contact creation failed: User {UserId} is too far ({Distance}m) from voter {VoterId}", 
+                            currentUserId, Math.Round(distance), request.VoterId);
+                        return BadRequest(new { 
+                            error = $"You must be within {maxDistanceMeters} meters of the voter to create a contact", 
+                            currentDistance = Math.Round(distance),
+                            maxDistance = maxDistanceMeters,
+                            proximityRequired = true
+                        });
+                    }
+                }
 
                 // Parse contact status
                 if (!Enum.TryParse<ContactStatus>(request.Status, true, out var contactStatus))
@@ -665,6 +716,29 @@ namespace HooverCanvassingApi.Controllers
                 _logger.LogError(ex, "Failed to send contact deletion notifications for contact {ContactId}", contact.Id);
                 // Don't throw - we don't want notification failures to break contact deletion
             }
+        }
+
+        private static double CalculateDistance(double lat1, double lon1, double lat2, double lon2)
+        {
+            const double earthRadius = 6371; // km
+            const double metersPerKm = 1000;
+
+            var dLat = DegreesToRadians(lat2 - lat1);
+            var dLon = DegreesToRadians(lon2 - lon1);
+
+            var a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
+                    Math.Cos(DegreesToRadians(lat1)) * Math.Cos(DegreesToRadians(lat2)) *
+                    Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
+
+            var c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+            var distanceKm = earthRadius * c;
+            
+            return distanceKm * metersPerKm; // Return distance in meters
+        }
+
+        private static double DegreesToRadians(double degrees)
+        {
+            return degrees * Math.PI / 180;
         }
     }
 

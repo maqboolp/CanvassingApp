@@ -382,6 +382,31 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
     if (!selectedVoter) return;
 
     try {
+      // Get current location for proximity check
+      const currentLocation = await new Promise<{ latitude: number; longitude: number } | null>((resolve) => {
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              resolve({
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude
+              });
+            },
+            (error) => {
+              console.warn('Geolocation error:', error);
+              resolve(null);
+            },
+            { 
+              enableHighAccuracy: true,
+              timeout: 10000,
+              maximumAge: 0 
+            }
+          );
+        } else {
+          resolve(null);
+        }
+      });
+
       const token = user?.token || localStorage.getItem('auth_token');
       const response = await fetch(`${API_BASE_URL}/api/contacts`, {
         method: 'POST',
@@ -394,12 +419,21 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
           status,
           voterSupport,
           notes,
-          location: await getCurrentLocation()
+          location: currentLocation
         })
       });
 
       if (!response.ok) {
-        throw new Error('Failed to log contact');
+        const errorData = await response.json();
+        
+        // Check for proximity error
+        if (errorData.proximityRequired) {
+          throw new Error(`Proximity check failed: ${errorData.error}\n\nYou are ${errorData.currentDistance}m away (max allowed: ${errorData.maxDistance}m)`);
+        } else if (errorData.requiresLocation) {
+          throw new Error('Location services must be enabled to create contacts. Please enable location access and try again.');
+        }
+        
+        throw new Error(errorData.error || 'Failed to log contact');
       }
 
       setContactModalOpen(false);

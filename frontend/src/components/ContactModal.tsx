@@ -73,6 +73,16 @@ const ContactModal: React.FC<ContactModalProps> = ({
       </DialogTitle>
       
       <DialogContent>
+        {/* Proximity Warning */}
+        <Box sx={{ mb: 2, p: 2, bgcolor: 'warning.light', borderRadius: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <LocationOn color="warning" />
+            <Typography variant="body2" color="warning.dark">
+              You must be within 100 meters of the voter's location to log this contact
+            </Typography>
+          </Box>
+        </Box>
+
         {/* Voter Information */}
         <Box sx={{ mb: 3, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
