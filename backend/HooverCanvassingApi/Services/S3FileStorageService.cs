@@ -12,6 +12,7 @@ namespace HooverCanvassingApi.Services
         private readonly IAmazonS3 _s3Client;
         private readonly string _bucketName;
         private readonly string _audioPrefix;
+        private readonly string _publicUrl;
 
         public S3FileStorageService(IConfiguration configuration, ILogger<S3FileStorageService> logger)
         {
@@ -25,15 +26,37 @@ namespace HooverCanvassingApi.Services
             var accessKey = awsConfig["AccessKey"];
             var secretKey = awsConfig["SecretKey"];
             var region = _configuration["AWS:Region"] ?? "us-east-1";
+            var serviceUrl = awsConfig["ServiceUrl"]; // For DigitalOcean Spaces or other S3-compatible services
+            var publicUrl = awsConfig["PublicUrl"]; // Custom public URL for DigitalOcean Spaces
             
             if (!string.IsNullOrEmpty(accessKey) && !string.IsNullOrEmpty(secretKey))
             {
-                _s3Client = new AmazonS3Client(accessKey, secretKey, RegionEndpoint.GetBySystemName(region));
+                if (!string.IsNullOrEmpty(serviceUrl))
+                {
+                    // Use custom endpoint for DigitalOcean Spaces or other S3-compatible services
+                    var config = new AmazonS3Config
+                    {
+                        ServiceURL = serviceUrl,
+                        ForcePathStyle = true // Required for DigitalOcean Spaces
+                    };
+                    _s3Client = new AmazonS3Client(accessKey, secretKey, config);
+                    _logger.LogInformation("Using S3-compatible service at: {ServiceUrl}", serviceUrl);
+                    
+                    // Set public URL for DigitalOcean Spaces
+                    _publicUrl = publicUrl ?? serviceUrl.Replace("https://", $"https://{_bucketName}.");
+                }
+                else
+                {
+                    // Use standard AWS S3
+                    _s3Client = new AmazonS3Client(accessKey, secretKey, RegionEndpoint.GetBySystemName(region));
+                    _publicUrl = $"https://{_bucketName}.s3.amazonaws.com";
+                }
             }
             else
             {
                 // Use default credentials (IAM role, environment variables, etc.)
                 _s3Client = new AmazonS3Client(RegionEndpoint.GetBySystemName(region));
+                _publicUrl = $"https://{_bucketName}.s3.amazonaws.com";
             }
         }
 
@@ -59,7 +82,7 @@ namespace HooverCanvassingApi.Services
                 if (response.HttpStatusCode == System.Net.HttpStatusCode.OK)
                 {
                     // Return the public URL
-                    var url = $"https://{_bucketName}.s3.amazonaws.com/{key}";
+                    var url = $"{_publicUrl}/{key}";
                     _logger.LogInformation("Audio file uploaded to S3 successfully: {Key}", key);
                     return url;
                 }

@@ -1,5 +1,7 @@
 # S3 Setup for Audio Storage
 
+> **Note**: The application supports both AWS S3 and S3-compatible services like DigitalOcean Spaces. For DigitalOcean Spaces setup, see [DIGITALOCEAN-SPACES-SETUP.md](./DIGITALOCEAN-SPACES-SETUP.md).
+
 ## Why S3?
 - **Unlimited Storage**: No file system limitations
 - **Scalability**: Handles any number of audio files
