@@ -18,6 +18,8 @@ namespace HooverCanvassingApi.Services
         Task<int> GetRecipientCountAsync(string? filterZipCodes, VoteFrequency? filterVoteFrequency, int? filterMinAge, int? filterMaxAge, VoterSupport? filterVoterSupport, List<int>? filterTagIds = null);
         Task<IEnumerable<string>> GetAvailableZipCodesAsync();
         Task ProcessScheduledCampaignsAsync();
+        Task<bool> RetryFailedMessagesAsync(int campaignId, bool overrideOptIn = false);
+        Task<bool> SealCampaignIfCompleteAsync(int campaignId);
     }
 
     public class CampaignStats

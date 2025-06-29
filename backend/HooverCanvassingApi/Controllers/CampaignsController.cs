@@ -213,6 +213,26 @@ namespace HooverCanvassingApi.Controllers
                 return StatusCode(500, new { error = ex.Message });
             }
         }
+
+        [HttpPost("{id}/retry-failed")]
+        [Authorize(Roles = "SuperAdmin")]
+        public async Task<ActionResult> RetryFailedMessages(int id, SendCampaignRequest request)
+        {
+            try
+            {
+                var success = await _campaignService.RetryFailedMessagesAsync(id, request?.OverrideOptIn ?? false);
+                if (!success)
+                {
+                    return BadRequest(new { error = "Failed to retry messages. Campaign may be sealed or have no failed messages." });
+                }
+                return Ok(new { message = "Retrying failed messages" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrying failed messages for campaign {CampaignId}", id);
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
     }
 
     public class CreateCampaignRequest

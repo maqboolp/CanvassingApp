@@ -630,5 +630,189 @@ namespace HooverCanvassingApi.Services
 
             await context.SaveChangesAsync();
         }
+
+        public async Task<bool> RetryFailedMessagesAsync(int campaignId, bool overrideOptIn = false)
+        {
+            try
+            {
+                var campaign = await _context.Campaigns
+                    .Include(c => c.Messages)
+                    .FirstOrDefaultAsync(c => c.Id == campaignId);
+
+                if (campaign == null)
+                    return false;
+
+                // Don't retry if campaign is sealed
+                if (campaign.Status == CampaignStatus.Sealed)
+                {
+                    _logger.LogWarning($"Cannot retry messages for sealed campaign {campaignId}");
+                    return false;
+                }
+
+                // Get failed messages
+                var failedMessages = campaign.Messages
+                    .Where(m => m.Status == MessageStatus.Failed || 
+                               m.Status == MessageStatus.Undelivered || 
+                               m.Status == MessageStatus.NoAnswer ||
+                               m.Status == MessageStatus.Busy)
+                    .ToList();
+
+                if (!failedMessages.Any())
+                {
+                    _logger.LogInformation($"No failed messages to retry for campaign {campaignId}");
+                    // Check if we should seal the campaign
+                    await SealCampaignIfCompleteAsync(campaignId);
+                    return true;
+                }
+
+                _logger.LogInformation($"Retrying {failedMessages.Count} failed messages for campaign {campaignId}");
+
+                // Update campaign status
+                campaign.Status = CampaignStatus.Sending;
+                campaign.PendingDeliveries = failedMessages.Count;
+                await _context.SaveChangesAsync();
+
+                // Prepare messages for retry
+                var messagesToRetry = failedMessages.Select(m => new
+                {
+                    PhoneNumber = m.RecipientPhone,
+                    Message = campaign.Message,
+                    CampaignMessageId = m.Id,
+                    VoiceUrl = campaign.VoiceUrl
+                }).ToList();
+
+                // Retry based on campaign type
+                if (campaign.Type == CampaignType.SMS)
+                {
+                    var messageList = messagesToRetry.Select(m => 
+                        (m.PhoneNumber, m.Message, m.CampaignMessageId)).ToList();
+                    
+                    await _twilioService.SendBulkSmsAsync(messageList, overrideOptIn);
+                }
+                else if (campaign.Type == CampaignType.RoboCall)
+                {
+                    // Retry robo calls one by one
+                    foreach (var msg in messagesToRetry)
+                    {
+                        if (!string.IsNullOrEmpty(msg.VoiceUrl))
+                        {
+                            await _twilioService.MakeRoboCallAsync(msg.PhoneNumber, msg.VoiceUrl, msg.CampaignMessageId);
+                        }
+                    }
+                }
+
+                // Update retry count for failed messages
+                foreach (var msg in failedMessages)
+                {
+                    msg.RetryCount++;
+                    msg.Status = MessageStatus.Queued;
+                    msg.ErrorMessage = null;
+                }
+                await _context.SaveChangesAsync();
+
+                // Schedule status update check
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(TimeSpan.FromMinutes(2));
+                    await UpdateCampaignStatsAsync(campaignId);
+                    await SealCampaignIfCompleteAsync(campaignId);
+                });
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error retrying failed messages for campaign {campaignId}");
+                return false;
+            }
+        }
+
+        private async Task UpdateCampaignStatsAsync(int campaignId)
+        {
+            try
+            {
+                var campaign = await _context.Campaigns
+                    .Include(c => c.Messages)
+                    .FirstOrDefaultAsync(c => c.Id == campaignId);
+
+                if (campaign == null)
+                    return;
+
+                // Update stats based on message statuses
+                campaign.SuccessfulDeliveries = campaign.Messages.Count(m => 
+                    m.Status == MessageStatus.Delivered || 
+                    m.Status == MessageStatus.Sent ||
+                    m.Status == MessageStatus.Completed);
+                    
+                campaign.FailedDeliveries = campaign.Messages.Count(m => 
+                    m.Status == MessageStatus.Failed || 
+                    m.Status == MessageStatus.Undelivered ||
+                    m.Status == MessageStatus.NoAnswer ||
+                    m.Status == MessageStatus.Busy);
+                    
+                campaign.PendingDeliveries = campaign.Messages.Count(m => 
+                    m.Status == MessageStatus.Pending ||
+                    m.Status == MessageStatus.Queued ||
+                    m.Status == MessageStatus.Sending);
+
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error updating campaign stats for campaign {campaignId}");
+            }
+        }
+
+        public async Task<bool> SealCampaignIfCompleteAsync(int campaignId)
+        {
+            try
+            {
+                var campaign = await _context.Campaigns
+                    .Include(c => c.Messages)
+                    .FirstOrDefaultAsync(c => c.Id == campaignId);
+
+                if (campaign == null || campaign.Status == CampaignStatus.Sealed)
+                    return false;
+
+                // Check if all messages are in a final state
+                var hasUnfinishedMessages = campaign.Messages.Any(m => 
+                    m.Status == MessageStatus.Pending ||
+                    m.Status == MessageStatus.Queued ||
+                    m.Status == MessageStatus.Sending);
+
+                if (!hasUnfinishedMessages)
+                {
+                    // Check if all messages are successful
+                    var failedCount = campaign.Messages.Count(m => 
+                        m.Status == MessageStatus.Failed || 
+                        m.Status == MessageStatus.Undelivered ||
+                        m.Status == MessageStatus.NoAnswer ||
+                        m.Status == MessageStatus.Busy);
+
+                    if (failedCount == 0)
+                    {
+                        // All messages successful - seal the campaign
+                        campaign.Status = CampaignStatus.Sealed;
+                        _logger.LogInformation($"Campaign {campaignId} sealed - all messages delivered successfully");
+                    }
+                    else
+                    {
+                        // Has failed messages - mark as completed but not sealed
+                        campaign.Status = CampaignStatus.Completed;
+                        _logger.LogInformation($"Campaign {campaignId} completed with {failedCount} failed messages");
+                    }
+
+                    await _context.SaveChangesAsync();
+                    return true;
+                }
+
+                return false;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error sealing campaign {campaignId}");
+                return false;
+            }
+        }
     }
 }

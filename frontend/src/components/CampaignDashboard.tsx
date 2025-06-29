@@ -40,7 +40,7 @@ interface Campaign {
   name: string;
   message: string;
   type: number; // 0 = SMS, 1 = RoboCall
-  status: number; // 0 = Draft, 1 = Scheduled, 2 = Sending, 3 = Completed, 4 = Failed, 5 = Cancelled
+  status: number; // 0 = Draft, 1 = Scheduled, 2 = Sending, 3 = Completed, 4 = Failed, 5 = Cancelled, 6 = Sealed
   scheduledTime?: string;
   createdAt: string;
   sentAt?: string;
@@ -94,6 +94,7 @@ const getCampaignStatusString = (status: number): string => {
     case 3: return 'Completed';
     case 4: return 'Failed';
     case 5: return 'Cancelled';
+    case 6: return 'Sealed';
     default: return 'Ready to Send';
   }
 };
@@ -298,15 +299,23 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
     if (!sendDialog.campaignId) return;
     
     try {
+      // Check if this is a retry (campaign status is completed)
+      const campaign = campaigns.find(c => c.id === sendDialog.campaignId);
+      const isRetry = campaign && campaign.status === 3; // Completed status
+      
+      const endpoint = isRetry 
+        ? `${API_BASE_URL}/api/campaigns/${sendDialog.campaignId}/retry-failed`
+        : `${API_BASE_URL}/api/campaigns/${sendDialog.campaignId}/send`;
+      
       await ApiErrorHandler.makeAuthenticatedRequest(
-        `${API_BASE_URL}/api/campaigns/${sendDialog.campaignId}/send`,
+        endpoint,
         {
           method: 'POST',
           body: JSON.stringify({ overrideOptIn: sendDialog.overrideOptIn })
         }
       );
 
-      setSuccess('Campaign is being sent');
+      setSuccess(isRetry ? 'Retrying failed messages' : 'Campaign is being sent');
       setSendDialog({ open: false, campaignId: null, overrideOptIn: false });
       fetchCampaigns();
     } catch (error) {
@@ -633,8 +642,35 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                   )}
                 </>
               )}
-              {/* Show a message for non-editable campaigns */}
-              {campaign.status !== 0 && (
+              {/* Show retry button for completed campaigns with failed messages */}
+              {campaign.status === 3 && campaign.failedDeliveries > 0 && canSendCampaign() && (
+                <Button
+                  size="small"
+                  startIcon={<SendIcon />}
+                  onClick={() => setSendDialog({ 
+                    open: true, 
+                    campaignId: campaign.id, 
+                    overrideOptIn: false 
+                  })}
+                  variant="outlined"
+                  color="warning"
+                >
+                  Retry Failed ({campaign.failedDeliveries})
+                </Button>
+              )}
+              {/* Show a message for sealed campaigns */}
+              {campaign.status === 6 && (
+                <Box sx={{ p: 1 }}>
+                  <Chip 
+                    label="✓ All Messages Delivered" 
+                    color="success" 
+                    size="small" 
+                    variant="outlined"
+                  />
+                </Box>
+              )}
+              {/* Show a message for other non-editable campaigns */}
+              {campaign.status !== 0 && campaign.status !== 3 && campaign.status !== 6 && (
                 <Box sx={{ p: 1 }}>
                   <Typography variant="caption" color="text.secondary">
                     Campaign has been sent and cannot be edited
@@ -936,11 +972,19 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
         maxWidth="sm" 
         fullWidth
       >
-        <DialogTitle>Confirm Campaign Send</DialogTitle>
+        <DialogTitle>
+          {campaigns.find(c => c.id === sendDialog.campaignId)?.status === 3 
+            ? 'Retry Failed Messages' 
+            : 'Confirm Campaign Send'
+          }
+        </DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ pt: 2 }}>
             <Alert severity="warning">
-              Are you sure you want to send this campaign? This action cannot be undone.
+              {campaigns.find(c => c.id === sendDialog.campaignId)?.status === 3 
+                ? `Are you sure you want to retry sending to ${campaigns.find(c => c.id === sendDialog.campaignId)?.failedDeliveries} failed recipients?`
+                : 'Are you sure you want to send this campaign? This action cannot be undone.'
+              }
             </Alert>
             
             <FormControlLabel
@@ -981,7 +1025,10 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
             variant="contained"
             color={sendDialog.overrideOptIn ? "warning" : "primary"}
           >
-            {sendDialog.overrideOptIn ? "Send to All" : "Send Campaign"}
+            {campaigns.find(c => c.id === sendDialog.campaignId)?.status === 3 
+              ? (sendDialog.overrideOptIn ? "Retry All" : "Retry Failed") 
+              : (sendDialog.overrideOptIn ? "Send to All" : "Send Campaign")
+            }
           </Button>
         </DialogActions>
       </Dialog>

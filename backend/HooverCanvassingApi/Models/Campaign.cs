@@ -47,6 +47,7 @@ namespace HooverCanvassingApi.Models
         Sending,
         Completed,
         Failed,
-        Cancelled
+        Cancelled,
+        Sealed  // Campaign is fully completed and cannot be modified
     }
 }
