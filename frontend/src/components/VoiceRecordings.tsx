@@ -34,7 +34,8 @@ import {
   FiberManualRecord as RecordIcon,
   Download as DownloadIcon,
 } from '@mui/icons-material';
-import { api } from '../services/api';
+import { API_BASE_URL } from '../config';
+import { ApiErrorHandler, ApiError } from '../utils/apiErrorHandler';
 
 interface VoiceRecording {
   id: number;
@@ -90,9 +91,14 @@ const VoiceRecordings: React.FC<VoiceRecordingsProps> = ({ user }) => {
   const fetchRecordings = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/voice-recordings');
-      setRecordings(response.data);
+      const data = await ApiErrorHandler.makeAuthenticatedRequest(
+        `${API_BASE_URL}/api/voicerecordings`
+      );
+      setRecordings(data);
     } catch (err) {
+      if (err instanceof ApiError && err.isAuthError) {
+        return;
+      }
       setError('Failed to load voice recordings');
     } finally {
       setLoading(false);
@@ -128,15 +134,24 @@ const VoiceRecordings: React.FC<VoiceRecordingsProps> = ({ user }) => {
 
     try {
       setUploading(true);
-      await api.post('/voice-recordings/upload', data, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      await ApiErrorHandler.makeAuthenticatedRequest(
+        `${API_BASE_URL}/api/voicerecordings/upload`,
+        {
+          method: 'POST',
+          body: data,
+          headers: { 'Content-Type': 'multipart/form-data' },
+        }
+      );
       setSuccess('Voice recording uploaded successfully');
       setUploadDialogOpen(false);
       setFormData({ name: '', description: '', file: null });
       fetchRecordings();
     } catch (err) {
-      setError('Failed to upload voice recording');
+      if (err instanceof ApiError) {
+        setError(err.message);
+      } else {
+        setError('Failed to upload voice recording');
+      }
     } finally {
       setUploading(false);
     }
@@ -169,15 +184,24 @@ const VoiceRecordings: React.FC<VoiceRecordingsProps> = ({ user }) => {
 
         try {
           setUploading(true);
-          await api.post('/voice-recordings/upload', data, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-          });
+          await ApiErrorHandler.makeAuthenticatedRequest(
+            `${API_BASE_URL}/api/voicerecordings/upload`,
+            {
+              method: 'POST',
+              body: data,
+              headers: { 'Content-Type': 'multipart/form-data' },
+            }
+          );
           setSuccess('Voice recording saved successfully');
           setRecordDialogOpen(false);
           setFormData({ name: '', description: '', file: null });
           fetchRecordings();
         } catch (err) {
-          setError('Failed to save voice recording');
+          if (err instanceof ApiError) {
+            setError(err.message);
+          } else {
+            setError('Failed to save voice recording');
+          }
         } finally {
           setUploading(false);
           setRecording(false);
@@ -230,15 +254,25 @@ const VoiceRecordings: React.FC<VoiceRecordingsProps> = ({ user }) => {
     if (!selectedRecording) return;
 
     try {
-      await api.put(`/voice-recordings/${selectedRecording.id}`, {
-        name: formData.name,
-        description: formData.description,
-      });
+      await ApiErrorHandler.makeAuthenticatedRequest(
+        `${API_BASE_URL}/api/voicerecordings/${selectedRecording.id}`,
+        {
+          method: 'PUT',
+          body: JSON.stringify({
+            name: formData.name,
+            description: formData.description,
+          })
+        }
+      );
       setSuccess('Voice recording updated successfully');
       setEditDialogOpen(false);
       fetchRecordings();
     } catch (err) {
-      setError('Failed to update voice recording');
+      if (err instanceof ApiError) {
+        setError(err.message);
+      } else {
+        setError('Failed to update voice recording');
+      }
     }
   };
 
@@ -246,11 +280,20 @@ const VoiceRecordings: React.FC<VoiceRecordingsProps> = ({ user }) => {
     if (!window.confirm('Are you sure you want to delete this voice recording?')) return;
 
     try {
-      await api.delete(`/voice-recordings/${id}`);
+      await ApiErrorHandler.makeAuthenticatedRequest(
+        `${API_BASE_URL}/api/voicerecordings/${id}`,
+        {
+          method: 'DELETE'
+        }
+      );
       setSuccess('Voice recording deleted successfully');
       fetchRecordings();
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to delete voice recording');
+      if (err instanceof ApiError) {
+        setError(err.message);
+      } else {
+        setError('Failed to delete voice recording');
+      }
     }
   };
 
