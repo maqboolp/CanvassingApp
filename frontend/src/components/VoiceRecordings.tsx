@@ -304,6 +304,8 @@ const VoiceRecordings: React.FC<VoiceRecordingsProps> = ({ user }) => {
     } catch (err: any) {
       if (err instanceof ApiError) {
         setError(err.message);
+      } else if (err.response && err.response.status === 400) {
+        setError('Cannot delete recording that is used in campaigns');
       } else {
         setError('Failed to delete voice recording');
       }
@@ -414,14 +416,16 @@ const VoiceRecordings: React.FC<VoiceRecordingsProps> = ({ user }) => {
                       <EditIcon />
                     </IconButton>
                   </Tooltip>
-                  <Tooltip title="Delete">
-                    <IconButton
-                      onClick={() => handleDelete(recording.id)}
-                      color="error"
-                      disabled={recording.usageCount > 0}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
+                  <Tooltip title={recording.usageCount > 0 ? "Cannot delete - used in campaigns" : "Delete"}>
+                    <span>
+                      <IconButton
+                        onClick={() => handleDelete(recording.id)}
+                        color="error"
+                        disabled={recording.usageCount > 0}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </span>
                   </Tooltip>
                 </TableCell>
               </TableRow>
