@@ -37,6 +37,11 @@ namespace HooverCanvassingApi.Services
             await _context.SaveChangesAsync();
             
             _logger.LogInformation($"Campaign '{campaign.Name}' created with ID {campaign.Id} and {campaign.TotalRecipients} recipients");
+            
+            // Clear navigation properties to avoid circular reference in JSON serialization
+            campaign.VoiceRecording = null;
+            campaign.Messages = new List<CampaignMessage>();
+            
             return campaign;
         }
 
@@ -66,6 +71,11 @@ namespace HooverCanvassingApi.Services
             
             _context.Campaigns.Update(campaign);
             await _context.SaveChangesAsync();
+            
+            // Clear navigation properties to avoid circular reference in JSON serialization
+            campaign.VoiceRecording = null;
+            campaign.Messages = new List<CampaignMessage>();
+            
             return campaign;
         }
 
