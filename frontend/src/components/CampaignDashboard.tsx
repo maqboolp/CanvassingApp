@@ -276,8 +276,14 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
       errors.name = 'Campaign name is required';
     }
     
-    if (!newCampaign.message.trim()) {
-      errors.message = newCampaign.type === 'SMS' ? 'SMS message is required' : 'Call script is required';
+    if (newCampaign.type === 'SMS' || (newCampaign.type === 'RoboCall' && voiceType === 'text')) {
+      if (!newCampaign.message.trim()) {
+        errors.message = newCampaign.type === 'SMS' ? 'SMS message is required' : 'Call script is required';
+      }
+    }
+    
+    if (newCampaign.type === 'RoboCall' && voiceType === 'recording' && !newCampaign.voiceRecordingId) {
+      errors.voiceRecording = 'Please select a voice recording';
     }
     
     
@@ -825,7 +831,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                 </RadioGroup>
 
                 {voiceType === 'recording' && (
-                  <FormControl fullWidth sx={{ mt: 2 }}>
+                  <FormControl fullWidth sx={{ mt: 2 }} error={!!validationErrors.voiceRecording}>
                     <InputLabel>Select Voice Recording</InputLabel>
                     <Select
                       value={newCampaign.voiceRecordingId || ''}
@@ -862,6 +868,11 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                         </MenuItem>
                       ))}
                     </Select>
+                    {validationErrors.voiceRecording && (
+                      <Typography variant="caption" color="error" sx={{ mt: 0.5, display: 'block' }}>
+                        {validationErrors.voiceRecording}
+                      </Typography>
+                    )}
                     {voiceRecordings.length === 0 && (
                       <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
                         No voice recordings available. Go to Voice Recordings tab to create one.
@@ -1075,7 +1086,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                 </RadioGroup>
 
                 {voiceType === 'recording' && (
-                  <FormControl fullWidth sx={{ mt: 2 }}>
+                  <FormControl fullWidth sx={{ mt: 2 }} error={!!validationErrors.voiceRecording}>
                     <InputLabel>Select Voice Recording</InputLabel>
                     <Select
                       value={newCampaign.voiceRecordingId || ''}
@@ -1112,6 +1123,11 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                         </MenuItem>
                       ))}
                     </Select>
+                    {validationErrors.voiceRecording && (
+                      <Typography variant="caption" color="error" sx={{ mt: 0.5, display: 'block' }}>
+                        {validationErrors.voiceRecording}
+                      </Typography>
+                    )}
                     {voiceRecordings.length === 0 && (
                       <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
                         No voice recordings available. Go to Voice Recordings tab to create one.
