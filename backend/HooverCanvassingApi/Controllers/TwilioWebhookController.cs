@@ -114,17 +114,43 @@ namespace HooverCanvassingApi.Controllers
         }
 
         [HttpPost("voice")]
+        [HttpGet("voice")]
         public IActionResult VoiceResponse([FromQuery] string message = "")
         {
-            // Generate TwiML for the robo call
-            var twiml = $@"<?xml version=""1.0"" encoding=""UTF-8""?>
-                <Response>
-                    <Say voice=""alice"">{message}</Say>
-                    <Pause length=""1""/>
-                    <Say voice=""alice"">Thank you for your time. Goodbye.</Say>
-                </Response>";
+            try
+            {
+                // Default message if none provided
+                if (string.IsNullOrEmpty(message))
+                {
+                    message = "Hello, this is a message from the campaign. Thank you for your time.";
+                }
 
-            return Content(twiml, "application/xml");
+                // Escape XML special characters
+                message = System.Security.SecurityElement.Escape(message);
+
+                // Generate TwiML for the robo call
+                var twiml = $@"<?xml version=""1.0"" encoding=""UTF-8""?>
+<Response>
+    <Say voice=""alice"">{message}</Say>
+    <Pause length=""1""/>
+    <Say voice=""alice"">Thank you for your time. Goodbye.</Say>
+</Response>";
+
+                _logger.LogInformation($"Voice response generated for message: {message}");
+                return Content(twiml, "application/xml");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error generating voice response");
+                
+                // Return a safe error response
+                var errorTwiml = @"<?xml version=""1.0"" encoding=""UTF-8""?>
+<Response>
+    <Say voice=""alice"">We apologize, but there was an error processing this call. Goodbye.</Say>
+</Response>";
+                
+                return Content(errorTwiml, "application/xml");
+            }
         }
 
         private async Task UpdateCampaignStats(int campaignId)
