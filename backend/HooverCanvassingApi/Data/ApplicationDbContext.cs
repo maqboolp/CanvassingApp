@@ -21,6 +21,7 @@ namespace HooverCanvassingApi.Data
         public DbSet<VoterTag> VoterTags { get; set; }
         public DbSet<VoterTagAssignment> VoterTagAssignments { get; set; }
         public DbSet<ConsentRecord> ConsentRecords { get; set; }
+        public DbSet<VoiceRecording> VoiceRecordings { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

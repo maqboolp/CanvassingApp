@@ -115,28 +115,44 @@ namespace HooverCanvassingApi.Controllers
 
         [HttpPost("voice")]
         [HttpGet("voice")]
-        public IActionResult VoiceResponse([FromQuery] string message = "")
+        public IActionResult VoiceResponse([FromQuery] string message = "", [FromQuery] string audioUrl = "")
         {
             try
             {
-                // Default message if none provided
-                if (string.IsNullOrEmpty(message))
+                string twiml;
+
+                // If audio URL is provided, use that instead of text-to-speech
+                if (!string.IsNullOrEmpty(audioUrl))
                 {
-                    message = "Hello, this is a message from the campaign. Thank you for your time.";
+                    _logger.LogInformation($"Voice response using audio file: {audioUrl}");
+                    
+                    twiml = $@"<?xml version=""1.0"" encoding=""UTF-8""?>
+<Response>
+    <Play>{System.Security.SecurityElement.Escape(audioUrl)}</Play>
+</Response>";
                 }
+                else
+                {
+                    // Default message if none provided
+                    if (string.IsNullOrEmpty(message))
+                    {
+                        message = "Hello, this is a message from the campaign. Thank you for your time.";
+                    }
 
-                // Escape XML special characters
-                message = System.Security.SecurityElement.Escape(message);
+                    // Escape XML special characters
+                    message = System.Security.SecurityElement.Escape(message);
 
-                // Generate TwiML for the robo call
-                var twiml = $@"<?xml version=""1.0"" encoding=""UTF-8""?>
+                    // Generate TwiML for the robo call with text-to-speech
+                    twiml = $@"<?xml version=""1.0"" encoding=""UTF-8""?>
 <Response>
     <Say voice=""alice"">{message}</Say>
     <Pause length=""1""/>
     <Say voice=""alice"">Thank you for your time. Goodbye.</Say>
 </Response>";
 
-                _logger.LogInformation($"Voice response generated for message: {message}");
+                    _logger.LogInformation($"Voice response generated for message: {message}");
+                }
+
                 return Content(twiml, "application/xml");
             }
             catch (Exception ex)

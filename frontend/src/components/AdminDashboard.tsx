@@ -80,6 +80,7 @@ import { AuthUser, Voter, ContactStatus, VoterSupport, VoterTagDetail } from '..
 import VoterList from './VoterList';
 import VoterContactHistory from './VoterContactHistory';
 import ContactModal from './ContactModal';
+import VoiceRecordings from './VoiceRecordings';
 import { API_BASE_URL } from '../config';
 import { ApiErrorHandler, ApiError } from '../utils/apiErrorHandler';
 
@@ -125,6 +126,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
       'voters',
       'history',
       ...(user.role === 'admin' || user.role === 'superadmin' ? ['campaigns'] : []),
+      ...(user.role === 'admin' || user.role === 'superadmin' ? ['voiceRecordings'] : []),
       ...(user.role === 'admin' || user.role === 'superadmin' ? ['tags'] : []),
       'resources',
       'engagement',
@@ -1404,6 +1406,9 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
             <Tab label="Campaigns" icon={<Campaign />} />
           )}
           {(user.role === 'admin' || user.role === 'superadmin') && (
+            <Tab label="Voice Recordings" icon={<Phone />} />
+          )}
+          {(user.role === 'admin' || user.role === 'superadmin') && (
             <Tab label="Tags" icon={<LocalOffer />} />
           )}
           <Tab label="Resources" icon={<MenuBook />} />
@@ -2272,6 +2277,13 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
         {(user.role === 'admin' || user.role === 'superadmin') && (
           <TabPanel value={currentTab} index={getTabIndex('campaigns')}>
             <CampaignDashboard user={user} />
+          </TabPanel>
+        )}
+
+        {/* Voice Recordings Tab - For Admins and SuperAdmins */}
+        {(user.role === 'admin' || user.role === 'superadmin') && (
+          <TabPanel value={currentTab} index={getTabIndex('voiceRecordings')}>
+            <VoiceRecordings user={user} />
           </TabPanel>
         )}
 

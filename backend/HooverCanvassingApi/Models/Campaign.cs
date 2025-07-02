@@ -17,6 +17,10 @@ namespace HooverCanvassingApi.Models
         public string? VoiceUrl { get; set; } // For robo calls
         public string? RecordingUrl { get; set; } // For robo calls
         
+        // Voice recording reference for RoboCall campaigns
+        public int? VoiceRecordingId { get; set; }
+        public VoiceRecording? VoiceRecording { get; set; }
+        
         // Filtering criteria
         public string? FilterZipCodes { get; set; } // JSON array of zip codes
         public VoteFrequency? FilterVoteFrequency { get; set; }

@@ -20,6 +20,7 @@ namespace HooverCanvassingApi.Services
         Task ProcessScheduledCampaignsAsync();
         Task<bool> RetryFailedMessagesAsync(int campaignId, bool overrideOptIn = false);
         Task<bool> SealCampaignIfCompleteAsync(int campaignId);
+        Task<VoiceRecording?> GetVoiceRecordingAsync(int id);
     }
 
     public class CampaignStats

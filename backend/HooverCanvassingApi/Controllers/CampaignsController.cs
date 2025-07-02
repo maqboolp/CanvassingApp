@@ -51,6 +51,7 @@ namespace HooverCanvassingApi.Controllers
                 Type = request.Type,
                 CreatedById = userId,
                 VoiceUrl = request.VoiceUrl,
+                VoiceRecordingId = request.VoiceRecordingId,
                 FilterZipCodes = request.FilterZipCodes,
                 FilterVoteFrequency = request.FilterVoteFrequency,
                 FilterMinAge = request.FilterMinAge,
@@ -61,13 +62,28 @@ namespace HooverCanvassingApi.Controllers
                     : null
             };
 
-            // Auto-generate voice URL for RoboCall campaigns if not provided
-            if (campaign.Type == CampaignType.RoboCall && string.IsNullOrEmpty(campaign.VoiceUrl))
+            // Auto-generate voice URL for RoboCall campaigns
+            if (campaign.Type == CampaignType.RoboCall)
             {
-                var baseUrl = $"{Request.Scheme}://{Request.Host}";
-                var encodedMessage = Uri.EscapeDataString(campaign.Message);
-                campaign.VoiceUrl = $"{baseUrl}/api/TwilioWebhook/voice?message={encodedMessage}";
-                _logger.LogInformation($"Auto-generated voice URL for campaign: {campaign.VoiceUrl}");
+                if (campaign.VoiceRecordingId.HasValue)
+                {
+                    // Use voice recording
+                    var voiceRecording = await _campaignService.GetVoiceRecordingAsync(campaign.VoiceRecordingId.Value);
+                    if (voiceRecording != null)
+                    {
+                        var baseUrl = $"{Request.Scheme}://{Request.Host}";
+                        campaign.VoiceUrl = $"{baseUrl}/api/TwilioWebhook/voice?audioUrl={Uri.EscapeDataString(voiceRecording.Url)}";
+                        _logger.LogInformation($"Using voice recording for campaign: {voiceRecording.Name}");
+                    }
+                }
+                else if (string.IsNullOrEmpty(campaign.VoiceUrl))
+                {
+                    // Use text-to-speech
+                    var baseUrl = $"{Request.Scheme}://{Request.Host}";
+                    var encodedMessage = Uri.EscapeDataString(campaign.Message);
+                    campaign.VoiceUrl = $"{baseUrl}/api/TwilioWebhook/voice?message={encodedMessage}";
+                    _logger.LogInformation($"Auto-generated voice URL for campaign: {campaign.VoiceUrl}");
+                }
             }
 
             var createdCampaign = await _campaignService.CreateCampaignAsync(campaign);
@@ -94,19 +110,35 @@ namespace HooverCanvassingApi.Controllers
             campaign.Name = request.Name;
             campaign.Message = request.Message;
             campaign.VoiceUrl = request.VoiceUrl;
+            campaign.VoiceRecordingId = request.VoiceRecordingId;
             campaign.FilterZipCodes = request.FilterZipCodes;
             campaign.FilterVoteFrequency = request.FilterVoteFrequency;
             campaign.FilterMinAge = request.FilterMinAge;
             campaign.FilterMaxAge = request.FilterMaxAge;
             campaign.FilterVoterSupport = request.FilterVoterSupport;
 
-            // Auto-generate voice URL for RoboCall campaigns if not provided
-            if (campaign.Type == CampaignType.RoboCall && string.IsNullOrEmpty(campaign.VoiceUrl))
+            // Auto-generate voice URL for RoboCall campaigns
+            if (campaign.Type == CampaignType.RoboCall)
             {
-                var baseUrl = $"{Request.Scheme}://{Request.Host}";
-                var encodedMessage = Uri.EscapeDataString(campaign.Message);
-                campaign.VoiceUrl = $"{baseUrl}/api/TwilioWebhook/voice?message={encodedMessage}";
-                _logger.LogInformation($"Auto-generated voice URL for campaign update: {campaign.VoiceUrl}");
+                if (campaign.VoiceRecordingId.HasValue)
+                {
+                    // Use voice recording
+                    var voiceRecording = await _campaignService.GetVoiceRecordingAsync(campaign.VoiceRecordingId.Value);
+                    if (voiceRecording != null)
+                    {
+                        var baseUrl = $"{Request.Scheme}://{Request.Host}";
+                        campaign.VoiceUrl = $"{baseUrl}/api/TwilioWebhook/voice?audioUrl={Uri.EscapeDataString(voiceRecording.Url)}";
+                        _logger.LogInformation($"Using voice recording for campaign update: {voiceRecording.Name}");
+                    }
+                }
+                else if (string.IsNullOrEmpty(campaign.VoiceUrl))
+                {
+                    // Use text-to-speech
+                    var baseUrl = $"{Request.Scheme}://{Request.Host}";
+                    var encodedMessage = Uri.EscapeDataString(campaign.Message);
+                    campaign.VoiceUrl = $"{baseUrl}/api/TwilioWebhook/voice?message={encodedMessage}";
+                    _logger.LogInformation($"Auto-generated voice URL for campaign update: {campaign.VoiceUrl}");
+                }
             }
 
             var updatedCampaign = await _campaignService.UpdateCampaignAsync(campaign);
@@ -259,6 +291,7 @@ namespace HooverCanvassingApi.Controllers
         public string Message { get; set; } = string.Empty;
         public CampaignType Type { get; set; }
         public string? VoiceUrl { get; set; }
+        public int? VoiceRecordingId { get; set; }
         public string? FilterZipCodes { get; set; }
         public VoteFrequency? FilterVoteFrequency { get; set; }
         public int? FilterMinAge { get; set; }
@@ -272,6 +305,7 @@ namespace HooverCanvassingApi.Controllers
         public string Name { get; set; } = string.Empty;
         public string Message { get; set; } = string.Empty;
         public string? VoiceUrl { get; set; }
+        public int? VoiceRecordingId { get; set; }
         public string? FilterZipCodes { get; set; }
         public VoteFrequency? FilterVoteFrequency { get; set; }
         public int? FilterMinAge { get; set; }

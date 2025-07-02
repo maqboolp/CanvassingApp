@@ -814,5 +814,10 @@ namespace HooverCanvassingApi.Services
                 return false;
             }
         }
+
+        public async Task<VoiceRecording?> GetVoiceRecordingAsync(int id)
+        {
+            return await _context.VoiceRecordings.FindAsync(id);
+        }
     }
 }
