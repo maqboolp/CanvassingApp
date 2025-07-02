@@ -103,14 +103,19 @@ namespace HooverCanvassingApi.Controllers
         [HttpPost("upload")]
         public async Task<ActionResult<VoiceRecordingDto>> UploadVoiceRecording([FromForm] UploadVoiceRecordingRequest request)
         {
+            _logger.LogInformation($"Upload request received. File: {request?.File?.FileName}, Length: {request?.File?.Length}");
+            
             if (request.File == null || request.File.Length == 0)
+            {
+                _logger.LogWarning("No file uploaded in request");
                 return BadRequest("No file uploaded");
+            }
 
             // Validate file type
-            var allowedExtensions = new[] { ".mp3", ".wav", ".m4a", ".ogg" };
+            var allowedExtensions = new[] { ".mp3", ".wav", ".m4a", ".ogg", ".webm" };
             var extension = Path.GetExtension(request.File.FileName).ToLower();
             if (!allowedExtensions.Contains(extension))
-                return BadRequest("Invalid file type. Allowed types: MP3, WAV, M4A, OGG");
+                return BadRequest($"Invalid file type: {extension}. Allowed types: MP3, WAV, M4A, OGG, WEBM");
 
             // Validate file size (max 10MB)
             if (request.File.Length > 10 * 1024 * 1024)

@@ -447,7 +447,7 @@ const VoiceRecordings: React.FC<VoiceRecordingsProps> = ({ user }) => {
             <input
               type="file"
               hidden
-              accept=".mp3,.wav,.m4a,.ogg"
+              accept=".mp3,.wav,.m4a,.ogg,.webm"
               onChange={(e) => {
                 if (e.target.files?.[0]) {
                   setFormData({ ...formData, file: e.target.files[0] });
