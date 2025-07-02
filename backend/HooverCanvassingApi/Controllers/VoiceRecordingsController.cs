@@ -3,8 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using HooverCanvassingApi.Data;
 using HooverCanvassingApi.Models;
-using Amazon.S3;
-using Amazon.S3.Model;
+using HooverCanvassingApi.Services;
 using System.Security.Claims;
 
 namespace HooverCanvassingApi.Controllers
@@ -17,22 +16,18 @@ namespace HooverCanvassingApi.Controllers
         private readonly ApplicationDbContext _context;
         private readonly IConfiguration _configuration;
         private readonly ILogger<VoiceRecordingsController> _logger;
-        private readonly IAmazonS3 _s3Client;
-        private readonly string _bucketName;
-        private readonly string _spacesUrl;
+        private readonly IFileStorageService _fileStorageService;
 
         public VoiceRecordingsController(
             ApplicationDbContext context,
             IConfiguration configuration,
             ILogger<VoiceRecordingsController> logger,
-            IAmazonS3 s3Client)
+            IFileStorageService fileStorageService)
         {
             _context = context;
             _configuration = configuration;
             _logger = logger;
-            _s3Client = s3Client;
-            _bucketName = _configuration["DigitalOcean:Spaces:BucketName"] ?? throw new InvalidOperationException("Bucket name not configured");
-            _spacesUrl = _configuration["DigitalOcean:Spaces:Url"] ?? throw new InvalidOperationException("Spaces URL not configured");
+            _fileStorageService = fileStorageService;
         }
 
         [HttpGet]
@@ -125,24 +120,9 @@ namespace HooverCanvassingApi.Controllers
             
             try
             {
-                // Generate unique filename
-                var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-                var fileName = $"voice-recordings/{userId}/{timestamp}_{Path.GetFileName(request.File.FileName)}";
-                
-                // Upload to DigitalOcean Spaces
+                // Upload to storage service
                 using var stream = request.File.OpenReadStream();
-                var putRequest = new PutObjectRequest
-                {
-                    BucketName = _bucketName,
-                    Key = fileName,
-                    InputStream = stream,
-                    ContentType = request.File.ContentType,
-                    CannedACL = S3CannedACL.PublicRead
-                };
-
-                await _s3Client.PutObjectAsync(putRequest);
-                
-                var fileUrl = $"{_spacesUrl}/{fileName}";
+                var fileUrl = await _fileStorageService.UploadAudioAsync(stream, request.File.FileName);
 
                 // Create database record
                 var voiceRecording = new VoiceRecording
@@ -230,13 +210,12 @@ namespace HooverCanvassingApi.Controllers
 
             try
             {
-                // Delete from S3
-                var key = recording.Url.Replace(_spacesUrl + "/", "");
-                await _s3Client.DeleteObjectAsync(_bucketName, key);
+                // Delete from storage
+                await _fileStorageService.DeleteAudioAsync(recording.Url);
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, $"Failed to delete file from S3: {recording.Url}");
+                _logger.LogWarning(ex, $"Failed to delete file from storage: {recording.Url}");
             }
 
             _context.VoiceRecordings.Remove(recording);
