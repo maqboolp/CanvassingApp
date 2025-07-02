@@ -8,7 +8,8 @@
       "Bash(rg:*)",
       "Bash(grep:*)",
       "Bash(npm run type-check:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(doctl apps create-deployment:*)"
     ],
     "deny": []
   }

@@ -139,7 +139,6 @@ const VoiceRecordings: React.FC<VoiceRecordingsProps> = ({ user }) => {
         {
           method: 'POST',
           body: data,
-          headers: { 'Content-Type': 'multipart/form-data' },
         }
       );
       setSuccess('Voice recording uploaded successfully');
@@ -189,7 +188,6 @@ const VoiceRecordings: React.FC<VoiceRecordingsProps> = ({ user }) => {
             {
               method: 'POST',
               body: data,
-              headers: { 'Content-Type': 'multipart/form-data' },
             }
           );
           setSuccess('Voice recording saved successfully');
