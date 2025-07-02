@@ -17,17 +17,20 @@ namespace HooverCanvassingApi.Controllers
         private readonly IConfiguration _configuration;
         private readonly ILogger<VoiceRecordingsController> _logger;
         private readonly IFileStorageService _fileStorageService;
+        private readonly IAudioConversionService _audioConversionService;
 
         public VoiceRecordingsController(
             ApplicationDbContext context,
             IConfiguration configuration,
             ILogger<VoiceRecordingsController> logger,
-            IFileStorageService fileStorageService)
+            IFileStorageService fileStorageService,
+            IAudioConversionService audioConversionService)
         {
             _context = context;
             _configuration = configuration;
             _logger = logger;
             _fileStorageService = fileStorageService;
+            _audioConversionService = audioConversionService;
         }
 
         [HttpGet]
@@ -125,17 +128,47 @@ namespace HooverCanvassingApi.Controllers
             
             try
             {
-                // Upload to storage service
-                using var stream = request.File.OpenReadStream();
-                var fileUrl = await _fileStorageService.UploadAudioAsync(stream, request.File.FileName);
+                // Check if conversion is needed
+                var fileExtension = Path.GetExtension(request.File.FileName).ToLower();
+                string fileUrl;
+                string actualFileName = request.File.FileName;
+                
+                if (fileExtension == ".webm")
+                {
+                    // Check if FFMpeg is available
+                    var ffmpegAvailable = await _audioConversionService.IsFFMpegAvailableAsync();
+                    if (!ffmpegAvailable)
+                    {
+                        _logger.LogWarning("FFMpeg not available, uploading WebM file without conversion");
+                        using var stream = request.File.OpenReadStream();
+                        fileUrl = await _fileStorageService.UploadAudioAsync(stream, request.File.FileName);
+                    }
+                    else
+                    {
+                        // Convert WebM to MP3
+                        _logger.LogInformation($"Converting WebM file to MP3: {request.File.FileName}");
+                        using var stream = request.File.OpenReadStream();
+                        using var convertedStream = await _audioConversionService.ConvertWebMToMp3Async(stream, request.File.FileName);
+                        
+                        // Update filename to reflect conversion
+                        actualFileName = Path.ChangeExtension(request.File.FileName, ".mp3");
+                        fileUrl = await _fileStorageService.UploadAudioAsync(convertedStream, actualFileName);
+                    }
+                }
+                else
+                {
+                    // Upload directly for supported formats
+                    using var stream = request.File.OpenReadStream();
+                    fileUrl = await _fileStorageService.UploadAudioAsync(stream, request.File.FileName);
+                }
 
                 // Create database record
                 var voiceRecording = new VoiceRecording
                 {
-                    Name = request.Name ?? Path.GetFileNameWithoutExtension(request.File.FileName),
+                    Name = request.Name ?? Path.GetFileNameWithoutExtension(actualFileName),
                     Description = request.Description,
                     Url = fileUrl,
-                    FileName = request.File.FileName,
+                    FileName = actualFileName,
                     FileSizeBytes = request.File.Length,
                     DurationSeconds = request.DurationSeconds,
                     CreatedById = userId!,
