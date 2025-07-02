@@ -145,14 +145,23 @@ namespace HooverCanvassingApi.Controllers
                     }
                     else
                     {
-                        // Convert WebM to MP3
-                        _logger.LogInformation($"Converting WebM file to MP3: {request.File.FileName}");
-                        using var stream = request.File.OpenReadStream();
-                        using var convertedStream = await _audioConversionService.ConvertWebMToMp3Async(stream, request.File.FileName);
-                        
-                        // Update filename to reflect conversion
-                        actualFileName = Path.ChangeExtension(request.File.FileName, ".mp3");
-                        fileUrl = await _fileStorageService.UploadAudioAsync(convertedStream, actualFileName);
+                        try
+                        {
+                            // Convert WebM to MP3
+                            _logger.LogInformation($"Converting WebM file to MP3: {request.File.FileName}");
+                            using var stream = request.File.OpenReadStream();
+                            using var convertedStream = await _audioConversionService.ConvertWebMToMp3Async(stream, request.File.FileName);
+                            
+                            // Update filename to reflect conversion
+                            actualFileName = Path.ChangeExtension(request.File.FileName, ".mp3");
+                            fileUrl = await _fileStorageService.UploadAudioAsync(convertedStream, actualFileName);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Failed to convert WebM to MP3, uploading as WebM");
+                            using var stream = request.File.OpenReadStream();
+                            fileUrl = await _fileStorageService.UploadAudioAsync(stream, request.File.FileName);
+                        }
                     }
                 }
                 else
