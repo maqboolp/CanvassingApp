@@ -14,50 +14,23 @@ namespace HooverCanvassingApi.Services
         private readonly string _audioPrefix;
         private readonly string _publicUrl;
 
-        public S3FileStorageService(IConfiguration configuration, ILogger<S3FileStorageService> logger)
+        public S3FileStorageService(IConfiguration configuration, ILogger<S3FileStorageService> logger, IAmazonS3 s3Client)
         {
             _configuration = configuration;
             _logger = logger;
+            _s3Client = s3Client;
             
             var awsConfig = _configuration.GetSection("AWS:S3");
             _bucketName = awsConfig["BucketName"] ?? "hoover-canvassing-audio";
             _audioPrefix = awsConfig["AudioPrefix"] ?? "audio-memos/";
             
-            var accessKey = awsConfig["AccessKey"];
-            var secretKey = awsConfig["SecretKey"];
-            var region = _configuration["AWS:Region"] ?? "us-east-1";
             var serviceUrl = awsConfig["ServiceUrl"]; // For DigitalOcean Spaces or other S3-compatible services
             var publicUrl = awsConfig["PublicUrl"]; // Custom public URL for DigitalOcean Spaces
             
-            if (!string.IsNullOrEmpty(accessKey) && !string.IsNullOrEmpty(secretKey))
-            {
-                if (!string.IsNullOrEmpty(serviceUrl))
-                {
-                    // Use custom endpoint for DigitalOcean Spaces or other S3-compatible services
-                    var config = new AmazonS3Config
-                    {
-                        ServiceURL = serviceUrl,
-                        ForcePathStyle = true // Required for DigitalOcean Spaces
-                    };
-                    _s3Client = new AmazonS3Client(accessKey, secretKey, config);
-                    _logger.LogInformation("Using S3-compatible service at: {ServiceUrl}", serviceUrl);
-                    
-                    // Set public URL for DigitalOcean Spaces
-                    _publicUrl = publicUrl ?? serviceUrl.Replace("https://", $"https://{_bucketName}.");
-                }
-                else
-                {
-                    // Use standard AWS S3
-                    _s3Client = new AmazonS3Client(accessKey, secretKey, RegionEndpoint.GetBySystemName(region));
-                    _publicUrl = $"https://{_bucketName}.s3.amazonaws.com";
-                }
-            }
-            else
-            {
-                // Use default credentials (IAM role, environment variables, etc.)
-                _s3Client = new AmazonS3Client(RegionEndpoint.GetBySystemName(region));
-                _publicUrl = $"https://{_bucketName}.s3.amazonaws.com";
-            }
+            _logger.LogInformation("Using S3-compatible service with bucket: {BucketName}", _bucketName);
+            
+            // Set public URL for DigitalOcean Spaces
+            _publicUrl = publicUrl ?? (serviceUrl != null ? serviceUrl.Replace("https://", $"https://{_bucketName}.") : "");
         }
 
         public async Task<string> UploadAudioAsync(Stream audioStream, string fileName)

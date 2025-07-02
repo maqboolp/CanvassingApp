@@ -11,6 +11,8 @@ using HooverCanvassingApi.Services;
 using HooverCanvassingApi.Middleware;
 using HooverCanvassingApi;
 using HooverCanvassingApi.Configuration;
+using Amazon.S3;
+using Amazon;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -159,6 +161,25 @@ builder.Services.AddScoped<IOptInInvitationService, OptInInvitationService>();
 var useS3 = builder.Configuration.GetValue<bool>("AWS:S3:UseS3");
 if (useS3)
 {
+    // Register AWS S3 client for DigitalOcean Spaces
+    var awsConfig = builder.Configuration.GetSection("AWS:S3");
+    var accessKey = awsConfig["AccessKey"];
+    var secretKey = awsConfig["SecretKey"];
+    var serviceUrl = awsConfig["ServiceUrl"];
+    
+    if (!string.IsNullOrEmpty(accessKey) && !string.IsNullOrEmpty(secretKey) && !string.IsNullOrEmpty(serviceUrl))
+    {
+        builder.Services.AddSingleton<IAmazonS3>(sp =>
+        {
+            var config = new AmazonS3Config
+            {
+                ServiceURL = serviceUrl,
+                ForcePathStyle = true
+            };
+            return new AmazonS3Client(accessKey, secretKey, config);
+        });
+    }
+    
     builder.Services.AddScoped<IFileStorageService, S3FileStorageService>();
 }
 else
