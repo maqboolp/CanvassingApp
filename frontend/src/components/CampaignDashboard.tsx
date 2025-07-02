@@ -22,14 +22,21 @@ import {
   ListItemText,
   OutlinedInput,
   Autocomplete,
-  FormControlLabel
+  FormControlLabel,
+  RadioGroup,
+  Radio,
+  IconButton
 } from '@mui/material';
 import {
   Add as AddIcon,
   Send as SendIcon,
   Delete as DeleteIcon,
   Edit as EditIcon,
-  LocalOffer
+  LocalOffer,
+  PlayArrow as PlayIcon,
+  Stop as StopIcon,
+  Mic as MicIcon,
+  TextFields as TextIcon
 } from '@mui/icons-material';
 import { API_BASE_URL } from '../config';
 import { AuthUser, VoterTag } from '../types';
@@ -50,6 +57,7 @@ interface Campaign {
   failedDeliveries: number;
   pendingDeliveries: number;
   voiceUrl?: string;
+  voiceRecordingId?: number;
   filterZipCodes?: string;
   filterVoteFrequency?: number;
   filterMinAge?: number;
@@ -112,6 +120,10 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
   const [audienceCount, setAudienceCount] = useState<number>(0);
   const [availableTags, setAvailableTags] = useState<VoterTag[]>([]);
   const [selectedTags, setSelectedTags] = useState<VoterTag[]>([]);
+  const [voiceRecordings, setVoiceRecordings] = useState<any[]>([]);
+  const [voiceType, setVoiceType] = useState<'text' | 'recording'>('text');
+  const [playingRecordingId, setPlayingRecordingId] = useState<number | null>(null);
+  const audioRef = React.useRef<HTMLAudioElement | null>(null);
   const [sendDialog, setSendDialog] = useState<SendDialogState>({
     open: false,
     campaignId: null,
@@ -123,6 +135,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
     message: '',
     type: 'SMS' as 'SMS' | 'RoboCall',
     voiceUrl: '',
+    voiceRecordingId: null as number | null,
     selectedZipCodes: [] as string[],
     selectedTagIds: [] as number[]
   });
@@ -131,6 +144,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
     fetchCampaigns();
     fetchAvailableZipCodes();
     fetchAvailableTags();
+    fetchVoiceRecordings();
   }, []);
 
   useEffect(() => {
@@ -192,6 +206,42 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
     }
   };
 
+  const fetchVoiceRecordings = async () => {
+    try {
+      const data = await ApiErrorHandler.makeAuthenticatedRequest(
+        `${API_BASE_URL}/api/voicerecordings`
+      );
+      setVoiceRecordings(data);
+    } catch (error) {
+      if (error instanceof ApiError && error.isAuthError) {
+        return;
+      }
+      console.error('Failed to fetch voice recordings:', error instanceof ApiError ? error.message : error);
+    }
+  };
+
+  const playRecording = (recordingId: number, url: string) => {
+    if (playingRecordingId === recordingId) {
+      // Stop playing
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+      setPlayingRecordingId(null);
+    } else {
+      // Stop any current playback
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+      // Start new playback
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      audio.play();
+      audio.onended = () => setPlayingRecordingId(null);
+      setPlayingRecordingId(recordingId);
+    }
+  };
+
   const previewAudienceCount = async () => {
     try {
       const queryParams = new URLSearchParams();
@@ -250,6 +300,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
         message: newCampaign.message,
         type: getCampaignTypeEnum(newCampaign.type),
         voiceUrl: newCampaign.voiceUrl || null,
+        voiceRecordingId: newCampaign.voiceRecordingId || null,
         filterZipCodes: newCampaign.selectedZipCodes.length > 0 ? JSON.stringify(newCampaign.selectedZipCodes) : null,
         filterVoteFrequency: null,
         filterMinAge: null,
@@ -275,9 +326,11 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
         message: '', 
         type: 'SMS', 
         voiceUrl: '',
+        voiceRecordingId: null,
         selectedZipCodes: [],
         selectedTagIds: []
       });
+      setVoiceType('text');
       setSelectedTags([]);
       setValidationErrors({});
       setAudienceCount(0);
@@ -376,9 +429,13 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
       message: campaign.message,
       type: getCampaignTypeString(campaign.type) as 'SMS' | 'RoboCall',
       voiceUrl: campaign.voiceUrl || '',
+      voiceRecordingId: campaign.voiceRecordingId || null,
       selectedZipCodes,
       selectedTagIds
     });
+    
+    // Set voice type based on whether a recording is selected
+    setVoiceType(campaign.voiceRecordingId ? 'recording' : 'text');
     
     // Set selected tags for UI display
     const campaignTags = availableTags.filter(tag => selectedTagIds.includes(tag.id));
@@ -401,6 +458,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
         name: newCampaign.name,
         message: newCampaign.message,
         voiceUrl: newCampaign.voiceUrl || null,
+        voiceRecordingId: newCampaign.voiceRecordingId || null,
         filterZipCodes: newCampaign.selectedZipCodes.length > 0 ? JSON.stringify(newCampaign.selectedZipCodes) : null,
         filterVoteFrequency: null,
         filterMinAge: null,
@@ -427,9 +485,11 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
         message: '', 
         type: 'SMS', 
         voiceUrl: '',
+        voiceRecordingId: null,
         selectedZipCodes: [],
         selectedTagIds: []
       });
+      setVoiceType('text');
       setSelectedTags([]);
       setValidationErrors({});
       setAudienceCount(0);
@@ -724,14 +784,85 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
             />
 
             {newCampaign.type === 'RoboCall' && (
-              <TextField
-                label="Voice URL (TwiML endpoint)"
-                fullWidth
-                value={newCampaign.voiceUrl}
-                onChange={(e) => setNewCampaign({ ...newCampaign, voiceUrl: e.target.value })}
-                error={!!validationErrors.voiceUrl}
-                helperText={validationErrors.voiceUrl || "Optional: Custom TwiML endpoint. Leave empty to use text-to-speech for your call script."}
-              />
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="subtitle2" gutterBottom>
+                  Voice Type
+                </Typography>
+                <RadioGroup
+                  value={voiceType}
+                  onChange={(e) => {
+                    setVoiceType(e.target.value as 'text' | 'recording');
+                    setNewCampaign({ ...newCampaign, voiceRecordingId: null });
+                  }}
+                >
+                  <FormControlLabel 
+                    value="text" 
+                    control={<Radio />} 
+                    label={
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <TextIcon />
+                        <span>Text-to-Speech (Use call script above)</span>
+                      </Box>
+                    }
+                  />
+                  <FormControlLabel 
+                    value="recording" 
+                    control={<Radio />} 
+                    label={
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <MicIcon />
+                        <span>Voice Recording</span>
+                      </Box>
+                    }
+                  />
+                </RadioGroup>
+
+                {voiceType === 'recording' && (
+                  <FormControl fullWidth sx={{ mt: 2 }}>
+                    <InputLabel>Select Voice Recording</InputLabel>
+                    <Select
+                      value={newCampaign.voiceRecordingId || ''}
+                      label="Select Voice Recording"
+                      onChange={(e) => setNewCampaign({ 
+                        ...newCampaign, 
+                        voiceRecordingId: e.target.value ? Number(e.target.value) : null 
+                      })}
+                    >
+                      <MenuItem value="">
+                        <em>None</em>
+                      </MenuItem>
+                      {voiceRecordings.map((recording) => (
+                        <MenuItem key={recording.id} value={recording.id}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                            <Box>
+                              <Typography variant="body2">{recording.name}</Typography>
+                              {recording.description && (
+                                <Typography variant="caption" color="text.secondary">
+                                  {recording.description}
+                                </Typography>
+                              )}
+                            </Box>
+                            <IconButton
+                              size="small"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                playRecording(recording.id, recording.url);
+                              }}
+                            >
+                              {playingRecordingId === recording.id ? <StopIcon /> : <PlayIcon />}
+                            </IconButton>
+                          </Box>
+                        </MenuItem>
+                      ))}
+                    </Select>
+                    {voiceRecordings.length === 0 && (
+                      <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
+                        No voice recordings available. Go to Voice Recordings tab to create one.
+                      </Typography>
+                    )}
+                  </FormControl>
+                )}
+              </Box>
             )}
 
             <Typography variant="subtitle1">Target Audience</Typography>
@@ -896,14 +1027,85 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
             />
 
             {newCampaign.type === 'RoboCall' && (
-              <TextField
-                label="Voice URL (TwiML endpoint)"
-                fullWidth
-                value={newCampaign.voiceUrl}
-                onChange={(e) => setNewCampaign({ ...newCampaign, voiceUrl: e.target.value })}
-                error={!!validationErrors.voiceUrl}
-                helperText={validationErrors.voiceUrl || "Optional: Custom TwiML endpoint. Leave empty to use text-to-speech for your call script."}
-              />
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="subtitle2" gutterBottom>
+                  Voice Type
+                </Typography>
+                <RadioGroup
+                  value={voiceType}
+                  onChange={(e) => {
+                    setVoiceType(e.target.value as 'text' | 'recording');
+                    setNewCampaign({ ...newCampaign, voiceRecordingId: null });
+                  }}
+                >
+                  <FormControlLabel 
+                    value="text" 
+                    control={<Radio />} 
+                    label={
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <TextIcon />
+                        <span>Text-to-Speech (Use call script above)</span>
+                      </Box>
+                    }
+                  />
+                  <FormControlLabel 
+                    value="recording" 
+                    control={<Radio />} 
+                    label={
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <MicIcon />
+                        <span>Voice Recording</span>
+                      </Box>
+                    }
+                  />
+                </RadioGroup>
+
+                {voiceType === 'recording' && (
+                  <FormControl fullWidth sx={{ mt: 2 }}>
+                    <InputLabel>Select Voice Recording</InputLabel>
+                    <Select
+                      value={newCampaign.voiceRecordingId || ''}
+                      label="Select Voice Recording"
+                      onChange={(e) => setNewCampaign({ 
+                        ...newCampaign, 
+                        voiceRecordingId: e.target.value ? Number(e.target.value) : null 
+                      })}
+                    >
+                      <MenuItem value="">
+                        <em>None</em>
+                      </MenuItem>
+                      {voiceRecordings.map((recording) => (
+                        <MenuItem key={recording.id} value={recording.id}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                            <Box>
+                              <Typography variant="body2">{recording.name}</Typography>
+                              {recording.description && (
+                                <Typography variant="caption" color="text.secondary">
+                                  {recording.description}
+                                </Typography>
+                              )}
+                            </Box>
+                            <IconButton
+                              size="small"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                playRecording(recording.id, recording.url);
+                              }}
+                            >
+                              {playingRecordingId === recording.id ? <StopIcon /> : <PlayIcon />}
+                            </IconButton>
+                          </Box>
+                        </MenuItem>
+                      ))}
+                    </Select>
+                    {voiceRecordings.length === 0 && (
+                      <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
+                        No voice recordings available. Go to Voice Recordings tab to create one.
+                      </Typography>
+                    )}
+                  </FormControl>
+                )}
+              </Box>
             )}
 
             <Typography variant="subtitle1">Target Audience</Typography>
