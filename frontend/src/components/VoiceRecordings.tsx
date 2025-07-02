@@ -159,7 +159,18 @@ const VoiceRecordings: React.FC<VoiceRecordingsProps> = ({ user }) => {
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
+      
+      // Try to use a format supported by Twilio
+      let options: MediaRecorderOptions = {};
+      if (MediaRecorder.isTypeSupported('audio/wav')) {
+        options = { mimeType: 'audio/wav' };
+      } else if (MediaRecorder.isTypeSupported('audio/mp3')) {
+        options = { mimeType: 'audio/mp3' };
+      } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+        options = { mimeType: 'audio/webm' };
+      }
+      
+      const mediaRecorder = new MediaRecorder(stream, options);
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
 
@@ -168,8 +179,12 @@ const VoiceRecordings: React.FC<VoiceRecordingsProps> = ({ user }) => {
       };
 
       mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        const audioFile = new File([audioBlob], 'recording.webm', { type: 'audio/webm' });
+        // Try to use audio/wav if supported, otherwise fall back to webm
+        const mimeType = MediaRecorder.isTypeSupported('audio/wav') ? 'audio/wav' : 'audio/webm';
+        const extension = mimeType === 'audio/wav' ? 'wav' : 'webm';
+        
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+        const audioFile = new File([audioBlob], `recording.${extension}`, { type: mimeType });
         
         // Stop all tracks
         stream.getTracks().forEach(track => track.stop());
@@ -347,6 +362,13 @@ const VoiceRecordings: React.FC<VoiceRecordingsProps> = ({ user }) => {
           {success}
         </Alert>
       )}
+      
+      <Alert severity="info" sx={{ mb: 2 }}>
+        <Typography variant="body2">
+          <strong>Note:</strong> For best compatibility with phone systems, upload MP3 or WAV files. 
+          Browser recordings may not play correctly on all devices.
+        </Typography>
+      </Alert>
 
       <TableContainer component={Paper}>
         <Table>
