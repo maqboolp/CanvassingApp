@@ -126,9 +126,18 @@ class AuthService {
       throw new Error('No authentication token available');
     }
 
-    const headers = {
-      'Content-Type': 'application/json',
+    // Don't set Content-Type for FormData - let browser set it
+    const isFormData = options.body instanceof FormData;
+    const defaultHeaders: any = {
       'Authorization': `Bearer ${token}`,
+    };
+    
+    if (!isFormData) {
+      defaultHeaders['Content-Type'] = 'application/json';
+    }
+
+    const headers = {
+      ...defaultHeaders,
       ...options.headers,
     };
 
