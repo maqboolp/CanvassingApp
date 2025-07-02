@@ -230,9 +230,6 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
       errors.message = newCampaign.type === 'SMS' ? 'SMS message is required' : 'Call script is required';
     }
     
-    if (newCampaign.type === 'RoboCall' && !newCampaign.voiceUrl.trim()) {
-      errors.voiceUrl = 'Voice URL is required for robo calls';
-    }
     
     if (newCampaign.selectedZipCodes.length === 0 && newCampaign.selectedTagIds.length === 0) {
       errors.audience = 'Please select at least one ZIP code or tag for targeting';
@@ -730,11 +727,10 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
               <TextField
                 label="Voice URL (TwiML endpoint)"
                 fullWidth
-                required
                 value={newCampaign.voiceUrl}
                 onChange={(e) => setNewCampaign({ ...newCampaign, voiceUrl: e.target.value })}
                 error={!!validationErrors.voiceUrl}
-                helperText={validationErrors.voiceUrl || "URL that returns TwiML for the voice call"}
+                helperText={validationErrors.voiceUrl || "Optional: Custom TwiML endpoint. Leave empty to use text-to-speech for your call script."}
               />
             )}
 
@@ -903,11 +899,10 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
               <TextField
                 label="Voice URL (TwiML endpoint)"
                 fullWidth
-                required
                 value={newCampaign.voiceUrl}
                 onChange={(e) => setNewCampaign({ ...newCampaign, voiceUrl: e.target.value })}
                 error={!!validationErrors.voiceUrl}
-                helperText={validationErrors.voiceUrl || "URL that returns TwiML for the voice call"}
+                helperText={validationErrors.voiceUrl || "Optional: Custom TwiML endpoint. Leave empty to use text-to-speech for your call script."}
               />
             )}
 
