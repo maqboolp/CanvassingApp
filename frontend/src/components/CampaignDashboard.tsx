@@ -771,17 +771,19 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
               </FormControl>
             </Box>
             
-            <TextField
-              label={newCampaign.type === 'SMS' ? 'SMS Message' : 'Call Script'}
-              fullWidth
-              required
-              multiline
-              rows={4}
-              value={newCampaign.message}
-              onChange={(e) => setNewCampaign({ ...newCampaign, message: e.target.value })}
-              error={!!validationErrors.message}
-              helperText={validationErrors.message || `${newCampaign.message.length}/1600 characters`}
-            />
+            {(newCampaign.type === 'SMS' || (newCampaign.type === 'RoboCall' && voiceType === 'text')) && (
+              <TextField
+                label={newCampaign.type === 'SMS' ? 'SMS Message' : 'Call Script'}
+                fullWidth
+                required
+                multiline
+                rows={4}
+                value={newCampaign.message}
+                onChange={(e) => setNewCampaign({ ...newCampaign, message: e.target.value })}
+                error={!!validationErrors.message}
+                helperText={validationErrors.message || `${newCampaign.message.length}/1600 characters`}
+              />
+            )}
 
             {newCampaign.type === 'RoboCall' && (
               <Box sx={{ mt: 2 }}>
@@ -791,8 +793,13 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                 <RadioGroup
                   value={voiceType}
                   onChange={(e) => {
-                    setVoiceType(e.target.value as 'text' | 'recording');
-                    setNewCampaign({ ...newCampaign, voiceRecordingId: null });
+                    const newVoiceType = e.target.value as 'text' | 'recording';
+                    setVoiceType(newVoiceType);
+                    if (newVoiceType === 'recording') {
+                      setNewCampaign({ ...newCampaign, voiceRecordingId: null, message: '' });
+                    } else {
+                      setNewCampaign({ ...newCampaign, voiceRecordingId: null });
+                    }
                   }}
                 >
                   <FormControlLabel 
@@ -1014,17 +1021,19 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
               </FormControl>
             </Box>
             
-            <TextField
-              label={newCampaign.type === 'SMS' ? 'SMS Message' : 'Call Script'}
-              fullWidth
-              required
-              multiline
-              rows={4}
-              value={newCampaign.message}
-              onChange={(e) => setNewCampaign({ ...newCampaign, message: e.target.value })}
-              error={!!validationErrors.message}
-              helperText={validationErrors.message || `${newCampaign.message.length}/1600 characters`}
-            />
+            {(newCampaign.type === 'SMS' || (newCampaign.type === 'RoboCall' && voiceType === 'text')) && (
+              <TextField
+                label={newCampaign.type === 'SMS' ? 'SMS Message' : 'Call Script'}
+                fullWidth
+                required
+                multiline
+                rows={4}
+                value={newCampaign.message}
+                onChange={(e) => setNewCampaign({ ...newCampaign, message: e.target.value })}
+                error={!!validationErrors.message}
+                helperText={validationErrors.message || `${newCampaign.message.length}/1600 characters`}
+              />
+            )}
 
             {newCampaign.type === 'RoboCall' && (
               <Box sx={{ mt: 2 }}>
@@ -1034,8 +1043,13 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                 <RadioGroup
                   value={voiceType}
                   onChange={(e) => {
-                    setVoiceType(e.target.value as 'text' | 'recording');
-                    setNewCampaign({ ...newCampaign, voiceRecordingId: null });
+                    const newVoiceType = e.target.value as 'text' | 'recording';
+                    setVoiceType(newVoiceType);
+                    if (newVoiceType === 'recording') {
+                      setNewCampaign({ ...newCampaign, voiceRecordingId: null, message: '' });
+                    } else {
+                      setNewCampaign({ ...newCampaign, voiceRecordingId: null });
+                    }
                   }}
                 >
                   <FormControlLabel 

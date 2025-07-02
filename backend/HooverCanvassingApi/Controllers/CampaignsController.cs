@@ -47,7 +47,7 @@ namespace HooverCanvassingApi.Controllers
             var campaign = new Campaign
             {
                 Name = request.Name,
-                Message = request.Message,
+                Message = request.Message ?? string.Empty,
                 Type = request.Type,
                 CreatedById = userId,
                 VoiceUrl = request.VoiceUrl,
@@ -76,9 +76,9 @@ namespace HooverCanvassingApi.Controllers
                         _logger.LogInformation($"Using voice recording for campaign: {voiceRecording.Name}");
                     }
                 }
-                else if (string.IsNullOrEmpty(campaign.VoiceUrl))
+                else if (string.IsNullOrEmpty(campaign.VoiceUrl) && !string.IsNullOrEmpty(campaign.Message))
                 {
-                    // Use text-to-speech
+                    // Use text-to-speech only if message is provided
                     var baseUrl = $"{Request.Scheme}://{Request.Host}";
                     var encodedMessage = Uri.EscapeDataString(campaign.Message);
                     campaign.VoiceUrl = $"{baseUrl}/api/TwilioWebhook/voice?message={encodedMessage}";
@@ -108,7 +108,7 @@ namespace HooverCanvassingApi.Controllers
                 return Forbid("You can only edit campaigns you created");
 
             campaign.Name = request.Name;
-            campaign.Message = request.Message;
+            campaign.Message = request.Message ?? string.Empty;
             campaign.VoiceUrl = request.VoiceUrl;
             campaign.VoiceRecordingId = request.VoiceRecordingId;
             campaign.FilterZipCodes = request.FilterZipCodes;
@@ -131,9 +131,9 @@ namespace HooverCanvassingApi.Controllers
                         _logger.LogInformation($"Using voice recording for campaign update: {voiceRecording.Name}");
                     }
                 }
-                else if (string.IsNullOrEmpty(campaign.VoiceUrl))
+                else if (string.IsNullOrEmpty(campaign.VoiceUrl) && !string.IsNullOrEmpty(campaign.Message))
                 {
-                    // Use text-to-speech
+                    // Use text-to-speech only if message is provided
                     var baseUrl = $"{Request.Scheme}://{Request.Host}";
                     var encodedMessage = Uri.EscapeDataString(campaign.Message);
                     campaign.VoiceUrl = $"{baseUrl}/api/TwilioWebhook/voice?message={encodedMessage}";
@@ -288,7 +288,7 @@ namespace HooverCanvassingApi.Controllers
     public class CreateCampaignRequest
     {
         public string Name { get; set; } = string.Empty;
-        public string Message { get; set; } = string.Empty;
+        public string? Message { get; set; }
         public CampaignType Type { get; set; }
         public string? VoiceUrl { get; set; }
         public int? VoiceRecordingId { get; set; }
@@ -303,7 +303,7 @@ namespace HooverCanvassingApi.Controllers
     public class UpdateCampaignRequest
     {
         public string Name { get; set; } = string.Empty;
-        public string Message { get; set; } = string.Empty;
+        public string? Message { get; set; }
         public string? VoiceUrl { get; set; }
         public int? VoiceRecordingId { get; set; }
         public string? FilterZipCodes { get; set; }
