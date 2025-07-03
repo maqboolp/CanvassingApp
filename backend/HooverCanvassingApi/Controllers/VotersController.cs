@@ -342,7 +342,7 @@ namespace HooverCanvassingApi.Controllers
                     _logger.LogInformation("No uncontacted voters found within {Distance}km for user {UserId}", 
                         maxDistanceKm, currentUserId);
                     
-                    var nearestDistance = allVotersWithDistance.Any() ? allVotersWithDistance[0].Distance : 0;
+                    var nearestDistance = allVotersWithDistance.Any() ? allVotersWithDistance.First().Distance : 0;
                     return NotFound(new { 
                         message = $"No uncontacted voters found within {maxDistanceKm}km",
                         nearestVoterDistance = nearestDistance,
