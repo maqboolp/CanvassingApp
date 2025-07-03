@@ -35,8 +35,8 @@ public static class SeedData
             Console.WriteLine("No users found, creating default admin users...");
             var superAdminUser = new Volunteer
             {
-                UserName = "superadmin@tanveer4hoover.com",
-                Email = "superadmin@tanveer4hoover.com",
+                UserName = "superadmin@campaign.local",
+                Email = "superadmin@campaign.local",
                 FirstName = "Super",
                 LastName = "Admin",
                 Role = VolunteerRole.SuperAdmin,
@@ -50,7 +50,7 @@ public static class SeedData
             {
                 await userManager.AddToRoleAsync(superAdminUser, "SuperAdmin");
                 Console.WriteLine("Default super admin user created:");
-                Console.WriteLine($"Email: superadmin@tanveer4hoover.com");
+                Console.WriteLine($"Email: superadmin@campaign.local");
                 Console.WriteLine($"Password: SuperAdmin123");
                 Console.WriteLine("Please change this password after first login!");
             }
@@ -62,8 +62,8 @@ public static class SeedData
             // Also create a regular admin user
             var adminUser = new Volunteer
             {
-                UserName = "admin@tanveer4hoover.com",
-                Email = "admin@tanveer4hoover.com",
+                UserName = "admin@campaign.local",
+                Email = "admin@campaign.local",
                 FirstName = "Admin",
                 LastName = "User",
                 Role = VolunteerRole.Admin,
@@ -77,7 +77,7 @@ public static class SeedData
             {
                 await userManager.AddToRoleAsync(adminUser, "Admin");
                 Console.WriteLine("Default admin user created:");
-                Console.WriteLine($"Email: admin@tanveer4hoover.com");
+                Console.WriteLine($"Email: admin@campaign.local");
                 Console.WriteLine($"Password: Admin123");
             }
             else
