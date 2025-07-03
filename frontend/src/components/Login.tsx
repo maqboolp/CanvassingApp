@@ -11,6 +11,10 @@ const campaignDisclaimer = process.env.REACT_APP_CAMPAIGN_DISCLAIMER || `Paid fo
 const campaignWebsite = process.env.REACT_APP_CAMPAIGN_WEBSITE;
 const campaignVenmo = process.env.REACT_APP_CAMPAIGN_VENMO;
 const campaignYoutube = process.env.REACT_APP_CAMPAIGN_YOUTUBE;
+
+// Get customer-specific voter resources
+const voterRegistrationUrl = process.env.REACT_APP_VOTER_REGISTRATION_URL;
+const volunteerHotline = process.env.REACT_APP_VOLUNTEER_HOTLINE;
 import {
   TextField,
   Button,
@@ -327,43 +331,41 @@ const Login: React.FC<LoginProps> = ({ onLogin, isLoading = false, error }) => {
               </Box>
 
               {/* Voter Resources */}
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: '#2f1c6a' }}>
-                  Voter Resources
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <HowToReg fontSize="small" sx={{ color: '#2f1c6a' }} />
-                  <a 
-                    href="https://myinfo.alabamavotes.gov/VoterView" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    style={{ color: '#2f1c6a', textDecoration: 'none', fontSize: '14px' }}
-                  >
-                    Check Voter Registration <OpenInNew fontSize="small" sx={{ ml: 0.5, verticalAlign: 'middle' }} />
-                  </a>
+              {voterRegistrationUrl && (
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: '#2f1c6a' }}>
+                    Voter Resources
+                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <HowToReg fontSize="small" sx={{ color: '#2f1c6a' }} />
+                    <a 
+                      href={voterRegistrationUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      style={{ color: '#2f1c6a', textDecoration: 'none', fontSize: '14px' }}
+                    >
+                      Check Voter Registration <OpenInNew fontSize="small" sx={{ ml: 0.5, verticalAlign: 'middle' }} />
+                    </a>
+                  </Box>
                 </Box>
-              </Box>
+              )}
 
               {/* Support & Help */}
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: '#2f1c6a' }}>
-                  Support & Help
-                </Typography>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Phone fontSize="small" sx={{ color: '#2f1c6a' }} />
-                    <Typography variant="body2" sx={{ color: '#2f1c6a' }}>
-                      Volunteer Hotline: (205) 555-VOTE
-                    </Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Help fontSize="small" sx={{ color: '#2f1c6a' }} />
-                    <Typography variant="body2" sx={{ color: '#2f1c6a' }}>
-                      App Support: Email support@tanveer4hoover.com
-                    </Typography>
+              {volunteerHotline && (
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: '#2f1c6a' }}>
+                    Support & Help
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Phone fontSize="small" sx={{ color: '#2f1c6a' }} />
+                      <Typography variant="body2" sx={{ color: '#2f1c6a' }}>
+                        Volunteer Hotline: {volunteerHotline}
+                      </Typography>
+                    </Box>
                   </Box>
                 </Box>
-              </Box>
+              )}
 
               {/* Quick Tips */}
               <Box sx={{ 

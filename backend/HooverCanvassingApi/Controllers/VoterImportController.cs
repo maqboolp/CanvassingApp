@@ -24,7 +24,6 @@ namespace HooverCanvassingApi.Controllers
         }
 
         [HttpPost("stage")]
-        [RequestTimeout(300000)] // 5 minutes timeout
         [RequestSizeLimit(104857600)] // 100MB limit
         public async Task<IActionResult> UploadToStaging(IFormFile file)
         {
