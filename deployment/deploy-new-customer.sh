@@ -12,9 +12,10 @@ if [ -z "$1" ]; then
     exit 1
 fi
 
-CUSTOMER_NAME=$1
-APP_NAME="canvassing-${CUSTOMER_NAME}"
-GITHUB_REPO=${GITHUB_REPO:-"YOUR_GITHUB_USERNAME/hoover-canvassing-app"}
+CUSTOMER_NAME=$(echo "$1" | tr '[:upper:]' '[:lower:]')
+CUSTOMER_ID="${CUSTOMER_NAME// /-}"
+APP_NAME="canvassing-${CUSTOMER_ID}"
+GITHUB_REPO=${GITHUB_REPO:-"maqboolp/CanvassingApp"}
 GITHUB_BRANCH=${GITHUB_BRANCH:-"main"}
 REGION=${REGION:-"nyc"}
 
@@ -108,6 +109,12 @@ services:
     value: "https://${APP_NAME}.ondigitalocean.app/api"
   - key: NODE_ENV
     value: "production"
+  - key: REACT_APP_CUSTOMER_ID
+    value: "${CUSTOMER_ID}"
+  - key: REACT_APP_LOGO_URL
+    value: "/customers/${CUSTOMER_ID}/assets/logo.png"
+  - key: REACT_APP_APP_TITLE
+    value: "${CUSTOMER_NAME} Canvas"
 
 databases:
 - name: db
