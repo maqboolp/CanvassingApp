@@ -4,7 +4,6 @@ import {
   Card,
   CardContent,
   Typography,
-  Grid,
   CircularProgress,
   Alert,
   Tabs,
@@ -143,88 +142,80 @@ const Analytics: React.FC = () => {
       </Typography>
 
       {/* Summary Cards */}
-      <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Box>
-                  <Typography color="textSecondary" gutterBottom>
-                    Total Voters
-                  </Typography>
-                  <Typography variant="h4">
-                    {voterData?.totalVoters?.toLocaleString() || 0}
-                  </Typography>
-                </Box>
-                <People color="primary" sx={{ fontSize: 40 }} />
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }, gap: 3, mb: 3 }}>
+        <Card>
+          <CardContent>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Box>
+                <Typography color="textSecondary" gutterBottom>
+                  Total Voters
+                </Typography>
+                <Typography variant="h4">
+                  {voterData?.totalVoters?.toLocaleString() || 0}
+                </Typography>
               </Box>
-            </CardContent>
-          </Card>
-        </Grid>
+              <People color="primary" sx={{ fontSize: 40 }} />
+            </Box>
+          </CardContent>
+        </Card>
 
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Box>
-                  <Typography color="textSecondary" gutterBottom>
-                    Contacted
-                  </Typography>
-                  <Typography variant="h4">
-                    {voterData?.contactStats?.contacted?.toLocaleString() || 0}
-                  </Typography>
-                  <Typography variant="body2" color="textSecondary">
-                    {voterData?.contactStats?.contactedPercentage || 0}%
-                  </Typography>
-                </Box>
-                <ContactPhone color="success" sx={{ fontSize: 40 }} />
+        <Card>
+          <CardContent>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Box>
+                <Typography color="textSecondary" gutterBottom>
+                  Contacted
+                </Typography>
+                <Typography variant="h4">
+                  {voterData?.contactStats?.contacted?.toLocaleString() || 0}
+                </Typography>
+                <Typography variant="body2" color="textSecondary">
+                  {voterData?.contactStats?.contactedPercentage || 0}%
+                </Typography>
               </Box>
-            </CardContent>
-          </Card>
-        </Grid>
+              <ContactPhone color="success" sx={{ fontSize: 40 }} />
+            </Box>
+          </CardContent>
+        </Card>
 
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Box>
-                  <Typography color="textSecondary" gutterBottom>
-                    Total Contacts
-                  </Typography>
-                  <Typography variant="h4">
-                    {contactData?.totalContacts?.toLocaleString() || 0}
-                  </Typography>
-                </Box>
-                <HowToVote color="info" sx={{ fontSize: 40 }} />
+        <Card>
+          <CardContent>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Box>
+                <Typography color="textSecondary" gutterBottom>
+                  Total Contacts
+                </Typography>
+                <Typography variant="h4">
+                  {contactData?.totalContacts?.toLocaleString() || 0}
+                </Typography>
               </Box>
-            </CardContent>
-          </Card>
-        </Grid>
+              <HowToVote color="info" sx={{ fontSize: 40 }} />
+            </Box>
+          </CardContent>
+        </Card>
 
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Box>
-                  <Typography color="textSecondary" gutterBottom>
-                    Support Rate
-                  </Typography>
-                  <Typography variant="h4">
-                    {voterData?.voterSupportStats?.length > 0 
-                      ? Math.round(
-                          voterData.voterSupportStats
-                            .filter((s: any) => s.support === 'StrongYes' || s.support === 'LeaningYes')
-                            .reduce((sum: number, s: any) => sum + s.percentage, 0)
-                        ) + '%'
-                      : 'N/A'}
-                  </Typography>
-                </Box>
-                <ThumbUp color="warning" sx={{ fontSize: 40 }} />
+        <Card>
+          <CardContent>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Box>
+                <Typography color="textSecondary" gutterBottom>
+                  Support Rate
+                </Typography>
+                <Typography variant="h4">
+                  {voterData?.voterSupportStats?.length > 0 
+                    ? Math.round(
+                        voterData.voterSupportStats
+                          .filter((s: any) => s.support === 'StrongYes' || s.support === 'LeaningYes')
+                          .reduce((sum: number, s: any) => sum + s.percentage, 0)
+                      ) + '%'
+                    : 'N/A'}
+                </Typography>
               </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+              <ThumbUp color="warning" sx={{ fontSize: 40 }} />
+            </Box>
+          </CardContent>
+        </Card>
+      </Box>
 
       <Tabs value={tabValue} onChange={handleTabChange} sx={{ borderBottom: 1, borderColor: 'divider' }}>
         <Tab label="Demographics" />
@@ -233,204 +224,116 @@ const Analytics: React.FC = () => {
       </Tabs>
 
       <TabPanel value={tabValue} index={0}>
-        <Grid container spacing={3}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' }, gap: 3 }}>
           {/* Gender Distribution */}
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="h6" gutterBottom>Gender Distribution</Typography>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={voterData?.genderStats || []}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={(entry) => `${entry.gender} (${entry.percentage}%)`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="count"
-                  >
-                    {voterData?.genderStats?.map((entry: any, index: number) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </Paper>
-          </Grid>
+          <Paper sx={{ p: 2 }}>
+            <Typography variant="h6" gutterBottom>Gender Distribution</Typography>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={voterData?.genderStats || []}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={(entry) => `${entry.gender} (${entry.percentage}%)`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="count"
+                >
+                  {voterData?.genderStats?.map((entry: any, index: number) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </Paper>
 
           {/* Age Distribution */}
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="h6" gutterBottom>Age Distribution</Typography>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={voterData?.ageGroupStats || []}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="ageGroup" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="count" fill="#0088FE" />
-                </BarChart>
-              </ResponsiveContainer>
-            </Paper>
-          </Grid>
+          <Paper sx={{ p: 2 }}>
+            <Typography variant="h6" gutterBottom>Age Distribution</Typography>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={voterData?.ageGroupStats || []}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="ageGroup" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="count" fill="#0088FE" />
+              </BarChart>
+            </ResponsiveContainer>
+          </Paper>
 
           {/* Party Affiliation */}
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="h6" gutterBottom>Party Affiliation</Typography>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={voterData?.partyAffiliationStats || []}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={(entry) => `${entry.party} (${entry.percentage}%)`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="count"
-                  >
-                    {voterData?.partyAffiliationStats?.map((entry: any, index: number) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </Paper>
-          </Grid>
+          <Paper sx={{ p: 2 }}>
+            <Typography variant="h6" gutterBottom>Party Affiliation</Typography>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={voterData?.partyAffiliationStats || []}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={(entry) => `${entry.party} (${entry.percentage}%)`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="count"
+                >
+                  {voterData?.partyAffiliationStats?.map((entry: any, index: number) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </Paper>
 
           {/* Vote Frequency */}
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="h6" gutterBottom>Vote Frequency</Typography>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={voterData?.voteFrequencyStats || []}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="frequency" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="count" fill="#00C49F" />
-                </BarChart>
-              </ResponsiveContainer>
-            </Paper>
-          </Grid>
+          <Paper sx={{ p: 2 }}>
+            <Typography variant="h6" gutterBottom>Vote Frequency</Typography>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={voterData?.voteFrequencyStats || []}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="frequency" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="count" fill="#00C49F" />
+              </BarChart>
+            </ResponsiveContainer>
+          </Paper>
 
           {/* Voter Support */}
           {voterData?.voterSupportStats?.length > 0 && (
-            <Grid item xs={12}>
-              <Paper sx={{ p: 2 }}>
-                <Typography variant="h6" gutterBottom>Voter Support Levels</Typography>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={voterData?.voterSupportStats || []}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="support" />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="count" fill="#FFBB28" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </Paper>
-            </Grid>
+            <Paper sx={{ p: 2, gridColumn: '1 / -1' }}>
+              <Typography variant="h6" gutterBottom>Voter Support Levels</Typography>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={voterData?.voterSupportStats || []}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="support" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="count" fill="#FFBB28" />
+                </BarChart>
+              </ResponsiveContainer>
+            </Paper>
           )}
 
           {/* Ethnicity Distribution */}
           {voterData?.ethnicityStats?.length > 0 && (
-            <Grid item xs={12} md={6}>
-              <Paper sx={{ p: 2 }}>
-                <Typography variant="h6" gutterBottom>Ethnicity Distribution</Typography>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={voterData?.ethnicityStats || []}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={(entry) => `${entry.ethnicity} (${entry.percentage}%)`}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="count"
-                    >
-                      {voterData?.ethnicityStats?.map((entry: any, index: number) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              </Paper>
-            </Grid>
-          )}
-
-          {/* Religion Distribution */}
-          {voterData?.religionStats?.length > 0 && (
-            <Grid item xs={12} md={6}>
-              <Paper sx={{ p: 2 }}>
-                <Typography variant="h6" gutterBottom>Religion Distribution</Typography>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={voterData?.religionStats || []}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={(entry) => `${entry.religion} (${entry.percentage}%)`}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="count"
-                    >
-                      {voterData?.religionStats?.map((entry: any, index: number) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              </Paper>
-            </Grid>
-          )}
-
-          {/* Income Distribution */}
-          {voterData?.incomeStats?.length > 0 && (
-            <Grid item xs={12}>
-              <Paper sx={{ p: 2 }}>
-                <Typography variant="h6" gutterBottom>Income Distribution</Typography>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={voterData?.incomeStats || []}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="income" />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="count" fill="#82CA9D" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </Paper>
-            </Grid>
-          )}
-        </Grid>
-      </TabPanel>
-
-      <TabPanel value={tabValue} index={1}>
-        <Grid container spacing={3}>
-          {/* Contact Status Distribution */}
-          <Grid item xs={12} md={6}>
             <Paper sx={{ p: 2 }}>
-              <Typography variant="h6" gutterBottom>Contact Status Distribution</Typography>
+              <Typography variant="h6" gutterBottom>Ethnicity Distribution</Typography>
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie
-                    data={contactData?.contactsByStatus || []}
+                    data={voterData?.ethnicityStats || []}
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={(entry) => `${entry.status} (${entry.percentage}%)`}
+                    label={(entry) => `${entry.ethnicity} (${entry.percentage}%)`}
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="count"
                   >
-                    {contactData?.contactsByStatus?.map((entry: any, index: number) => (
+                    {voterData?.ethnicityStats?.map((entry: any, index: number) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
@@ -438,72 +341,136 @@ const Analytics: React.FC = () => {
                 </PieChart>
               </ResponsiveContainer>
             </Paper>
-          </Grid>
+          )}
 
-          {/* Top Volunteers */}
-          <Grid item xs={12} md={6}>
+          {/* Religion Distribution */}
+          {voterData?.religionStats?.length > 0 && (
             <Paper sx={{ p: 2 }}>
-              <Typography variant="h6" gutterBottom>Top Volunteers</Typography>
-              <Box sx={{ mt: 2 }}>
-                {contactData?.contactsByVolunteer?.map((volunteer: any, index: number) => (
-                  <Box key={volunteer.volunteerId} sx={{ mb: 2 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Typography variant="body1">
-                        {index + 1}. {volunteer.volunteerName}
-                      </Typography>
-                      <Chip label={`${volunteer.contactCount} contacts`} color="primary" size="small" />
-                    </Box>
-                  </Box>
-                ))}
-              </Box>
-            </Paper>
-          </Grid>
-
-          {/* Contacts Over Time */}
-          <Grid item xs={12}>
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="h6" gutterBottom>Contact Activity (Last 30 Days)</Typography>
+              <Typography variant="h6" gutterBottom>Religion Distribution</Typography>
               <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={contactData?.contactsOverTime || []}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis 
-                    dataKey="date" 
-                    tickFormatter={(date) => new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                  />
-                  <YAxis />
-                  <Tooltip 
-                    labelFormatter={(date) => new Date(date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-                  />
-                  <Line type="monotone" dataKey="count" stroke="#8884d8" strokeWidth={2} />
-                </LineChart>
-              </ResponsiveContainer>
-            </Paper>
-          </Grid>
-        </Grid>
-      </TabPanel>
-
-      <TabPanel value={tabValue} index={2}>
-        <Grid container spacing={3}>
-          {/* Top Zip Codes */}
-          <Grid item xs={12}>
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="h6" gutterBottom>Top 10 Zip Codes</Typography>
-              <ResponsiveContainer width="100%" height={400}>
-                <BarChart data={voterData?.zipCodeStats || []} layout="horizontal">
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="zipCode" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="count" fill="#FF8042">
-                    {voterData?.zipCodeStats?.map((entry: any, index: number) => (
+                <PieChart>
+                  <Pie
+                    data={voterData?.religionStats || []}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={(entry) => `${entry.religion} (${entry.percentage}%)`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="count"
+                  >
+                    {voterData?.religionStats?.map((entry: any, index: number) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
-                  </Bar>
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </Paper>
+          )}
+
+          {/* Income Distribution */}
+          {voterData?.incomeStats?.length > 0 && (
+            <Paper sx={{ p: 2, gridColumn: '1 / -1' }}>
+              <Typography variant="h6" gutterBottom>Income Distribution</Typography>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={voterData?.incomeStats || []}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="income" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="count" fill="#82CA9D" />
                 </BarChart>
               </ResponsiveContainer>
             </Paper>
-          </Grid>
-        </Grid>
+          )}
+        </Box>
+      </TabPanel>
+
+      <TabPanel value={tabValue} index={1}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' }, gap: 3 }}>
+          {/* Contact Status Distribution */}
+          <Paper sx={{ p: 2 }}>
+            <Typography variant="h6" gutterBottom>Contact Status Distribution</Typography>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={contactData?.contactsByStatus || []}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={(entry) => `${entry.status} (${entry.percentage}%)`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="count"
+                >
+                  {contactData?.contactsByStatus?.map((entry: any, index: number) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </Paper>
+
+          {/* Top Volunteers */}
+          <Paper sx={{ p: 2 }}>
+            <Typography variant="h6" gutterBottom>Top Volunteers</Typography>
+            <Box sx={{ mt: 2 }}>
+              {contactData?.contactsByVolunteer?.map((volunteer: any, index: number) => (
+                <Box key={volunteer.volunteerId} sx={{ mb: 2 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="body1">
+                      {index + 1}. {volunteer.volunteerName}
+                    </Typography>
+                    <Chip label={`${volunteer.contactCount} contacts`} color="primary" size="small" />
+                  </Box>
+                </Box>
+              ))}
+            </Box>
+          </Paper>
+
+          {/* Contacts Over Time */}
+          <Paper sx={{ p: 2, gridColumn: '1 / -1' }}>
+            <Typography variant="h6" gutterBottom>Contact Activity (Last 30 Days)</Typography>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={contactData?.contactsOverTime || []}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis 
+                  dataKey="date" 
+                  tickFormatter={(date) => new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                />
+                <YAxis />
+                <Tooltip 
+                  labelFormatter={(date) => new Date(date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                />
+                <Line type="monotone" dataKey="count" stroke="#8884d8" strokeWidth={2} />
+              </LineChart>
+            </ResponsiveContainer>
+          </Paper>
+        </Box>
+      </TabPanel>
+
+      <TabPanel value={tabValue} index={2}>
+        <Box>
+          {/* Top Zip Codes */}
+          <Paper sx={{ p: 2 }}>
+            <Typography variant="h6" gutterBottom>Top 10 Zip Codes</Typography>
+            <ResponsiveContainer width="100%" height={400}>
+              <BarChart data={voterData?.zipCodeStats || []} layout="horizontal">
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="zipCode" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="count" fill="#FF8042">
+                  {voterData?.zipCodeStats?.map((entry: any, index: number) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </Paper>
+        </Box>
       </TabPanel>
     </Box>
   );

@@ -84,7 +84,7 @@ import VoterContactHistory from './VoterContactHistory';
 import ContactModal from './ContactModal';
 import VoiceRecordings from './VoiceRecordings';
 import VoterStagingImport from './VoterStagingImport';
-import Analytics from './Analytics';
+import AnalyticsComponent from './Analytics';
 import { API_BASE_URL } from '../config';
 import { customerConfig } from '../config/customerConfig';
 import { ApiErrorHandler, ApiError } from '../utils/apiErrorHandler';
@@ -1598,7 +1598,7 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
 
         {/* Analytics Tab */}
         <TabPanel value={currentTab} index={getTabIndex('analytics')}>
-          <Analytics />
+          <AnalyticsComponent />
         </TabPanel>
 
         {/* Users Tab */}
