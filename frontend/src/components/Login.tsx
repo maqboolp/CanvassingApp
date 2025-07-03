@@ -328,6 +328,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, isLoading = false, error }) => {
                       </Box>
                     </>
                   )}
+                </Box>
               </Box>
 
               {/* Voter Resources */}
