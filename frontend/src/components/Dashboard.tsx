@@ -139,7 +139,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/volunteers/stats`, {
+      const response = await fetch(`${API_BASE_URL}/api/volunteers/stats`, {
         headers: {
           'Authorization': `Bearer ${user.token}`
         }
@@ -156,7 +156,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 
   const fetchLeaderboard = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/volunteers/leaderboard`, {
+      const response = await fetch(`${API_BASE_URL}/api/volunteers/leaderboard`, {
         headers: {
           'Authorization': `Bearer ${user.token}`
         }
@@ -173,7 +173,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 
   const fetchDebugStats = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/voters/debug-stats`, {
+      const response = await fetch(`${API_BASE_URL}/api/voters/debug-stats`, {
         headers: {
           'Authorization': `Bearer ${user.token}`
         }
@@ -192,10 +192,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const fetchVolunteerResources = async () => {
     try {
       const [quickTipsResponse, scriptResponse] = await Promise.all([
-        fetch(`${API_BASE_URL}/volunteerresources/QuickTips`, {
+        fetch(`${API_BASE_URL}/api/volunteerresources/QuickTips`, {
           headers: { 'Authorization': `Bearer ${user.token}` }
         }),
-        fetch(`${API_BASE_URL}/volunteerresources/Script`, {
+        fetch(`${API_BASE_URL}/api/volunteerresources/Script`, {
           headers: { 'Authorization': `Bearer ${user.token}` }
         })
       ]);
@@ -226,7 +226,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     setResourceSaving(true);
     try {
       const apiResourceType = editingResourceType === 'quickTips' ? 'QuickTips' : 'Script';
-      const response = await fetch(`${API_BASE_URL}/volunteerresources/${apiResourceType}`, {
+      const response = await fetch(`${API_BASE_URL}/api/volunteerresources/${apiResourceType}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -325,7 +325,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     try {
       console.log('Dashboard: Finding nearest voter for coords:', coords, 'user role:', user.role);
       const response = await fetch(
-        `${API_BASE_URL}/voters/nearest?latitude=${coords.latitude}&longitude=${coords.longitude}`,
+        `${API_BASE_URL}/api/voters/nearest?latitude=${coords.latitude}&longitude=${coords.longitude}`,
         {
           headers: {
             'Authorization': `Bearer ${user.token}`
@@ -384,7 +384,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     setPasswordResult(null);
     
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/change-password`, {
+      const response = await fetch(`${API_BASE_URL}/api/auth/change-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -418,7 +418,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 
   const fetchAvatarInfo = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/avatar-info`, {
+      const response = await fetch(`${API_BASE_URL}/api/auth/avatar-info`, {
         headers: {
           'Authorization': `Bearer ${user.token}`
         }
@@ -443,7 +443,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     if (!selectedVoterForContact) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/contacts`, {
+      const response = await fetch(`${API_BASE_URL}/api/contacts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

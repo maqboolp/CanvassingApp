@@ -101,7 +101,7 @@ const SelfRegistration: React.FC = () => {
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/registration/self-register`, {
+      const response = await fetch(`${API_BASE_URL}/api/registration/self-register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

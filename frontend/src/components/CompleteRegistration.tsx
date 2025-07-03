@@ -61,7 +61,7 @@ const CompleteRegistration: React.FC = () => {
 
   const fetchInvitationDetails = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/registration/invitation/${token}`);
+      const response = await fetch(`${API_BASE_URL}/api/registration/invitation/${token}`);
       
       if (response.ok) {
         const data = await response.json();
@@ -121,7 +121,7 @@ const CompleteRegistration: React.FC = () => {
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/registration/complete-invitation`, {
+      const response = await fetch(`${API_BASE_URL}/api/registration/complete-invitation`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
