@@ -35,7 +35,7 @@ These variables control the customer-facing branding and content:
 | `REACT_APP_CAMPAIGN_VENMO` | Venmo handle for donations | `@cindymyrex` | No |
 | `REACT_APP_CAMPAIGN_YOUTUBE` | YouTube channel URL | `https://youtube.com/@cindymyrex` | No |
 
-#### Voter Resources (Login Page)
+#### Voter Resources (Login Page & Dashboard)
 | Variable | Description | Example | Required |
 |----------|-------------|---------|----------|
 | `REACT_APP_VOTER_REGISTRATION_URL` | Voter registration check URL | `https://myinfo.alabamavotes.gov/VoterView` | No |
@@ -111,6 +111,8 @@ Voter resources section is optional and only displays if configured:
 1. **Voter Registration**: Links to state-specific voter registration check
 2. **Volunteer Hotline**: Campaign-specific support number
 3. **Quick Tips**: Currently static, will be configurable in future
+
+Note: These resources appear both on the login page and in the Dashboard's Resources tab. Campaign website, YouTube, and Venmo information also appears in the Dashboard's Resources tab when configured.
 
 ## API Configuration
 

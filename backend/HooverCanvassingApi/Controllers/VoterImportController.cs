@@ -43,9 +43,9 @@ namespace HooverCanvassingApi.Controllers
                 if (file.Length > 10 * 1024 * 1024) // 10MB
                 {
                     var tempFile = Path.GetTempFileName();
-                    using (var stream = new FileStream(tempFile, FileMode.Create))
+                    using (var writeStream = new FileStream(tempFile, FileMode.Create))
                     {
-                        await file.CopyToAsync(stream);
+                        await file.CopyToAsync(writeStream);
                     }
 
                     // Start background processing
@@ -53,14 +53,14 @@ namespace HooverCanvassingApi.Controllers
                     {
                         try
                         {
-                            using var stream = new FileStream(tempFile, FileMode.Open);
-                            await _stagingService.ImportCsvToStagingAsync(stream, file.FileName);
+                            using var readStream = new FileStream(tempFile, FileMode.Open);
+                            await _stagingService.ImportCsvToStagingAsync(readStream, file.FileName);
                         }
                         finally
                         {
-                            if (File.Exists(tempFile))
+                            if (System.IO.File.Exists(tempFile))
                             {
-                                File.Delete(tempFile);
+                                System.IO.File.Delete(tempFile);
                             }
                         }
                     });
