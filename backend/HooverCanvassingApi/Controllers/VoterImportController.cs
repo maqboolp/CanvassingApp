@@ -24,6 +24,8 @@ namespace HooverCanvassingApi.Controllers
         }
 
         [HttpPost("stage")]
+        [RequestTimeout(300000)] // 5 minutes timeout
+        [RequestSizeLimit(104857600)] // 100MB limit
         public async Task<IActionResult> UploadToStaging(IFormFile file)
         {
             if (file == null || file.Length == 0)
@@ -38,6 +40,42 @@ namespace HooverCanvassingApi.Controllers
 
             try
             {
+                // For large files, process in background and return immediately
+                if (file.Length > 10 * 1024 * 1024) // 10MB
+                {
+                    var tempFile = Path.GetTempFileName();
+                    using (var stream = new FileStream(tempFile, FileMode.Create))
+                    {
+                        await file.CopyToAsync(stream);
+                    }
+
+                    // Start background processing
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            using var stream = new FileStream(tempFile, FileMode.Open);
+                            await _stagingService.ImportCsvToStagingAsync(stream, file.FileName);
+                        }
+                        finally
+                        {
+                            if (File.Exists(tempFile))
+                            {
+                                File.Delete(tempFile);
+                            }
+                        }
+                    });
+
+                    return Accepted(new
+                    {
+                        success = true,
+                        message = "Large file import started. Check staging tables in a few moments.",
+                        fileName = file.FileName,
+                        fileSize = file.Length
+                    });
+                }
+
+                // For smaller files, process synchronously
                 using var stream = file.OpenReadStream();
                 var result = await _stagingService.ImportCsvToStagingAsync(stream, file.FileName);
                 

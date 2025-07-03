@@ -119,16 +119,44 @@ const VoterStagingImport: React.FC<VoterStagingImportProps> = ({ onComplete }) =
       setUploadResult(result);
       setSuccess(result.message);
       
-      // Fetch table info
-      const info = await ApiErrorHandler.makeAuthenticatedRequest(
-        `${API_BASE_URL}/api/voterimport/staging-tables/${result.stagingTableName}`
-      );
-      
-      setTableInfo(info);
-      setActiveStep(1);
-      
-      // Auto-detect common column mappings
-      autoDetectColumns(info.columns);
+      // Check if it's a large file async import
+      if (result.fileSize && result.fileSize > 10 * 1024 * 1024) {
+        // For large files, wait a bit then check for staging tables
+        setSuccess('Large file import started. Please wait...');
+        setTimeout(async () => {
+          try {
+            // Get the latest staging table
+            const tables = await ApiErrorHandler.makeAuthenticatedRequest(
+              `${API_BASE_URL}/api/voterimport/staging-tables`
+            );
+            
+            if (tables && tables.length > 0) {
+              const latestTable = tables[0]; // Most recent table
+              const info = await ApiErrorHandler.makeAuthenticatedRequest(
+                `${API_BASE_URL}/api/voterimport/staging-tables/${latestTable}`
+              );
+              
+              setTableInfo(info);
+              setUploadResult({ ...result, stagingTableName: latestTable });
+              setActiveStep(1);
+              autoDetectColumns(info.columns);
+            }
+          } catch (err) {
+            setError('Large file is still processing. Please try again in a moment.');
+          }
+        }, 5000); // Wait 5 seconds
+      } else {
+        // Fetch table info for small files
+        const info = await ApiErrorHandler.makeAuthenticatedRequest(
+          `${API_BASE_URL}/api/voterimport/staging-tables/${result.stagingTableName}`
+        );
+        
+        setTableInfo(info);
+        setActiveStep(1);
+        
+        // Auto-detect common column mappings
+        autoDetectColumns(info.columns);
+      }
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message);

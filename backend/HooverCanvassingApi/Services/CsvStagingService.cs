@@ -75,11 +75,18 @@ namespace HooverCanvassingApi.Services
                     records.Add(record);
                     recordCount++;
                     
-                    // Batch insert every 1000 records
-                    if (records.Count >= 1000)
+                    // Batch insert every 500 records for better performance
+                    if (records.Count >= 500)
                     {
                         await InsertRecordsAsync(tableName, headers, records);
                         records.Clear();
+                        
+                        // Log progress for large imports
+                        if (recordCount % 5000 == 0)
+                        {
+                            _logger.LogInformation("Imported {Count} records to staging table {TableName}", 
+                                recordCount, tableName);
+                        }
                     }
                 }
                 
