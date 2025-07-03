@@ -125,6 +125,10 @@ CAMPAIGN_YOUTUBE=""
 # Voter Resources
 VOTER_REGISTRATION_URL=""
 VOLUNTEER_HOTLINE=""
+
+# Registration Page
+REGISTRATION_TITLE="Join Our Campaign Team"
+REGISTRATION_SUBTITLE="Help bring positive change to our community!"
 EOF
 
 # Create customer-specific scripts

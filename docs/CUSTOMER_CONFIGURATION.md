@@ -41,6 +41,12 @@ These variables control the customer-facing branding and content:
 | `REACT_APP_VOTER_REGISTRATION_URL` | Voter registration check URL | `https://myinfo.alabamavotes.gov/VoterView` | No |
 | `REACT_APP_VOLUNTEER_HOTLINE` | Support phone number | `(205) 555-1234` | No |
 
+#### Registration Page
+| Variable | Description | Example | Required |
+|----------|-------------|---------|----------|
+| `REACT_APP_REGISTRATION_TITLE` | Self-registration page title | `Join Our Campaign Team` | No |
+| `REACT_APP_REGISTRATION_SUBTITLE` | Self-registration page subtitle | `Help bring positive change to our community!` | No |
+
 ### Backend Environment Variables
 
 These variables control server-side functionality:
@@ -158,6 +164,8 @@ REACT_APP_CAMPAIGN_WEBSITE=https://cindymyrex.com
 REACT_APP_CAMPAIGN_VENMO=@cindymyrex
 REACT_APP_VOTER_REGISTRATION_URL=https://myinfo.alabamavotes.gov/VoterView
 REACT_APP_VOLUNTEER_HOTLINE=(205) 555-1234
+REACT_APP_REGISTRATION_TITLE="Join Our Campaign Team"
+REACT_APP_REGISTRATION_SUBTITLE="Help bring positive change to Alabama House District 12!"
 
 # Backend
 JwtSettings__Secret=cindy-myrex-secret-key-minimum-32-characters-long

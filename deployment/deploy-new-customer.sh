@@ -131,6 +131,10 @@ services:
     value: ""
   - key: REACT_APP_VOLUNTEER_HOTLINE
     value: ""
+  - key: REACT_APP_REGISTRATION_TITLE
+    value: "Join Our Campaign Team"
+  - key: REACT_APP_REGISTRATION_SUBTITLE
+    value: "Help bring positive change to our community!"
 
 databases:
 - name: db

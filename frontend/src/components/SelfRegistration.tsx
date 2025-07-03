@@ -32,6 +32,14 @@ import {
 import { API_BASE_URL } from '../config';
 import { customerConfig } from '../config/customerConfig';
 
+// Get customer-specific campaign info
+const campaignSlogan = process.env.REACT_APP_CAMPAIGN_SLOGAN || "Join our campaign!";
+const campaignMessage = process.env.REACT_APP_CAMPAIGN_MESSAGE || "Join the movement for positive change";
+const campaignDisclaimer = process.env.REACT_APP_CAMPAIGN_DISCLAIMER || `Paid for by ${customerConfig.appTitle}`;
+const campaignWebsite = process.env.REACT_APP_CAMPAIGN_WEBSITE;
+const registrationTitle = process.env.REACT_APP_REGISTRATION_TITLE || "Join Our Campaign Team";
+const registrationSubtitle = process.env.REACT_APP_REGISTRATION_SUBTITLE || "Help bring positive change to our community!";
+
 const SelfRegistration: React.FC = () => {
   const navigate = useNavigate();
   
@@ -156,7 +164,7 @@ const SelfRegistration: React.FC = () => {
               Registration Submitted!
             </Typography>
             <Typography variant="body1" color="text.secondary" paragraph>
-              Thank you for your interest in joining the Tanveer for Hoover campaign! 
+              Thank you for your interest in joining our campaign! 
               Your registration has been submitted and is awaiting review.
             </Typography>
             <Alert severity="info" sx={{ mb: 3, textAlign: 'left' }}>
@@ -171,9 +179,11 @@ const SelfRegistration: React.FC = () => {
               <Button variant="outlined" onClick={() => navigate('/login')}>
                 Go to Login
               </Button>
-              <Button variant="contained" onClick={() => window.location.href = 'https://tanveer4hoover.com'}>
-                Visit Campaign Site
-              </Button>
+              {campaignWebsite && (
+                <Button variant="contained" onClick={() => window.location.href = campaignWebsite}>
+                  Visit Campaign Site
+                </Button>
+              )}
             </Box>
             
             {/* Version Information */}
@@ -201,10 +211,10 @@ const SelfRegistration: React.FC = () => {
               }} 
             />
             <Typography variant="h4" gutterBottom sx={{ color: '#2f1c6a', fontWeight: 600 }}>
-              Join Our Campaign Team
+              {registrationTitle}
             </Typography>
             <Typography variant="body1" color="text.secondary">
-              Help bring positive change to Hoover!
+              {registrationSubtitle}
             </Typography>
           </Box>
 
@@ -408,23 +418,31 @@ const SelfRegistration: React.FC = () => {
           </Box>
 
           {/* Campaign Info */}
-          <Box sx={{ 
-            mt: 3, 
-            p: 2, 
-            background: 'linear-gradient(45deg, #ebe4ff 30%, #d5dfff 90%)',
-            borderRadius: 2,
-            border: '1px solid rgba(103, 61, 230, 0.1)'
-          }}>
-            <Typography variant="body2" align="center" sx={{ color: '#2f1c6a', fontWeight: 600 }}>
-              "Take a Walk With Me."
-            </Typography>
-            <Typography variant="body2" align="center" sx={{ color: '#2f1c6a', mt: 0.5 }}>
-              Join the movement for a better Hoover - August 26, 2025 Election
-            </Typography>
-            <Typography variant="caption" align="center" sx={{ mt: 1, display: 'block', color: '#2f1c6a', fontStyle: 'italic' }}>
-              Paid for by Tanveer for Hoover
-            </Typography>
-          </Box>
+          {(campaignSlogan || campaignMessage) && (
+            <Box sx={{ 
+              mt: 3, 
+              p: 2, 
+              background: 'linear-gradient(45deg, #ebe4ff 30%, #d5dfff 90%)',
+              borderRadius: 2,
+              border: '1px solid rgba(103, 61, 230, 0.1)'
+            }}>
+              {campaignSlogan && (
+                <Typography variant="body2" align="center" sx={{ color: '#2f1c6a', fontWeight: 600 }}>
+                  {campaignSlogan}
+                </Typography>
+              )}
+              {campaignMessage && (
+                <Typography variant="body2" align="center" sx={{ color: '#2f1c6a', mt: 0.5 }}>
+                  {campaignMessage}
+                </Typography>
+              )}
+              {campaignDisclaimer && (
+                <Typography variant="caption" align="center" sx={{ mt: 1, display: 'block', color: '#2f1c6a', fontStyle: 'italic' }}>
+                  {campaignDisclaimer}
+                </Typography>
+              )}
+            </Box>
+          )}
 
           {/* Version Information */}
           <VersionInfo />
