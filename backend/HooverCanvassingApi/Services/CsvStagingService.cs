@@ -47,7 +47,8 @@ namespace HooverCanvassingApi.Services
                 var headers = csv.HeaderRecord ?? throw new InvalidOperationException("CSV file has no headers");
                 
                 // Generate a unique table name for this import
-                var tableName = $"voter_import_{DateTime.UtcNow:yyyyMMdd_HHmmss}_{Guid.NewGuid():N}".Substring(0, 63);
+                var baseTableName = $"voter_import_{DateTime.UtcNow:yyyyMMdd_HHmmss}_{Guid.NewGuid():N}";
+                var tableName = baseTableName.Length > 63 ? baseTableName.Substring(0, 63) : baseTableName;
                 result.StagingTableName = tableName;
                 
                 // Create the staging table
