@@ -92,7 +92,7 @@ const VoiceRecordings: React.FC<VoiceRecordingsProps> = ({ user }) => {
     try {
       setLoading(true);
       const data = await ApiErrorHandler.makeAuthenticatedRequest(
-        `${API_BASE_URL}/api/voicerecordings`
+        `${API_BASE_URL}/voicerecordings`
       );
       setRecordings(data);
     } catch (err) {
@@ -135,7 +135,7 @@ const VoiceRecordings: React.FC<VoiceRecordingsProps> = ({ user }) => {
     try {
       setUploading(true);
       await ApiErrorHandler.makeAuthenticatedRequest(
-        `${API_BASE_URL}/api/voicerecordings/upload`,
+        `${API_BASE_URL}/voicerecordings/upload`,
         {
           method: 'POST',
           body: data,
@@ -199,7 +199,7 @@ const VoiceRecordings: React.FC<VoiceRecordingsProps> = ({ user }) => {
         try {
           setUploading(true);
           await ApiErrorHandler.makeAuthenticatedRequest(
-            `${API_BASE_URL}/api/voicerecordings/upload`,
+            `${API_BASE_URL}/voicerecordings/upload`,
             {
               method: 'POST',
               body: data,
@@ -268,7 +268,7 @@ const VoiceRecordings: React.FC<VoiceRecordingsProps> = ({ user }) => {
 
     try {
       await ApiErrorHandler.makeAuthenticatedRequest(
-        `${API_BASE_URL}/api/voicerecordings/${selectedRecording.id}`,
+        `${API_BASE_URL}/voicerecordings/${selectedRecording.id}`,
         {
           method: 'PUT',
           body: JSON.stringify({
@@ -294,7 +294,7 @@ const VoiceRecordings: React.FC<VoiceRecordingsProps> = ({ user }) => {
 
     try {
       await ApiErrorHandler.makeAuthenticatedRequest(
-        `${API_BASE_URL}/api/voicerecordings/${id}`,
+        `${API_BASE_URL}/voicerecordings/${id}`,
         {
           method: 'DELETE'
         }

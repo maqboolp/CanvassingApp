@@ -80,7 +80,7 @@ const VoterContactHistory: React.FC<VoterContactHistoryProps> = ({ user }) => {
 
   const fetchVolunteers = useCallback(async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/admin/volunteers`, {
+      const response = await fetch(`${API_BASE_URL}/admin/volunteers`, {
         headers: {
           'Authorization': `Bearer ${user.token}`
         }
@@ -113,7 +113,7 @@ const VoterContactHistory: React.FC<VoterContactHistoryProps> = ({ user }) => {
         ...(endDate && { endDate })
       });
 
-      const response = await fetch(`${API_BASE_URL}/api/admin/voter-contact-history?${queryParams}`, {
+      const response = await fetch(`${API_BASE_URL}/admin/voter-contact-history?${queryParams}`, {
         headers: {
           'Authorization': `Bearer ${user.token}`
         }

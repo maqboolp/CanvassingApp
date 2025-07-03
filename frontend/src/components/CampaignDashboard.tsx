@@ -159,7 +159,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
   const fetchCampaigns = async () => {
     try {
       const data = await ApiErrorHandler.makeAuthenticatedRequest(
-        `${API_BASE_URL}/api/campaigns`
+        `${API_BASE_URL}/campaigns`
       );
       console.log('Campaigns data from API:', data);
       setCampaigns(data);
@@ -178,7 +178,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
     try {
       console.log('Fetching available ZIP codes...');
       const data = await ApiErrorHandler.makeAuthenticatedRequest(
-        `${API_BASE_URL}/api/campaigns/available-zipcodes`
+        `${API_BASE_URL}/campaigns/available-zipcodes`
       );
       console.log('Received ZIP codes:', data);
       setAvailableZipCodes(data);
@@ -195,7 +195,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
   const fetchAvailableTags = async () => {
     try {
       const data = await ApiErrorHandler.makeAuthenticatedRequest(
-        `${API_BASE_URL}/api/votertags`
+        `${API_BASE_URL}/votertags`
       );
       setAvailableTags(data);
     } catch (error) {
@@ -209,7 +209,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
   const fetchVoiceRecordings = async () => {
     try {
       const data = await ApiErrorHandler.makeAuthenticatedRequest(
-        `${API_BASE_URL}/api/voicerecordings`
+        `${API_BASE_URL}/voicerecordings`
       );
       setVoiceRecordings(data);
     } catch (error) {
@@ -257,7 +257,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
       }
       
       const data = await ApiErrorHandler.makeAuthenticatedRequest(
-        `${API_BASE_URL}/api/campaigns/recipient-count?${queryParams}`
+        `${API_BASE_URL}/campaigns/recipient-count?${queryParams}`
       );
       setAudienceCount(data);
     } catch (error) {
@@ -318,7 +318,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
       console.log('Sending campaign request:', requestBody);
       
       await ApiErrorHandler.makeAuthenticatedRequest(
-        `${API_BASE_URL}/api/campaigns`,
+        `${API_BASE_URL}/campaigns`,
         {
           method: 'POST',
           body: JSON.stringify(requestBody)
@@ -360,8 +360,8 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
       const isRetry = campaign && campaign.status === 3; // Completed status
       
       const endpoint = isRetry 
-        ? `${API_BASE_URL}/api/campaigns/${sendDialog.campaignId}/retry-failed`
-        : `${API_BASE_URL}/api/campaigns/${sendDialog.campaignId}/send`;
+        ? `${API_BASE_URL}/campaigns/${sendDialog.campaignId}/retry-failed`
+        : `${API_BASE_URL}/campaigns/${sendDialog.campaignId}/send`;
       
       await ApiErrorHandler.makeAuthenticatedRequest(
         endpoint,
@@ -388,7 +388,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
 
     try {
       await ApiErrorHandler.makeAuthenticatedRequest(
-        `${API_BASE_URL}/api/campaigns/${campaignId}`,
+        `${API_BASE_URL}/campaigns/${campaignId}`,
         {
           method: 'DELETE'
         }
@@ -476,7 +476,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
       console.log('Updating campaign:', requestBody);
       
       await ApiErrorHandler.makeAuthenticatedRequest(
-        `${API_BASE_URL}/api/campaigns/${editingCampaign.id}`,
+        `${API_BASE_URL}/campaigns/${editingCampaign.id}`,
         {
           method: 'PUT',
           body: JSON.stringify(requestBody)

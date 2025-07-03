@@ -212,7 +212,7 @@ const ContactModal: React.FC<ContactModalProps> = ({
           formData.append('audioFile', audioBlob, 'voice-memo.webm');
           
           const token = localStorage.getItem('auth_token');
-          const response = await fetch(`${API_BASE_URL}/api/contacts/upload-audio`, {
+          const response = await fetch(`${API_BASE_URL}/contacts/upload-audio`, {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${token}`

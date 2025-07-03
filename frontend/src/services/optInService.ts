@@ -2,7 +2,7 @@ import { OptInRequest, OptInResponse } from '../types';
 import { API_BASE_URL } from '../config';
 
 class OptInService {
-  private apiUrl = `${API_BASE_URL}/api/optin`;
+  private apiUrl = `${API_BASE_URL}/optin`;
 
   async submitOptIn(data: OptInRequest): Promise<OptInResponse> {
     const response = await fetch(`${this.apiUrl}/web-form`, {

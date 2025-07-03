@@ -273,7 +273,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
     setLoading(true);
     try {
       const data = await ApiErrorHandler.makeAuthenticatedRequest(
-        `${API_BASE_URL}/api/admin/analytics`
+        `${API_BASE_URL}/admin/analytics`
       );
       setAnalytics(data);
     } catch (error) {
@@ -290,7 +290,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
   const fetchLeaderboard = async () => {
     try {
       const data = await ApiErrorHandler.makeAuthenticatedRequest(
-        `${API_BASE_URL}/api/admin/leaderboard`
+        `${API_BASE_URL}/admin/leaderboard`
       );
       setLeaderboard(data);
     } catch (error) {
@@ -306,7 +306,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
     setTagLoading(true);
     try {
       const data = await ApiErrorHandler.makeAuthenticatedRequest(
-        `${API_BASE_URL}/api/votertags`
+        `${API_BASE_URL}/votertags`
       );
       setTags(data);
     } catch (error) {
@@ -334,7 +334,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
       };
       
       await ApiErrorHandler.makeAuthenticatedRequest(
-        `${API_BASE_URL}/api/votertags`,
+        `${API_BASE_URL}/votertags`,
         {
           method: 'POST',
           body: JSON.stringify(requestBody)
@@ -370,7 +370,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
       };
       
       await ApiErrorHandler.makeAuthenticatedRequest(
-        `${API_BASE_URL}/api/votertags/${editingTag.id}`,
+        `${API_BASE_URL}/votertags/${editingTag.id}`,
         {
           method: 'PUT',
           body: JSON.stringify(requestBody)
@@ -399,7 +399,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
 
     try {
       await ApiErrorHandler.makeAuthenticatedRequest(
-        `${API_BASE_URL}/api/votertags/${tag.id}`,
+        `${API_BASE_URL}/votertags/${tag.id}`,
         {
           method: 'DELETE'
         }
@@ -435,7 +435,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
     setLoading(true);
     try {
       const data = await ApiErrorHandler.makeAuthenticatedRequest(
-        `${API_BASE_URL}/api/admin/volunteers`
+        `${API_BASE_URL}/admin/volunteers`
       );
       setVolunteers(data);
     } catch (error) {
@@ -452,7 +452,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
   const fetchPendingVolunteers = async () => {
     setPendingLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/admin/pending-volunteers`, {
+      const response = await fetch(`${API_BASE_URL}/admin/pending-volunteers`, {
         headers: {
           'Authorization': `Bearer ${user.token}`
         }
@@ -474,7 +474,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
     setApprovalResult(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/admin/approve-volunteer/${volunteer.id}`, {
+      const response = await fetch(`${API_BASE_URL}/admin/approve-volunteer/${volunteer.id}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -511,7 +511,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
     setApprovalResult(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/admin/reject-volunteer/${volunteer.id}`, {
+      const response = await fetch(`${API_BASE_URL}/admin/reject-volunteer/${volunteer.id}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -549,7 +549,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
     setDeleteResult(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/admin/delete-user/${userToDelete.id}`, {
+      const response = await fetch(`${API_BASE_URL}/admin/delete-user/${userToDelete.id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${user.token}`
@@ -600,7 +600,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
       formData.append('file', importFile);
       formData.append('enableGeocoding', enableGeocoding.toString());
 
-      const response = await fetch(`${API_BASE_URL}/api/admin/import-voters`, {
+      const response = await fetch(`${API_BASE_URL}/admin/import-voters`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${user.token}`
@@ -630,7 +630,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
 
   const handleExportAnalytics = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/admin/export-analytics`, {
+      const response = await fetch(`${API_BASE_URL}/admin/export-analytics`, {
         headers: {
           'Authorization': `Bearer ${user.token}`
         }
@@ -663,7 +663,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
     
     try {
       const result = await ApiErrorHandler.makeAuthenticatedRequest(
-        `${API_BASE_URL}/api/registration/send-invitation`,
+        `${API_BASE_URL}/registration/send-invitation`,
         {
           method: 'POST',
           body: JSON.stringify(invitationForm)
@@ -703,7 +703,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
     setAdminCreateResult(null);
     
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/create-admin`, {
+      const response = await fetch(`${API_BASE_URL}/auth/create-admin`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -748,7 +748,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
     setImportResult(null);
     
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/change-password`, {
+      const response = await fetch(`${API_BASE_URL}/auth/change-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -777,7 +777,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
 
   const fetchGeocodingStatus = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/admin/geocoding-status`, {
+      const response = await fetch(`${API_BASE_URL}/admin/geocoding-status`, {
         headers: {
           'Authorization': `Bearer ${user.token}`
         }
@@ -814,7 +814,7 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
     setGeocodingResult(null);
     
     try {
-      const response = await fetch(`${API_BASE_URL}/api/admin/geocode-voters`, {
+      const response = await fetch(`${API_BASE_URL}/admin/geocode-voters`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${user.token}`
@@ -891,7 +891,7 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
         requestBody
       });
       
-      const response = await fetch(`${API_BASE_URL}/api/admin/reset-volunteer-password`, {
+      const response = await fetch(`${API_BASE_URL}/admin/reset-volunteer-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -945,7 +945,7 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
         'superadmin': 2
       };
 
-      const response = await fetch(`${API_BASE_URL}/api/admin/change-user-role`, {
+      const response = await fetch(`${API_BASE_URL}/admin/change-user-role`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1041,7 +1041,7 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
     try {
       console.log('AdminDashboard: Finding nearest voter for coords:', coords, 'user role:', user.role);
       const response = await fetch(
-        `${API_BASE_URL}/api/voters/nearest?latitude=${coords.latitude}&longitude=${coords.longitude}`,
+        `${API_BASE_URL}/voters/nearest?latitude=${coords.latitude}&longitude=${coords.longitude}`,
         {
           headers: {
             'Authorization': `Bearer ${user.token}`
@@ -1092,7 +1092,7 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
     if (!selectedVoterForContact) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/contacts`, {
+      const response = await fetch(`${API_BASE_URL}/contacts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1129,10 +1129,10 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
   const fetchVolunteerResources = async () => {
     try {
       const [quickTipsResponse, scriptResponse] = await Promise.all([
-        fetch(`${API_BASE_URL}/api/volunteerresources/QuickTips`, {
+        fetch(`${API_BASE_URL}/volunteerresources/QuickTips`, {
           headers: { 'Authorization': `Bearer ${user.token}` }
         }),
-        fetch(`${API_BASE_URL}/api/volunteerresources/Script`, {
+        fetch(`${API_BASE_URL}/volunteerresources/Script`, {
           headers: { 'Authorization': `Bearer ${user.token}` }
         })
       ]);
@@ -1163,7 +1163,7 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
     setResourceSaving(true);
     try {
       const apiResourceType = editingResourceType === 'quickTips' ? 'QuickTips' : 'Script';
-      const response = await fetch(`${API_BASE_URL}/api/volunteerresources/${apiResourceType}`, {
+      const response = await fetch(`${API_BASE_URL}/volunteerresources/${apiResourceType}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -1210,7 +1210,7 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
         selectedUserIds: recipientType === 'selected' ? selectedUsers : []
       };
 
-      const response = await fetch(`${API_BASE_URL}/api/admin/send-engagement-email`, {
+      const response = await fetch(`${API_BASE_URL}/admin/send-engagement-email`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1257,7 +1257,7 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
     setToggleStatusLoading(targetUser.id);
     
     try {
-      const response = await fetch(`${API_BASE_URL}/api/admin/toggle-user-status`, {
+      const response = await fetch(`${API_BASE_URL}/admin/toggle-user-status`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

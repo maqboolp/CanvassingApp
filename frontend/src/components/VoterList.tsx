@@ -176,7 +176,7 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
   const fetchAvailableTags = async () => {
     try {
       const token = user?.token || localStorage.getItem('auth_token');
-      const response = await fetch(`${API_BASE_URL}/api/votertags`, {
+      const response = await fetch(`${API_BASE_URL}/votertags`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -222,7 +222,7 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
       }
 
       const token = user?.token || localStorage.getItem('auth_token');
-      const response = await fetch(`${API_BASE_URL}/api/voters?${queryParams}`, {
+      const response = await fetch(`${API_BASE_URL}/voters?${queryParams}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -321,7 +321,7 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
     setBulkLoading(true);
     try {
       const token = user?.token || localStorage.getItem('auth_token');
-      const response = await fetch(`${API_BASE_URL}/api/votertags/bulk-${bulkOperation}`, {
+      const response = await fetch(`${API_BASE_URL}/votertags/bulk-${bulkOperation}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -408,7 +408,7 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
       });
 
       const token = user?.token || localStorage.getItem('auth_token');
-      const response = await fetch(`${API_BASE_URL}/api/contacts`, {
+      const response = await fetch(`${API_BASE_URL}/contacts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -457,7 +457,7 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
       const token = user?.token || localStorage.getItem('auth_token');
       
       // Get contacts for this specific voter
-      const contactsResponse = await fetch(`${API_BASE_URL}/api/contacts?voterId=${voterToUncontact.lalVoterId}&page=1&limit=100`, {
+      const contactsResponse = await fetch(`${API_BASE_URL}/contacts?voterId=${voterToUncontact.lalVoterId}&page=1&limit=100`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -481,7 +481,7 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
       const latestContact = voterContacts[0];
 
       // Delete the contact
-      const deleteResponse = await fetch(`${API_BASE_URL}/api/contacts/${latestContact.id}`, {
+      const deleteResponse = await fetch(`${API_BASE_URL}/contacts/${latestContact.id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -563,7 +563,7 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
         partyAffiliation: newVoter.partyAffiliation
       };
 
-      const response = await fetch(`${API_BASE_URL}/api/voters`, {
+      const response = await fetch(`${API_BASE_URL}/voters`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
