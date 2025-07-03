@@ -3,18 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import QRCode from 'react-qr-code';
 import VersionInfo from './VersionInfo';
 import { customerConfig } from '../config/customerConfig';
-
-// Get customer-specific campaign info
-const campaignSlogan = process.env.REACT_APP_CAMPAIGN_SLOGAN || "Join our campaign!";
-const campaignMessage = process.env.REACT_APP_CAMPAIGN_MESSAGE || "Join the movement for positive change";
-const campaignDisclaimer = process.env.REACT_APP_CAMPAIGN_DISCLAIMER || `Paid for by ${customerConfig.appTitle}`;
-const campaignWebsite = process.env.REACT_APP_CAMPAIGN_WEBSITE;
-const campaignVenmo = process.env.REACT_APP_CAMPAIGN_VENMO;
-const campaignYoutube = process.env.REACT_APP_CAMPAIGN_YOUTUBE;
-
-// Get customer-specific voter resources
-const voterRegistrationUrl = process.env.REACT_APP_VOTER_REGISTRATION_URL;
-const volunteerHotline = process.env.REACT_APP_VOLUNTEER_HOTLINE;
 import {
   TextField,
   Button,
@@ -35,7 +23,6 @@ import {
 } from '@mui/material';
 import { 
   Login as LoginIcon, 
- 
   Visibility, 
   VisibilityOff,
   Language,
@@ -43,11 +30,22 @@ import {
   Payment,
   HowToReg,
   Phone,
-  Help,
   OpenInNew
 } from '@mui/icons-material';
 import { LoginRequest } from '../types';
 import { authService } from '../services/authService';
+
+// Get customer-specific campaign info
+const campaignSlogan = process.env.REACT_APP_CAMPAIGN_SLOGAN || "Join our campaign!";
+const campaignMessage = process.env.REACT_APP_CAMPAIGN_MESSAGE || "Join the movement for positive change";
+const campaignDisclaimer = process.env.REACT_APP_CAMPAIGN_DISCLAIMER || `Paid for by ${customerConfig.appTitle}`;
+const campaignWebsite = process.env.REACT_APP_CAMPAIGN_WEBSITE;
+const campaignVenmo = process.env.REACT_APP_CAMPAIGN_VENMO;
+const campaignYoutube = process.env.REACT_APP_CAMPAIGN_YOUTUBE;
+
+// Get customer-specific voter resources
+const voterRegistrationUrl = process.env.REACT_APP_VOTER_REGISTRATION_URL;
+const volunteerHotline = process.env.REACT_APP_VOLUNTEER_HOTLINE;
 
 interface LoginProps {
   onLogin: (credentials: LoginRequest) => Promise<void>;
