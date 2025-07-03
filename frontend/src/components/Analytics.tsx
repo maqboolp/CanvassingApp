@@ -37,6 +37,11 @@ import {
   ThumbUp
 } from '@mui/icons-material';
 import { API_BASE_URL } from '../config';
+import { AuthUser } from '../types';
+
+interface AnalyticsProps {
+  user: AuthUser;
+}
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -59,7 +64,7 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
-const Analytics: React.FC = () => {
+const Analytics: React.FC<AnalyticsProps> = ({ user }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [tabValue, setTabValue] = useState(0);
@@ -78,12 +83,11 @@ const Analytics: React.FC = () => {
   const fetchAnalytics = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
       
       // Fetch voter demographics
       const voterResponse = await fetch(`${API_BASE_URL}/api/analytics/voter-demographics`, {
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${user.token}`
         }
       });
       
@@ -97,7 +101,7 @@ const Analytics: React.FC = () => {
       // Fetch contact analytics
       const contactResponse = await fetch(`${API_BASE_URL}/api/analytics/contact-analytics`, {
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${user.token}`
         }
       });
       

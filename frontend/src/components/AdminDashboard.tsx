@@ -1598,7 +1598,7 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
 
         {/* Analytics Tab */}
         <TabPanel value={currentTab} index={getTabIndex('analytics')}>
-          <AnalyticsComponent />
+          <AnalyticsComponent user={user} />
         </TabPanel>
 
         {/* Users Tab */}
