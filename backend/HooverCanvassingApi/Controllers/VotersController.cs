@@ -312,31 +312,49 @@ namespace HooverCanvassingApi.Controllers
 
                 if (!voters.Any())
                 {
-                    return NotFound(new { message = "No uncontacted voters found" });
+                    var stats = new {
+                        message = "No uncontacted voters with coordinates found",
+                        totalVoters = await _context.Voters.CountAsync(),
+                        votersWithCoordinates = await _context.Voters.CountAsync(v => v.Latitude.HasValue && v.Longitude.HasValue),
+                        uncontactedVoters = await _context.Voters.CountAsync(v => !v.IsContacted),
+                        uncontactedWithCoordinates = 0
+                    };
+                    _logger.LogInformation("No uncontacted voters with coordinates found. Stats: {@Stats}", stats);
+                    return NotFound(stats);
                 }
 
-                // Calculate distances and find nearest
-                var votersWithDistance = voters
+                // Calculate distances for all voters
+                var allVotersWithDistance = voters
                     .Select(v => new
                     {
                         Voter = v,
                         Distance = CalculateDistance(latitude, longitude, v.Latitude!.Value, v.Longitude!.Value)
                     })
-                    .Where(vd => vd.Distance <= maxDistanceKm)
                     .OrderBy(vd => vd.Distance)
-                    .FirstOrDefault();
+                    .ToList();
 
-                if (votersWithDistance == null)
+                // Find nearest within max distance
+                var nearestWithinRange = allVotersWithDistance
+                    .FirstOrDefault(vd => vd.Distance <= maxDistanceKm);
+
+                if (nearestWithinRange == null)
                 {
                     _logger.LogInformation("No uncontacted voters found within {Distance}km for user {UserId}", 
                         maxDistanceKm, currentUserId);
-                    return NotFound(new { message = $"No uncontacted voters found within {maxDistanceKm}km" });
+                    
+                    var nearestDistance = allVotersWithDistance.Any() ? allVotersWithDistance[0].Distance : 0;
+                    return NotFound(new { 
+                        message = $"No uncontacted voters found within {maxDistanceKm}km",
+                        nearestVoterDistance = nearestDistance,
+                        totalUncontactedWithCoordinates = voters.Count,
+                        suggestion = nearestDistance > 0 ? $"Try increasing the search radius. Nearest voter is {nearestDistance:F1}km away" : null
+                    });
                 }
 
                 _logger.LogInformation("Found nearest voter at distance {Distance}km for user {UserId}", 
-                    votersWithDistance.Distance, currentUserId);
+                    nearestWithinRange.Distance, currentUserId);
 
-                var voter = votersWithDistance.Voter;
+                var voter = nearestWithinRange.Voter;
                 var voterDto = new VoterDto
                 {
                     LalVoterId = voter.LalVoterId,
@@ -367,7 +385,7 @@ namespace HooverCanvassingApi.Controllers
                     }).ToList()
                 };
 
-                return Ok(new { voter = voterDto, distance = votersWithDistance.Distance });
+                return Ok(new { voter = voterDto, distance = nearestWithinRange.Distance });
             }
             catch (Exception ex)
             {
