@@ -216,37 +216,46 @@ namespace HooverCanvassingApi.Services
             using var connection = new NpgsqlConnection(_connectionString);
             await connection.OpenAsync();
             
-            using var columnCommand = new NpgsqlCommand(columnSql, connection);
-            columnCommand.Parameters.AddWithValue("@tableName", tableName);
-            using var columnReader = await columnCommand.ExecuteReaderAsync();
-            
+            // Get columns first and close the reader
             var columns = new List<string>();
-            while (await columnReader.ReadAsync())
+            using (var columnCommand = new NpgsqlCommand(columnSql, connection))
             {
-                columns.Add(columnReader.GetString(0));
+                columnCommand.Parameters.AddWithValue("@tableName", tableName);
+                using (var columnReader = await columnCommand.ExecuteReaderAsync())
+                {
+                    while (await columnReader.ReadAsync())
+                    {
+                        columns.Add(columnReader.GetString(0));
+                    }
+                }
             }
             info.Columns = columns;
             
             // Get record count
             var countSql = $"SELECT COUNT(*) FROM \"{tableName}\"";
-            using var countCommand = new NpgsqlCommand(countSql, connection);
-            info.RecordCount = Convert.ToInt32(await countCommand.ExecuteScalarAsync());
+            using (var countCommand = new NpgsqlCommand(countSql, connection))
+            {
+                info.RecordCount = Convert.ToInt32(await countCommand.ExecuteScalarAsync());
+            }
             
             // Get sample data (first 5 rows)
             var sampleSql = $"SELECT * FROM \"{tableName}\" LIMIT 5";
-            using var sampleCommand = new NpgsqlCommand(sampleSql, connection);
-            using var sampleReader = await sampleCommand.ExecuteReaderAsync();
-            
             var sampleData = new List<Dictionary<string, object?>>();
-            while (await sampleReader.ReadAsync())
+            using (var sampleCommand = new NpgsqlCommand(sampleSql, connection))
             {
-                var row = new Dictionary<string, object?>();
-                for (int i = 0; i < sampleReader.FieldCount; i++)
+                using (var sampleReader = await sampleCommand.ExecuteReaderAsync())
                 {
-                    var columnName = sampleReader.GetName(i);
-                    row[columnName] = sampleReader.IsDBNull(i) ? null : sampleReader.GetValue(i);
+                    while (await sampleReader.ReadAsync())
+                    {
+                        var row = new Dictionary<string, object?>();
+                        for (int i = 0; i < sampleReader.FieldCount; i++)
+                        {
+                            var columnName = sampleReader.GetName(i);
+                            row[columnName] = sampleReader.IsDBNull(i) ? null : sampleReader.GetValue(i);
+                        }
+                        sampleData.Add(row);
+                    }
                 }
-                sampleData.Add(row);
             }
             info.SampleData = sampleData;
             
