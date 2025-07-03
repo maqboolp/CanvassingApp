@@ -112,13 +112,20 @@ namespace HooverCanvassingApi.Services
             sql.AppendLine("    id SERIAL PRIMARY KEY,");
             sql.AppendLine("    imported_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,");
             
-            foreach (var header in headers)
+            for (int i = 0; i < headers.Length; i++)
             {
-                var columnName = SanitizeColumnName(header);
-                sql.AppendLine($"    \"{columnName}\" TEXT,");
+                var columnName = SanitizeColumnName(headers[i]);
+                sql.Append($"    \"{columnName}\" TEXT");
+                if (i < headers.Length - 1)
+                {
+                    sql.AppendLine(",");
+                }
+                else
+                {
+                    sql.AppendLine();
+                }
             }
             
-            sql.Remove(sql.Length - 3, 1); // Remove last comma
             sql.AppendLine(");");
             
             using var connection = new NpgsqlConnection(_connectionString);
