@@ -152,6 +152,12 @@ namespace HooverCanvassingApi.Services
                 columns.Add($"\"{mapping.PartyColumn}\" as party");
             if (!string.IsNullOrEmpty(mapping.VoteFrequencyColumn))
                 columns.Add($"\"{mapping.VoteFrequencyColumn}\" as vote_frequency");
+            if (!string.IsNullOrEmpty(mapping.EthnicityColumn))
+                columns.Add($"\"{mapping.EthnicityColumn}\" as ethnicity");
+            if (!string.IsNullOrEmpty(mapping.ReligionColumn))
+                columns.Add($"\"{mapping.ReligionColumn}\" as religion");
+            if (!string.IsNullOrEmpty(mapping.IncomeColumn))
+                columns.Add($"\"{mapping.IncomeColumn}\" as income");
             
             var columnList = string.Join(", ", columns);
             return $"SELECT {columnList} FROM \"{tableName}\"";
@@ -184,6 +190,9 @@ namespace HooverCanvassingApi.Services
                 Email = GetStringValue(reader, "email"),
                 CellPhone = FormatPhoneNumber(GetStringValue(reader, "phone")),
                 PartyAffiliation = GetStringValue(reader, "party"),
+                Ethnicity = GetStringValue(reader, "ethnicity"),
+                Religion = GetStringValue(reader, "religion"),
+                Income = GetStringValue(reader, "income"),
                 IsContacted = false,
                 SmsConsentStatus = SmsConsentStatus.Unknown,
                 TotalCampaignContacts = 0,
@@ -305,6 +314,9 @@ namespace HooverCanvassingApi.Services
         public string? EmailColumn { get; set; }
         public string? PartyColumn { get; set; }
         public string? VoteFrequencyColumn { get; set; }
+        public string? EthnicityColumn { get; set; }
+        public string? ReligionColumn { get; set; }
+        public string? IncomeColumn { get; set; }
     }
 
     public class MappingResult

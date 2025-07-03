@@ -12,6 +12,7 @@ namespace HooverCanvassingApi.Services
         private readonly IAmazonS3 _s3Client;
         private readonly string _bucketName;
         private readonly string _audioPrefix;
+        private readonly string _photoPrefix;
         private readonly string _publicUrl;
 
         public S3FileStorageService(IConfiguration configuration, ILogger<S3FileStorageService> logger, IAmazonS3 s3Client)
@@ -23,6 +24,7 @@ namespace HooverCanvassingApi.Services
             var awsConfig = _configuration.GetSection("AWS:S3");
             _bucketName = awsConfig["BucketName"] ?? "hoover-canvassing-audio";
             _audioPrefix = awsConfig["AudioPrefix"] ?? "audio-memos/";
+            _photoPrefix = awsConfig["PhotoPrefix"] ?? "photos/";
             
             var serviceUrl = awsConfig["ServiceUrl"]; // For DigitalOcean Spaces or other S3-compatible services
             var publicUrl = awsConfig["PublicUrl"]; // Custom public URL for DigitalOcean Spaces
@@ -109,6 +111,83 @@ namespace HooverCanvassingApi.Services
                 return false;
             }
         }
+
+        public async Task<string> UploadPhotoAsync(Stream photoStream, string fileName)
+        {
+            try
+            {
+                // Generate unique key
+                var key = $"{_photoPrefix}{Guid.NewGuid()}_{DateTime.UtcNow:yyyyMMddHHmmss}_{fileName}";
+                
+                // Determine content type from file extension
+                var contentType = Path.GetExtension(fileName).ToLower() switch
+                {
+                    ".jpg" => "image/jpeg",
+                    ".jpeg" => "image/jpeg",
+                    ".png" => "image/png",
+                    ".gif" => "image/gif",
+                    ".webp" => "image/webp",
+                    ".bmp" => "image/bmp",
+                    _ => "image/jpeg"
+                };
+                
+                var request = new PutObjectRequest
+                {
+                    BucketName = _bucketName,
+                    Key = key,
+                    InputStream = photoStream,
+                    ContentType = contentType,
+                    ServerSideEncryptionMethod = ServerSideEncryptionMethod.AES256,
+                    CannedACL = S3CannedACL.PublicRead // Make files publicly readable
+                };
+
+                var response = await _s3Client.PutObjectAsync(request);
+                
+                if (response.HttpStatusCode == System.Net.HttpStatusCode.OK)
+                {
+                    // Return the public URL
+                    var url = $"{_publicUrl}/{key}";
+                    _logger.LogInformation("Photo file uploaded to S3 successfully: {Key}", key);
+                    return url;
+                }
+                
+                throw new Exception($"Failed to upload photo to S3. Status: {response.HttpStatusCode}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error uploading photo file to S3");
+                throw;
+            }
+        }
+
+        public async Task<bool> DeletePhotoAsync(string fileUrl)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(fileUrl))
+                    return false;
+                
+                // Extract key from URL
+                var uri = new Uri(fileUrl);
+                var key = uri.AbsolutePath.TrimStart('/');
+                
+                var request = new DeleteObjectRequest
+                {
+                    BucketName = _bucketName,
+                    Key = key
+                };
+                
+                var response = await _s3Client.DeleteObjectAsync(request);
+                
+                _logger.LogInformation("Photo file deleted from S3 successfully: {Key}", key);
+                return response.HttpStatusCode == System.Net.HttpStatusCode.NoContent;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting photo file from S3: {FileUrl}", fileUrl);
+                return false;
+            }
+        }
         
         // Create bucket if it doesn't exist
         public async Task EnsureBucketExistsAsync()
@@ -126,7 +205,7 @@ namespace HooverCanvassingApi.Services
                         BucketName = _bucketName
                     });
                     
-                    // Set bucket policy to allow public read access for audio files
+                    // Set bucket policy to allow public read access for audio and photo files
                     var bucketPolicy = @"{
                         ""Version"": ""2012-10-17"",
                         ""Statement"": [
@@ -135,7 +214,10 @@ namespace HooverCanvassingApi.Services
                                 ""Effect"": ""Allow"",
                                 ""Principal"": ""*"",
                                 ""Action"": ""s3:GetObject"",
-                                ""Resource"": ""arn:aws:s3:::" + _bucketName + @"/" + _audioPrefix + @"*""
+                                ""Resource"": [
+                                    ""arn:aws:s3:::" + _bucketName + @"/" + _audioPrefix + @"*"",
+                                    ""arn:aws:s3:::" + _bucketName + @"/" + _photoPrefix + @"*""
+                                ]
                             }
                         ]
                     }";

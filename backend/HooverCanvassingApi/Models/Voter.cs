@@ -15,6 +15,8 @@ namespace HooverCanvassingApi.Models
         public string Zip { get; set; } = string.Empty;
         public int Age { get; set; }
         public string? Ethnicity { get; set; }
+        public string? Religion { get; set; }
+        public string? Income { get; set; }
         public string Gender { get; set; } = string.Empty;
         public VoteFrequency VoteFrequency { get; set; }
         public string? PartyAffiliation { get; set; }

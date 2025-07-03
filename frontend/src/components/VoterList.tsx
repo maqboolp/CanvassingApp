@@ -378,7 +378,7 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
     setUncontactDialogOpen(true);
   };
 
-  const handleContactSubmit = async (status: ContactStatus, notes: string, voterSupport?: VoterSupport, audioUrl?: string, audioDuration?: number) => {
+  const handleContactSubmit = async (status: ContactStatus, notes: string, voterSupport?: VoterSupport, audioUrl?: string, audioDuration?: number, photoUrl?: string) => {
     if (!selectedVoter) return;
 
     try {
@@ -421,6 +421,7 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
           notes,
           audioFileUrl: audioUrl,
           audioDurationSeconds: audioDuration,
+          photoUrl: photoUrl,
           location: currentLocation
         })
       });

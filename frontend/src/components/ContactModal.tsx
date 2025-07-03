@@ -18,7 +18,7 @@ import {
   Chip,
   CircularProgress
 } from '@mui/material';
-import { ContactPhone, Person, LocationOn, Mic, Stop, Delete } from '@mui/icons-material';
+import { ContactPhone, Person, LocationOn, Mic, Stop, Delete, CameraAlt, PhotoCamera } from '@mui/icons-material';
 import { Voter, ContactStatus, VoterSupport, AuthUser } from '../types';
 import { API_BASE_URL } from '../config';
 
@@ -26,7 +26,7 @@ interface ContactModalProps {
   open: boolean;
   voter: Voter | null;
   onClose: () => void;
-  onSubmit: (status: ContactStatus, notes: string, voterSupport?: VoterSupport, audioUrl?: string, audioDuration?: number) => void;
+  onSubmit: (status: ContactStatus, notes: string, voterSupport?: VoterSupport, audioUrl?: string, audioDuration?: number, photoUrl?: string) => void;
   user?: AuthUser;
 }
 
@@ -54,6 +54,11 @@ const ContactModal: React.FC<ContactModalProps> = ({
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Photo capture states
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Calculate distance between two coordinates using Haversine formula
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
@@ -197,6 +202,29 @@ const ContactModal: React.FC<ContactModalProps> = ({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // Photo handling functions
+  const handlePhotoSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setPhotoFile(file);
+      
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPhotoPreviewUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const deletePhoto = () => {
+    setPhotoFile(null);
+    setPhotoPreviewUrl(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const handleSubmit = async () => {
     if (!voter) return;
     
@@ -204,6 +232,7 @@ const ContactModal: React.FC<ContactModalProps> = ({
     try {
       let audioUrl: string | undefined;
       let audioDuration: number | undefined;
+      let photoUrl: string | undefined;
       
       // Upload audio if present
       if (audioBlob) {
@@ -232,14 +261,41 @@ const ContactModal: React.FC<ContactModalProps> = ({
         }
       }
       
-      // Pass audio info to parent
-      await onSubmit(status, notes, voterSupport, audioUrl, audioDuration);
+      // Upload photo if present
+      if (photoFile) {
+        try {
+          const formData = new FormData();
+          formData.append('photoFile', photoFile);
+          
+          const token = localStorage.getItem('auth_token');
+          const response = await fetch(`${API_BASE_URL}/api/contacts/upload-photo`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            },
+            body: formData
+          });
+          
+          if (response.ok) {
+            const result = await response.json();
+            photoUrl = result.photoUrl;
+          } else {
+            console.error('Failed to upload photo');
+          }
+        } catch (error) {
+          console.error('Error uploading photo:', error);
+        }
+      }
+      
+      // Pass audio and photo info to parent
+      await onSubmit(status, notes, voterSupport, audioUrl, audioDuration, photoUrl);
       
       // Reset form
       setStatus('reached');
       setNotes('');
       setVoterSupport(undefined);
       deleteRecording();
+      deletePhoto();
     } finally {
       setSubmitting(false);
     }
@@ -254,6 +310,7 @@ const ContactModal: React.FC<ContactModalProps> = ({
     setDistance(null);
     setCheckingLocation(false);
     deleteRecording();
+    deletePhoto();
     if (recordingIntervalRef.current) {
       clearInterval(recordingIntervalRef.current);
     }
@@ -512,6 +569,61 @@ const ContactModal: React.FC<ContactModalProps> = ({
                 <IconButton
                   size="small"
                   onClick={deleteRecording}
+                  color="error"
+                >
+                  <Delete />
+                </IconButton>
+              </>
+            )}
+          </Box>
+          
+          {/* Photo Capture Controls */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2, flexWrap: 'wrap' }}>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handlePhotoSelect}
+              style={{ display: 'none' }}
+              id="photo-input"
+            />
+            
+            {!photoPreviewUrl && (
+              <Button
+                variant="outlined"
+                startIcon={<PhotoCamera />}
+                onClick={() => fileInputRef.current?.click()}
+                size="small"
+              >
+                Take Photo
+              </Button>
+            )}
+            
+            {photoPreviewUrl && (
+              <>
+                <Box
+                  component="img"
+                  src={photoPreviewUrl}
+                  alt="Contact photo"
+                  sx={{
+                    height: 60,
+                    width: 60,
+                    objectFit: 'cover',
+                    borderRadius: 1,
+                    border: '2px solid',
+                    borderColor: 'primary.main'
+                  }}
+                />
+                <Chip
+                  label="Photo added"
+                  size="small"
+                  color="success"
+                  icon={<CameraAlt />}
+                />
+                <IconButton
+                  size="small"
+                  onClick={deletePhoto}
                   color="error"
                 >
                   <Delete />

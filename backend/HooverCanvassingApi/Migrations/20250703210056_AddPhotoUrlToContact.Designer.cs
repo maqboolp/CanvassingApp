@@ -3,6 +3,7 @@ using System;
 using HooverCanvassingApi.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace HooverCanvassingApi.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250703210056_AddPhotoUrlToContact")]
+    partial class AddPhotoUrlToContact
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -639,9 +642,6 @@ namespace HooverCanvassingApi.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
-                    b.Property<string>("Income")
-                        .HasColumnType("text");
-
                     b.Property<bool>("IsContacted")
                         .HasColumnType("boolean");
 
@@ -681,9 +681,6 @@ namespace HooverCanvassingApi.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("PartyAffiliation")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Religion")
                         .HasColumnType("text");
 
                     b.Property<string>("SmsConsentStatus")

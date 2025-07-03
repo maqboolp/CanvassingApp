@@ -84,6 +84,7 @@ import VoterContactHistory from './VoterContactHistory';
 import ContactModal from './ContactModal';
 import VoiceRecordings from './VoiceRecordings';
 import VoterStagingImport from './VoterStagingImport';
+import Analytics from './Analytics';
 import { API_BASE_URL } from '../config';
 import { customerConfig } from '../config/customerConfig';
 import { ApiErrorHandler, ApiError } from '../utils/apiErrorHandler';
@@ -1101,7 +1102,7 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
     setContactModalOpen(true);
   };
 
-  const handleContactSubmit = async (status: ContactStatus, notes: string, voterSupport?: VoterSupport, audioUrl?: string, audioDuration?: number) => {
+  const handleContactSubmit = async (status: ContactStatus, notes: string, voterSupport?: VoterSupport, audioUrl?: string, audioDuration?: number, photoUrl?: string) => {
     if (!selectedVoterForContact) return;
 
     try {
@@ -1118,6 +1119,7 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
           notes,
           audioFileUrl: audioUrl,
           audioDurationSeconds: audioDuration,
+          photoUrl: photoUrl,
           location: location
         })
       });
@@ -1596,234 +1598,7 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
 
         {/* Analytics Tab */}
         <TabPanel value={currentTab} index={getTabIndex('analytics')}>
-          {loading ? (
-            <Box display="flex" justifyContent="center" py={4}>
-              <CircularProgress />
-            </Box>
-          ) : analytics ? (
-            <>
-              <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-                <Typography variant="h5">Campaign Analytics</Typography>
-                <Button
-                  startIcon={<GetApp />}
-                  variant="outlined"
-                  onClick={handleExportAnalytics}
-                >
-                  Export CSV
-                </Button>
-              </Box>
-
-              {/* Leaderboard & Achievements */}
-              {leaderboard && (
-                <Card sx={{ mb: 3 }}>
-                  <CardContent>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                      <EmojiEvents sx={{ mr: 1, color: '#ffd700' }} />
-                      <Typography variant="h6">
-                        Leaderboard
-                      </Typography>
-                    </Box>
-
-                    {/* Leaderboard Tabs */}
-                    <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
-                      <Tabs value={leaderboardTab} onChange={(e, newValue) => setLeaderboardTab(newValue)}>
-                        <Tab label="This Week" />
-                        <Tab label="This Month" />
-                      </Tabs>
-                    </Box>
-
-                    {/* Weekly Leaderboard */}
-                    {leaderboardTab === 0 && leaderboard.weeklyLeaderboard && (
-                      <Box>
-                        <Typography variant="subtitle2" sx={{ mb: 2 }}>
-                          Top Volunteers This Week
-                        </Typography>
-                        {leaderboard.weeklyLeaderboard.slice(0, 10).map((entry: any, index: number) => (
-                          <Box
-                            key={entry.volunteerId}
-                            sx={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                              p: 1,
-                              borderRadius: 1,
-                              backgroundColor: 'transparent',
-                              mb: 1
-                            }}
-                          >
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <Typography variant="body2" sx={{ minWidth: '20px', fontWeight: 'bold' }}>
-                                #{entry.position}
-                              </Typography>
-                              {entry.badge && (
-                                <span style={{ fontSize: '18px' }}>{entry.badge}</span>
-                              )}
-                              <Typography variant="body2">
-                                {entry.volunteerName}
-                              </Typography>
-                            </Box>
-                            <Chip
-                              label={`${entry.contactCount} contacts`}
-                              size="small"
-                              color="default"
-                            />
-                          </Box>
-                        ))}
-                      </Box>
-                    )}
-
-                    {/* Monthly Leaderboard */}
-                    {leaderboardTab === 1 && leaderboard.monthlyLeaderboard && (
-                      <Box>
-                        <Typography variant="subtitle2" sx={{ mb: 2 }}>
-                          Top Volunteers This Month
-                        </Typography>
-                        {leaderboard.monthlyLeaderboard.slice(0, 10).map((entry: any, index: number) => (
-                          <Box
-                            key={entry.volunteerId}
-                            sx={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                              p: 1,
-                              borderRadius: 1,
-                              backgroundColor: 'transparent',
-                              mb: 1
-                            }}
-                          >
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <Typography variant="body2" sx={{ minWidth: '20px', fontWeight: 'bold' }}>
-                                #{entry.position}
-                              </Typography>
-                              {entry.badge && (
-                                <span style={{ fontSize: '18px' }}>{entry.badge}</span>
-                              )}
-                              <Typography variant="body2">
-                                {entry.volunteerName}
-                              </Typography>
-                            </Box>
-                            <Chip
-                              label={`${entry.contactCount} contacts`}
-                              size="small"
-                              color="default"
-                            />
-                          </Box>
-                        ))}
-                      </Box>
-                    )}
-
-                    <Box sx={{ mt: 2, p: 2, backgroundColor: 'action.hover', borderRadius: 1 }}>
-                      <Typography variant="body2" sx={{ fontSize: '12px', textAlign: 'center', color: 'text.secondary' }}>
-                        💝 Top volunteers each month receive lunch gift cards! Keep up the great work!
-                      </Typography>
-                    </Box>
-                  </CardContent>
-                </Card>
-              )}
-
-              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 3, mb: 3 }}>
-                <Card>
-                  <CardContent>
-                    <Typography color="textSecondary" gutterBottom>
-                      Total Voters
-                    </Typography>
-                    <Typography variant="h4">
-                      {analytics.totalVoters}
-                    </Typography>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent>
-                    <Typography color="textSecondary" gutterBottom>
-                      Contacted
-                    </Typography>
-                    <Typography variant="h4">
-                      {analytics.totalContacted}
-                    </Typography>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent>
-                    <Typography color="textSecondary" gutterBottom>
-                      Contact Rate
-                    </Typography>
-                    <Typography variant="h4">
-                      {analytics.totalVoters > 0 
-                        ? Math.round((analytics.totalContacted / analytics.totalVoters) * 100)
-                        : 0}%
-                    </Typography>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent>
-                    <Typography color="textSecondary" gutterBottom>
-                      Active Volunteers
-                    </Typography>
-                    <Typography variant="h4">
-                      {analytics.volunteerActivity?.length || 0}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Box>
-
-              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
-                <Card>
-                  <CardContent>
-                    <Typography variant="h6" gutterBottom>
-                      Contact Status Breakdown
-                    </Typography>
-                    <Table size="small">
-                      <TableBody>
-                        <TableRow>
-                          <TableCell>Reached</TableCell>
-                          <TableCell align="right">{analytics.contactStatusBreakdown.reached}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell>Not Home</TableCell>
-                          <TableCell align="right">{analytics.contactStatusBreakdown.notHome}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell>Refused</TableCell>
-                          <TableCell align="right">{analytics.contactStatusBreakdown.refused}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell>Needs Follow-up</TableCell>
-                          <TableCell align="right">{analytics.contactStatusBreakdown.needsFollowUp}</TableCell>
-                        </TableRow>
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent>
-                    <Typography variant="h6" gutterBottom>
-                      Volunteer Activity
-                    </Typography>
-                    <Table size="small">
-                      <TableHead>
-                        <TableRow>
-                          <TableCell>Volunteer</TableCell>
-                          <TableCell align="right">Today</TableCell>
-                          <TableCell align="right">Total</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {analytics.volunteerActivity?.slice(0, 5).map((volunteer: any) => (
-                          <TableRow key={volunteer.volunteerId}>
-                            <TableCell>{volunteer.volunteerName}</TableCell>
-                            <TableCell align="right">{volunteer.contactsToday}</TableCell>
-                            <TableCell align="right">{volunteer.contactsTotal}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
-              </Box>
-            </>
-          ) : (
-            <Typography>No analytics data available</Typography>
-          )}
+          <Analytics />
         </TabPanel>
 
         {/* Users Tab */}

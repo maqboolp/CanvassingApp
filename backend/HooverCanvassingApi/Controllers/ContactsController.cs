@@ -185,6 +185,62 @@ namespace HooverCanvassingApi.Controllers
             }
         }
 
+        [HttpPost("upload-photo")]
+        public async Task<ActionResult<PhotoUploadResponse>> UploadPhoto([FromForm] IFormFile photoFile)
+        {
+            try
+            {
+                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                
+                if (string.IsNullOrEmpty(currentUserId))
+                {
+                    return Unauthorized();
+                }
+
+                if (photoFile == null || photoFile.Length == 0)
+                {
+                    return BadRequest(new { error = "No photo file provided" });
+                }
+
+                // Validate file type
+                var allowedTypes = new[] { 
+                    "image/jpeg", 
+                    "image/jpg", 
+                    "image/png", 
+                    "image/gif", 
+                    "image/webp"
+                };
+                
+                if (!allowedTypes.Contains(photoFile.ContentType))
+                {
+                    return BadRequest(new { error = $"Invalid photo file type: {photoFile.ContentType}. Allowed types: {string.Join(", ", allowedTypes)}" });
+                }
+
+                // Limit file size to 5MB
+                if (photoFile.Length > 5 * 1024 * 1024)
+                {
+                    return BadRequest(new { error = "Photo file too large. Maximum size is 5MB" });
+                }
+
+                using (var stream = photoFile.OpenReadStream())
+                {
+                    var fileName = $"contact-photo-{Guid.NewGuid()}{Path.GetExtension(photoFile.FileName)}";
+                    var photoUrl = await _fileStorageService.UploadPhotoAsync(stream, fileName);
+                    
+                    return Ok(new PhotoUploadResponse
+                    {
+                        PhotoUrl = photoUrl,
+                        FileName = fileName
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error uploading photo file");
+                return StatusCode(500, new { error = "Failed to upload photo file" });
+            }
+        }
+
         [HttpPost]
         public async Task<ActionResult<ContactDto>> CreateContact([FromBody] CreateContactRequest request)
         {
@@ -296,6 +352,7 @@ namespace HooverCanvassingApi.Controllers
                     Notes = request.Notes,
                     AudioFileUrl = request.AudioFileUrl,
                     AudioDurationSeconds = request.AudioDurationSeconds,
+                    PhotoUrl = request.PhotoUrl,
                     Timestamp = DateTime.UtcNow,
                     LocationLatitude = request.Location?.Latitude,
                     LocationLongitude = request.Location?.Longitude
@@ -330,6 +387,7 @@ namespace HooverCanvassingApi.Controllers
                     Notes = contact.Notes,
                     AudioFileUrl = contact.AudioFileUrl,
                     AudioDurationSeconds = contact.AudioDurationSeconds,
+                    PhotoUrl = contact.PhotoUrl,
                     Timestamp = contact.Timestamp,
                     Location = contact.LocationLatitude.HasValue && contact.LocationLongitude.HasValue
                         ? new LocationDto
@@ -386,6 +444,7 @@ namespace HooverCanvassingApi.Controllers
                     Notes = contact.Notes,
                     AudioFileUrl = contact.AudioFileUrl,
                     AudioDurationSeconds = contact.AudioDurationSeconds,
+                    PhotoUrl = contact.PhotoUrl,
                     Timestamp = contact.Timestamp,
                     Location = contact.LocationLatitude.HasValue && contact.LocationLongitude.HasValue
                         ? new LocationDto
@@ -474,6 +533,7 @@ namespace HooverCanvassingApi.Controllers
                         Notes = c.Notes,
                         AudioFileUrl = c.AudioFileUrl,
                         AudioDurationSeconds = c.AudioDurationSeconds,
+                        PhotoUrl = c.PhotoUrl,
                         Timestamp = c.Timestamp,
                         VoterName = $"{c.Voter.FirstName} {c.Voter.LastName}",
                         VolunteerName = $"{c.Volunteer.FirstName} {c.Volunteer.LastName}",
@@ -546,6 +606,7 @@ namespace HooverCanvassingApi.Controllers
                     Notes = contact.Notes,
                     AudioFileUrl = contact.AudioFileUrl,
                     AudioDurationSeconds = contact.AudioDurationSeconds,
+                    PhotoUrl = contact.PhotoUrl,
                     Timestamp = contact.Timestamp,
                     Location = contact.LocationLatitude.HasValue && contact.LocationLongitude.HasValue
                         ? new LocationDto
@@ -848,6 +909,7 @@ namespace HooverCanvassingApi.Controllers
         public string? Notes { get; set; }
         public string? AudioFileUrl { get; set; }
         public int? AudioDurationSeconds { get; set; }
+        public string? PhotoUrl { get; set; }
         public LocationDto? Location { get; set; }
     }
 
@@ -867,6 +929,7 @@ namespace HooverCanvassingApi.Controllers
         public string? Notes { get; set; }
         public string? AudioFileUrl { get; set; }
         public int? AudioDurationSeconds { get; set; }
+        public string? PhotoUrl { get; set; }
         public DateTime Timestamp { get; set; }
         public string? VoterName { get; set; }
         public string? VolunteerName { get; set; }
@@ -890,6 +953,12 @@ namespace HooverCanvassingApi.Controllers
     public class AudioUploadResponse
     {
         public string AudioUrl { get; set; } = string.Empty;
+        public string FileName { get; set; } = string.Empty;
+    }
+
+    public class PhotoUploadResponse
+    {
+        public string PhotoUrl { get; set; } = string.Empty;
         public string FileName { get; set; } = string.Empty;
     }
 }

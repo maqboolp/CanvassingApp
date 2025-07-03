@@ -13,6 +13,7 @@ namespace HooverCanvassingApi.Models
         public string? Notes { get; set; }
         public string? AudioFileUrl { get; set; }
         public int? AudioDurationSeconds { get; set; }
+        public string? PhotoUrl { get; set; }
         public DateTime Timestamp { get; set; } = DateTime.UtcNow;
         public double? LocationLatitude { get; set; }
         public double? LocationLongitude { get; set; }
