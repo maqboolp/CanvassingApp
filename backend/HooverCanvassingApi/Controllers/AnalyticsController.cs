@@ -104,17 +104,21 @@ namespace HooverCanvassingApi.Controllers
                     .OrderByDescending(p => p.Count)
                     .ToListAsync();
 
-                // Vote frequency breakdown
-                var voteFrequencyStats = await _context.Voters
+                // Vote frequency breakdown - fetch data first then transform
+                var voteFrequencyData = await _context.Voters
                     .GroupBy(v => v.VoteFrequency)
-                    .Select(g => new VoteFrequencyStat
+                    .Select(g => new { Frequency = g.Key, Count = g.Count() })
+                    .ToListAsync();
+
+                var voteFrequencyStats = voteFrequencyData
+                    .Select(vf => new VoteFrequencyStat
                     {
-                        Frequency = g.Key.ToString(),
-                        Count = g.Count(),
-                        Percentage = Math.Round((double)g.Count() / totalVoters * 100, 2)
+                        Frequency = vf.Frequency.ToString(),
+                        Count = vf.Count,
+                        Percentage = Math.Round((double)vf.Count / totalVoters * 100, 2)
                     })
                     .OrderByDescending(v => v.Count)
-                    .ToListAsync();
+                    .ToList();
 
                 // Ethnicity breakdown (if available)
                 var ethnicityStats = await _context.Voters
@@ -181,18 +185,22 @@ namespace HooverCanvassingApi.Controllers
                     NotContactedPercentage = Math.Round((double)notContactedCount / totalVoters * 100, 2)
                 };
 
-                // Voter support breakdown
-                var voterSupportStats = await _context.Voters
+                // Voter support breakdown - fetch data first then transform
+                var voterSupportData = await _context.Voters
                     .Where(v => v.VoterSupport.HasValue)
                     .GroupBy(v => v.VoterSupport!.Value)
-                    .Select(g => new VoterSupportStat
+                    .Select(g => new { Support = g.Key, Count = g.Count() })
+                    .ToListAsync();
+
+                var voterSupportStats = voterSupportData
+                    .Select(vs => new VoterSupportStat
                     {
-                        Support = g.Key.ToString(),
-                        Count = g.Count(),
-                        Percentage = Math.Round((double)g.Count() / totalVoters * 100, 2)
+                        Support = vs.Support.ToString(),
+                        Count = vs.Count,
+                        Percentage = Math.Round((double)vs.Count / totalVoters * 100, 2)
                     })
                     .OrderBy(v => v.Support)
-                    .ToListAsync();
+                    .ToList();
 
                 var response = new VoterDemographicsResponse
                 {
@@ -226,16 +234,20 @@ namespace HooverCanvassingApi.Controllers
             {
                 var totalContacts = await _context.Contacts.CountAsync();
                 
-                // Contacts by status
-                var contactsByStatus = await _context.Contacts
+                // Contacts by status - fetch data first then transform
+                var contactsByStatusData = await _context.Contacts
                     .GroupBy(c => c.Status)
-                    .Select(g => new ContactStatusStat
-                    {
-                        Status = g.Key.ToString(),
-                        Count = g.Count(),
-                        Percentage = Math.Round((double)g.Count() / totalContacts * 100, 2)
-                    })
+                    .Select(g => new { Status = g.Key, Count = g.Count() })
                     .ToListAsync();
+
+                var contactsByStatus = contactsByStatusData
+                    .Select(cs => new ContactStatusStat
+                    {
+                        Status = cs.Status.ToString(),
+                        Count = cs.Count,
+                        Percentage = totalContacts > 0 ? Math.Round((double)cs.Count / totalContacts * 100, 2) : 0
+                    })
+                    .ToList();
 
                 // Contacts by volunteer (top 10)
                 var contactsByVolunteer = await _context.Contacts
