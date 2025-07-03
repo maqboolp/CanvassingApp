@@ -88,6 +88,15 @@ import { API_BASE_URL } from '../config';
 import { customerConfig } from '../config/customerConfig';
 import { ApiErrorHandler, ApiError } from '../utils/apiErrorHandler';
 
+// Get customer-specific campaign info
+const campaignWebsite = process.env.REACT_APP_CAMPAIGN_WEBSITE;
+const campaignVenmo = process.env.REACT_APP_CAMPAIGN_VENMO;
+const campaignYoutube = process.env.REACT_APP_CAMPAIGN_YOUTUBE;
+
+// Get customer-specific voter resources
+const voterRegistrationUrl = process.env.REACT_APP_VOTER_REGISTRATION_URL;
+const volunteerHotline = process.env.REACT_APP_VOLUNTEER_HOTLINE;
+
 interface AdminDashboardProps {
   user: AuthUser;
   onLogout: () => void;
@@ -2427,104 +2436,110 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
           </Typography>
 
           {/* Campaign Information */}
-          <Card sx={{ mb: 3 }}>
-            <CardContent>
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: '#2f1c6a' }}>
-                Campaign Information
-              </Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Language fontSize="small" sx={{ color: '#2f1c6a' }} />
-                  <a 
-                    href="https://tanveer4hoover.com" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    style={{ color: '#2f1c6a', textDecoration: 'none', fontSize: '14px' }}
-                  >
-                    Campaign Website <OpenInNew fontSize="small" sx={{ ml: 0.5, verticalAlign: 'middle' }} />
-                  </a>
+          {(campaignWebsite || campaignYoutube) && (
+            <Card sx={{ mb: 3 }}>
+              <CardContent>
+                <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: '#2f1c6a' }}>
+                  Campaign Information
+                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {campaignWebsite && (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Language fontSize="small" sx={{ color: '#2f1c6a' }} />
+                      <a 
+                        href={campaignWebsite} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        style={{ color: '#2f1c6a', textDecoration: 'none', fontSize: '14px' }}
+                      >
+                        Campaign Website <OpenInNew fontSize="small" sx={{ ml: 0.5, verticalAlign: 'middle' }} />
+                      </a>
+                    </Box>
+                  )}
+                  {campaignYoutube && (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <VideoLibrary fontSize="small" sx={{ color: '#2f1c6a' }} />
+                      <a 
+                        href={campaignYoutube} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        style={{ color: '#2f1c6a', textDecoration: 'none', fontSize: '14px' }}
+                      >
+                        Campaign Videos <OpenInNew fontSize="small" sx={{ ml: 0.5, verticalAlign: 'middle' }} />
+                      </a>
+                    </Box>
+                  )}
                 </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <VideoLibrary fontSize="small" sx={{ color: '#2f1c6a' }} />
-                  <a 
-                    href="https://youtube.com/@tanveer4hoover" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    style={{ color: '#2f1c6a', textDecoration: 'none', fontSize: '14px' }}
-                  >
-                    Campaign Videos <OpenInNew fontSize="small" sx={{ ml: 0.5, verticalAlign: 'middle' }} />
-                  </a>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Support the Campaign */}
-          <Card sx={{ mb: 3 }}>
-            <CardContent>
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: '#2f1c6a' }}>
-                Support the Campaign
-              </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Payment fontSize="small" sx={{ color: '#2f1c6a' }} />
-                  <Typography variant="body2" sx={{ color: '#2f1c6a' }}>
-                    Venmo: @tanveerforhoover
-                  </Typography>
+          {campaignVenmo && (
+            <Card sx={{ mb: 3 }}>
+              <CardContent>
+                <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: '#2f1c6a' }}>
+                  Support the Campaign
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Payment fontSize="small" sx={{ color: '#2f1c6a' }} />
+                    <Typography variant="body2" sx={{ color: '#2f1c6a' }}>
+                      Venmo: {campaignVenmo}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ p: 1, bgcolor: 'white', borderRadius: 1, border: '1px solid #e0e0e0' }}>
+                    <QRCode 
+                      value={`https://venmo.com/${campaignVenmo.replace('@', '')}`} 
+                      size={80}
+                      style={{ height: "auto", maxWidth: "100%", width: "100%" }}
+                    />
+                  </Box>
                 </Box>
-                <Box sx={{ p: 1, bgcolor: 'white', borderRadius: 1, border: '1px solid #e0e0e0' }}>
-                  <QRCode 
-                    value="https://venmo.com/tanveerforhoover" 
-                    size={80}
-                    style={{ height: "auto", maxWidth: "100%", width: "100%" }}
-                  />
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Voter Resources */}
-          <Card sx={{ mb: 3 }}>
-            <CardContent>
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: '#2f1c6a' }}>
-                Voter Resources
-              </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <HowToReg fontSize="small" sx={{ color: '#2f1c6a' }} />
-                <a 
-                  href="https://myinfo.alabamavotes.gov/VoterView" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  style={{ color: '#2f1c6a', textDecoration: 'none', fontSize: '14px' }}
-                >
-                  Check Voter Registration <OpenInNew fontSize="small" sx={{ ml: 0.5, verticalAlign: 'middle' }} />
-                </a>
-              </Box>
-            </CardContent>
-          </Card>
+          {voterRegistrationUrl && (
+            <Card sx={{ mb: 3 }}>
+              <CardContent>
+                <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: '#2f1c6a' }}>
+                  Voter Resources
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <HowToReg fontSize="small" sx={{ color: '#2f1c6a' }} />
+                  <a 
+                    href={voterRegistrationUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    style={{ color: '#2f1c6a', textDecoration: 'none', fontSize: '14px' }}
+                  >
+                    Check Voter Registration <OpenInNew fontSize="small" sx={{ ml: 0.5, verticalAlign: 'middle' }} />
+                  </a>
+                </Box>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Support & Help */}
-          <Card sx={{ mb: 3 }}>
-            <CardContent>
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: '#2f1c6a' }}>
-                Support & Help
-              </Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Phone fontSize="small" sx={{ color: '#2f1c6a' }} />
-                  <Typography variant="body2" sx={{ color: '#2f1c6a' }}>
-                    Volunteer Hotline: (205) 555-VOTE
-                  </Typography>
+          {volunteerHotline && (
+            <Card sx={{ mb: 3 }}>
+              <CardContent>
+                <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: '#2f1c6a' }}>
+                  Support & Help
+                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Phone fontSize="small" sx={{ color: '#2f1c6a' }} />
+                    <Typography variant="body2" sx={{ color: '#2f1c6a' }}>
+                      Volunteer Hotline: {volunteerHotline}
+                    </Typography>
+                  </Box>
                 </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Help fontSize="small" sx={{ color: '#2f1c6a' }} />
-                  <Typography variant="body2" sx={{ color: '#2f1c6a' }}>
-                    App Support: Email support@tanveer4hoover.com
-                  </Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Quick Tips */}
           <Card sx={{ mb: 3 }}>
