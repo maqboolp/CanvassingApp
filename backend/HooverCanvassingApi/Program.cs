@@ -157,6 +157,8 @@ builder.Services.AddScoped<ITwilioService, TwilioService>();
 builder.Services.AddScoped<ICampaignService, CampaignService>();
 builder.Services.AddScoped<IOptInInvitationService, OptInInvitationService>();
 builder.Services.AddScoped<IAudioConversionService, AudioConversionService>();
+builder.Services.AddScoped<CsvStagingService>();
+builder.Services.AddScoped<VoterMappingService>();
 
 // Configure file storage based on settings
 var useS3 = builder.Configuration.GetValue<bool>("AWS:S3:UseS3");

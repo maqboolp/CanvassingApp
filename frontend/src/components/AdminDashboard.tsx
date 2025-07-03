@@ -74,13 +74,16 @@ import {
   Add,
   Edit,
   Delete,
-  Schedule
+  Schedule,
+  TableChart as TableIcon,
+  Close as CloseIcon
 } from '@mui/icons-material';
 import { AuthUser, Voter, ContactStatus, VoterSupport, VoterTagDetail } from '../types';
 import VoterList from './VoterList';
 import VoterContactHistory from './VoterContactHistory';
 import ContactModal from './ContactModal';
 import VoiceRecordings from './VoiceRecordings';
+import VoterStagingImport from './VoterStagingImport';
 import { API_BASE_URL } from '../config';
 import { customerConfig } from '../config/customerConfig';
 import { ApiErrorHandler, ApiError } from '../utils/apiErrorHandler';
@@ -143,6 +146,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
   const [importLoading, setImportLoading] = useState(false);
   const [importResult, setImportResult] = useState<any>(null);
   const [enableGeocoding, setEnableGeocoding] = useState(false);
+  const [stagingImportDialog, setStagingImportDialog] = useState(false);
   const [createVolunteerDialog, setCreateVolunteerDialog] = useState(false);
   const [invitationForm, setInvitationForm] = useState({
     email: '',
@@ -2767,13 +2771,22 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
                 <Typography variant="body2" color="text.secondary" paragraph>
                   Upload a CSV file with voter data. The system will automatically geocode addresses using OpenStreetMap.
                 </Typography>
-                <Button
-                  variant="contained"
-                  startIcon={<Upload />}
-                  onClick={() => setImportDialog(true)}
-                >
-                  Import CSV
-                </Button>
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                  <Button
+                    variant="contained"
+                    startIcon={<Upload />}
+                    onClick={() => setImportDialog(true)}
+                  >
+                    Simple Import
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    startIcon={<TableIcon />}
+                    onClick={() => setStagingImportDialog(true)}
+                  >
+                    Advanced Import
+                  </Button>
+                </Box>
               </CardContent>
             </Card>
             
@@ -3846,6 +3859,36 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
             {resourceSaving ? 'Saving...' : 'Save'}
           </Button>
         </DialogActions>
+      </Dialog>
+
+      {/* Staging Import Dialog */}
+      <Dialog 
+        open={stagingImportDialog} 
+        onClose={() => setStagingImportDialog(false)} 
+        maxWidth="lg" 
+        fullWidth
+      >
+        <DialogTitle>
+          Advanced CSV Import
+          <IconButton
+            onClick={() => setStagingImportDialog(false)}
+            sx={{ position: 'absolute', right: 8, top: 8 }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent>
+          <VoterStagingImport 
+            onComplete={() => {
+              setStagingImportDialog(false);
+              // Optionally refresh voter data
+              if (currentTab === 3) {
+                // Trigger refresh of voter list if on voters tab
+                window.location.reload();
+              }
+            }}
+          />
+        </DialogContent>
       </Dialog>
 
       {/* Version Information */}
