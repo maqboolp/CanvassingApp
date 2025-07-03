@@ -20,6 +20,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { authService } from '../services/authService';
+import { customerConfig } from '../config/customerConfig';
 
 const ResetPassword: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -150,8 +151,8 @@ const ResetPassword: React.FC = () => {
             {/* Header */}
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 3 }}>
               <img 
-                src="/campaign-logo.png" 
-                alt="Tanveer Patel for Hoover City Council" 
+                src={customerConfig.logoUrl} 
+                alt={customerConfig.logoAlt} 
                 style={{ 
                   width: 'auto', 
                   maxWidth: '180px', 

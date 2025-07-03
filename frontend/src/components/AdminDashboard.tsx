@@ -82,6 +82,7 @@ import VoterContactHistory from './VoterContactHistory';
 import ContactModal from './ContactModal';
 import VoiceRecordings from './VoiceRecordings';
 import { API_BASE_URL } from '../config';
+import { customerConfig } from '../config/customerConfig';
 import { ApiErrorHandler, ApiError } from '../utils/apiErrorHandler';
 
 interface AdminDashboardProps {
@@ -1310,8 +1311,8 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
       <AppBar position="static">
         <Toolbar>
           <img 
-            src="/campaign-logo.png" 
-            alt="Tanveer Patel for Hoover City Council" 
+            src={customerConfig.logoUrl} 
+            alt={customerConfig.logoAlt} 
             style={{ 
               height: '40px', 
               marginRight: '16px'

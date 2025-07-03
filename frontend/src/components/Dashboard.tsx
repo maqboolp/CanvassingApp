@@ -51,6 +51,7 @@ import { AuthUser, Voter, ContactStatus, VoterSupport } from '../types';
 import VoterList from './VoterList';
 import ContactModal from './ContactModal';
 import { API_BASE_URL } from '../config';
+import { customerConfig } from '../config/customerConfig';
 
 interface DashboardProps {
   user: AuthUser;
@@ -483,8 +484,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       <AppBar position="static">
         <Toolbar>
           <img 
-            src="/campaign-logo.png" 
-            alt="Tanveer Patel for Hoover City Council" 
+            src={customerConfig.logoUrl} 
+            alt={customerConfig.logoAlt} 
             style={{ 
               height: '40px', 
               marginRight: '16px'

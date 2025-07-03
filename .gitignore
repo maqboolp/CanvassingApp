@@ -30,4 +30,4 @@ logs/
 *.sqlite
 
 # Secrets
-appsettings.Production.json
+appsettings.Production.jsondeployment/.env.*

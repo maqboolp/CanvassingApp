@@ -26,6 +26,7 @@ import {
 import { OptInRequest } from '../types';
 import { optInService } from '../services/optInService';
 import VersionInfo from './VersionInfo';
+import { customerConfig } from '../config/customerConfig';
 
 const OptInForm: React.FC = () => {
   const navigate = useNavigate();
@@ -163,8 +164,8 @@ const OptInForm: React.FC = () => {
           <Box sx={{ textAlign: 'center', mb: 4 }}>
             <Box
               component="img"
-              src="/campaign-logo.png"
-              alt="Tanveer for Hoover"
+              src={customerConfig.logoUrl}
+              alt={customerConfig.logoAlt}
               sx={{ 
                 height: 100, 
                 mb: 2,

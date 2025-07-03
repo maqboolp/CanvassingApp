@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import QRCode from 'react-qr-code';
 import VersionInfo from './VersionInfo';
+import { customerConfig } from '../config/customerConfig';
 import {
   TextField,
   Button,
@@ -111,8 +112,8 @@ const Login: React.FC<LoginProps> = ({ onLogin, isLoading = false, error }) => {
             {/* Header */}
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 2 }}>
               <img 
-                src="/campaign-logo.png" 
-                alt="Tanveer Patel for Hoover City Council" 
+                src={customerConfig.logoUrl} 
+                alt={customerConfig.logoAlt} 
                 style={{ 
                   width: 'auto', 
                   maxWidth: '180px', 

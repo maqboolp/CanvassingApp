@@ -30,6 +30,7 @@ import {
   Schedule
 } from '@mui/icons-material';
 import { API_BASE_URL } from '../config';
+import { customerConfig } from '../config/customerConfig';
 
 const SelfRegistration: React.FC = () => {
   const navigate = useNavigate();
@@ -141,8 +142,8 @@ const SelfRegistration: React.FC = () => {
         <Card>
           <CardContent sx={{ textAlign: 'center', py: 4 }}>
             <img 
-              src="/campaign-logo.png" 
-              alt="Tanveer Patel for Hoover City Council" 
+              src={customerConfig.logoUrl} 
+              alt={customerConfig.logoAlt} 
               style={{ 
                 width: 'auto', 
                 maxWidth: '180px', 
@@ -190,8 +191,8 @@ const SelfRegistration: React.FC = () => {
           {/* Campaign Header */}
           <Box sx={{ textAlign: 'center', mb: 4 }}>
             <img 
-              src="/campaign-logo.png" 
-              alt="Tanveer Patel for Hoover City Council" 
+              src={customerConfig.logoUrl} 
+              alt={customerConfig.logoAlt} 
               style={{ 
                 width: 'auto', 
                 maxWidth: '200px', 
