@@ -3,6 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import QRCode from 'react-qr-code';
 import VersionInfo from './VersionInfo';
 import { customerConfig } from '../config/customerConfig';
+
+// Get customer-specific campaign info
+const campaignSlogan = process.env.REACT_APP_CAMPAIGN_SLOGAN || "Join our campaign!";
+const campaignMessage = process.env.REACT_APP_CAMPAIGN_MESSAGE || "Join the movement for positive change";
+const campaignDisclaimer = process.env.REACT_APP_CAMPAIGN_DISCLAIMER || `Paid for by ${customerConfig.appTitle}`;
+const campaignWebsite = process.env.REACT_APP_CAMPAIGN_WEBSITE;
+const campaignVenmo = process.env.REACT_APP_CAMPAIGN_VENMO;
+const campaignYoutube = process.env.REACT_APP_CAMPAIGN_YOUTUBE;
 import {
   TextField,
   Button,
@@ -225,24 +233,32 @@ const Login: React.FC<LoginProps> = ({ onLogin, isLoading = false, error }) => {
               </Box>
             </Box>
 
-            {/* Campaign Info */}
-            <Box sx={{ 
-              mt: 3, 
-              p: 2, 
-              background: 'linear-gradient(45deg, #ebe4ff 30%, #d5dfff 90%)',
-              borderRadius: 2,
-              border: '1px solid rgba(103, 61, 230, 0.1)'
-            }}>
-              <Typography variant="body2" align="center" sx={{ color: '#2f1c6a', fontWeight: 600 }}>
-                "Take a Walk With Me."
-              </Typography>
-              <Typography variant="body2" align="center" sx={{ color: '#2f1c6a', mt: 0.5 }}>
-                Join the movement for a better Hoover - August 26, 2025 Election
-              </Typography>
-              <Typography variant="caption" align="center" sx={{ mt: 2, color: '#2f1c6a', fontStyle: 'italic' }}>
-                Paid for by Tanveer for Hoover
-              </Typography>
-            </Box>
+            {/* Campaign Info - Customer Specific */}
+            {(campaignSlogan || campaignMessage) && (
+              <Box sx={{ 
+                mt: 3, 
+                p: 2, 
+                background: 'linear-gradient(45deg, #ebe4ff 30%, #d5dfff 90%)',
+                borderRadius: 2,
+                border: '1px solid rgba(103, 61, 230, 0.1)'
+              }}>
+                {campaignSlogan && (
+                  <Typography variant="body2" align="center" sx={{ color: '#2f1c6a', fontWeight: 600 }}>
+                    {campaignSlogan}
+                  </Typography>
+                )}
+                {campaignMessage && (
+                  <Typography variant="body2" align="center" sx={{ color: '#2f1c6a', mt: 0.5 }}>
+                    {campaignMessage}
+                  </Typography>
+                )}
+                {campaignDisclaimer && (
+                  <Typography variant="caption" align="center" sx={{ mt: 2, color: '#2f1c6a', fontStyle: 'italic' }}>
+                    {campaignDisclaimer}
+                  </Typography>
+                )}
+              </Box>
+            )}
 
             {/* Volunteer Resources */}
             <Box sx={{ mt: 3 }}>
@@ -256,28 +272,32 @@ const Login: React.FC<LoginProps> = ({ onLogin, isLoading = false, error }) => {
                   Campaign Information
                 </Typography>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Language fontSize="small" sx={{ color: '#2f1c6a' }} />
-                    <a 
-                      href="https://tanveer4hoover.com" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      style={{ color: '#2f1c6a', textDecoration: 'none', fontSize: '14px' }}
-                    >
-                      Campaign Website <OpenInNew fontSize="small" sx={{ ml: 0.5, verticalAlign: 'middle' }} />
-                    </a>
-                  </Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <VideoLibrary fontSize="small" sx={{ color: '#2f1c6a' }} />
-                    <a 
-                      href="https://youtube.com/@tanveer4hoover" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      style={{ color: '#2f1c6a', textDecoration: 'none', fontSize: '14px' }}
-                    >
-                      Campaign Videos <OpenInNew fontSize="small" sx={{ ml: 0.5, verticalAlign: 'middle' }} />
-                    </a>
-                  </Box>
+                  {campaignWebsite && (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Language fontSize="small" sx={{ color: '#2f1c6a' }} />
+                      <a 
+                        href={campaignWebsite} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        style={{ color: '#2f1c6a', textDecoration: 'none', fontSize: '14px' }}
+                      >
+                        Campaign Website <OpenInNew fontSize="small" sx={{ ml: 0.5, verticalAlign: 'middle' }} />
+                      </a>
+                    </Box>
+                  )}
+                  {campaignYoutube && (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <VideoLibrary fontSize="small" sx={{ color: '#2f1c6a' }} />
+                      <a 
+                        href={campaignYoutube} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        style={{ color: '#2f1c6a', textDecoration: 'none', fontSize: '14px' }}
+                      >
+                        Campaign Videos <OpenInNew fontSize="small" sx={{ ml: 0.5, verticalAlign: 'middle' }} />
+                      </a>
+                    </Box>
+                  )}
                 </Box>
               </Box>
 
@@ -287,20 +307,23 @@ const Login: React.FC<LoginProps> = ({ onLogin, isLoading = false, error }) => {
                   Support the Campaign
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Payment fontSize="small" sx={{ color: '#2f1c6a' }} />
-                    <Typography variant="body2" sx={{ color: '#2f1c6a' }}>
-                      Venmo: @tanveerforhoover
-                    </Typography>
-                  </Box>
-                  <Box sx={{ p: 1, bgcolor: 'white', borderRadius: 1, border: '1px solid #e0e0e0' }}>
-                    <QRCode 
-                      value="https://venmo.com/tanveerforhoover" 
-                      size={80}
-                      style={{ height: "auto", maxWidth: "100%", width: "100%" }}
-                    />
-                  </Box>
-                </Box>
+                  {campaignVenmo && (
+                    <>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Payment fontSize="small" sx={{ color: '#2f1c6a' }} />
+                        <Typography variant="body2" sx={{ color: '#2f1c6a' }}>
+                          Venmo: {campaignVenmo}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ p: 1, bgcolor: 'white', borderRadius: 1, border: '1px solid #e0e0e0' }}>
+                        <QRCode 
+                          value={`https://venmo.com/${campaignVenmo.replace('@', '')}`} 
+                          size={80}
+                          style={{ height: "auto", maxWidth: "100%", width: "100%" }}
+                        />
+                      </Box>
+                    </>
+                  )}
               </Box>
 
               {/* Voter Resources */}

@@ -115,6 +115,18 @@ services:
     value: "/customers/${CUSTOMER_ID}/assets/logo.png"
   - key: REACT_APP_APP_TITLE
     value: "${CUSTOMER_NAME} Canvas"
+  - key: REACT_APP_CAMPAIGN_SLOGAN
+    value: "Join our campaign!"
+  - key: REACT_APP_CAMPAIGN_MESSAGE
+    value: "Join the movement for positive change"
+  - key: REACT_APP_CAMPAIGN_DISCLAIMER
+    value: "Paid for by ${CUSTOMER_NAME}"
+  - key: REACT_APP_CAMPAIGN_WEBSITE
+    value: ""
+  - key: REACT_APP_CAMPAIGN_VENMO
+    value: ""
+  - key: REACT_APP_CAMPAIGN_YOUTUBE
+    value: ""
 
 databases:
 - name: db

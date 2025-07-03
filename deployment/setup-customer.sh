@@ -113,6 +113,14 @@ AWS_S3_SERVICE_URL="https://nyc3.digitaloceanspaces.com"
 
 # Domain Configuration (optional)
 CUSTOM_DOMAIN=""
+
+# Campaign Information
+CAMPAIGN_SLOGAN="Join our campaign!"
+CAMPAIGN_MESSAGE="Join the movement for positive change"
+CAMPAIGN_DISCLAIMER="Paid for by ${ORGANIZATION}"
+CAMPAIGN_WEBSITE=""
+CAMPAIGN_VENMO=""
+CAMPAIGN_YOUTUBE=""
 EOF
 
 # Create customer-specific scripts
