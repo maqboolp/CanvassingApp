@@ -206,6 +206,71 @@ namespace HooverCanvassingApi.Controllers
                 return StatusCode(500, "An error occurred while importing voters");
             }
         }
+
+        [HttpGet("staging-tables")]
+        public async Task<IActionResult> GetStagingTables()
+        {
+            try
+            {
+                var tables = await _stagingService.GetStagingTablesAsync();
+                
+                return Ok(new
+                {
+                    success = true,
+                    tables = tables.Select(t => new
+                    {
+                        tableName = t.TableName,
+                        rowCount = t.RowCount,
+                        createdAt = t.CreatedAt,
+                        uploadedBy = t.UploadedBy,
+                        isImported = t.IsImported,
+                        importedAt = t.ImportedAt
+                    })
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving staging tables");
+                return StatusCode(500, "An error occurred while retrieving staging tables");
+            }
+        }
+
+        [HttpPost("remap")]
+        public async Task<IActionResult> RemapAndImport([FromBody] ImportRequest request)
+        {
+            // This endpoint allows remapping an existing staging table
+            // It uses the same logic as the import endpoint but is explicitly named for remapping
+            return await ImportFromStaging(request);
+        }
+
+        [HttpDelete("staging-tables/{tableName}")]
+        public async Task<IActionResult> DeleteStagingTable(string tableName)
+        {
+            try
+            {
+                // Validate table name to prevent SQL injection
+                if (!tableName.StartsWith("voter_import_") || tableName.Contains(";"))
+                {
+                    return BadRequest("Invalid staging table name");
+                }
+
+                var deleted = await _stagingService.DeleteStagingTableAsync(tableName);
+                
+                if (deleted)
+                {
+                    return Ok(new { success = true, message = "Staging table deleted successfully" });
+                }
+                else
+                {
+                    return NotFound(new { success = false, message = "Staging table not found" });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting staging table {TableName}", tableName);
+                return StatusCode(500, "An error occurred while deleting the staging table");
+            }
+        }
     }
 
     public class ImportRequest

@@ -277,6 +277,102 @@ namespace HooverCanvassingApi.Services
                 .Replace("\"", "")
                 .ToLower();
         }
+
+        public async Task<List<StagingTableMetadata>> GetStagingTablesAsync()
+        {
+            var tables = new List<StagingTableMetadata>();
+            
+            using var connection = new NpgsqlConnection(_connectionString);
+            await connection.OpenAsync();
+            
+            // Get all staging tables
+            var sql = @"
+                SELECT 
+                    table_name,
+                    obj_description(c.oid) as description
+                FROM information_schema.tables t
+                JOIN pg_class c ON c.relname = t.table_name
+                WHERE table_schema = 'public' 
+                AND table_name LIKE 'voter_import_%'
+                ORDER BY table_name DESC";
+            
+            using var command = new NpgsqlCommand(sql, connection);
+            using var reader = await command.ExecuteReaderAsync();
+            
+            var tableNames = new List<(string name, string? description)>();
+            while (await reader.ReadAsync())
+            {
+                tableNames.Add((
+                    reader.GetString(0),
+                    reader.IsDBNull(1) ? null : reader.GetString(1)
+                ));
+            }
+            reader.Close();
+            
+            // Get metadata for each table
+            foreach (var (tableName, description) in tableNames)
+            {
+                var metadata = new StagingTableMetadata
+                {
+                    TableName = tableName
+                };
+                
+                // Parse metadata from description if available
+                if (!string.IsNullOrEmpty(description))
+                {
+                    try
+                    {
+                        var parts = description.Split('|');
+                        if (parts.Length >= 3)
+                        {
+                            metadata.UploadedBy = parts[0];
+                            if (DateTime.TryParse(parts[1], out var createdAt))
+                                metadata.CreatedAt = createdAt;
+                            metadata.FileName = parts[2];
+                            if (parts.Length > 3 && bool.TryParse(parts[3], out var imported))
+                                metadata.IsImported = imported;
+                            if (parts.Length > 4 && DateTime.TryParse(parts[4], out var importedAt))
+                                metadata.ImportedAt = importedAt;
+                        }
+                    }
+                    catch { }
+                }
+                
+                // Get row count
+                var countSql = $"SELECT COUNT(*) FROM \"{tableName}\"";
+                using var countCmd = new NpgsqlCommand(countSql, connection);
+                metadata.RowCount = Convert.ToInt32(await countCmd.ExecuteScalarAsync());
+                
+                tables.Add(metadata);
+            }
+            
+            return tables;
+        }
+
+        public async Task<bool> DeleteStagingTableAsync(string tableName)
+        {
+            // Validate table name
+            if (!tableName.StartsWith("voter_import_") || tableName.Contains(";"))
+            {
+                throw new ArgumentException("Invalid staging table name");
+            }
+            
+            using var connection = new NpgsqlConnection(_connectionString);
+            await connection.OpenAsync();
+            
+            try
+            {
+                var sql = $"DROP TABLE IF EXISTS \"{tableName}\"";
+                using var command = new NpgsqlCommand(sql, connection);
+                await command.ExecuteNonQueryAsync();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting staging table {TableName}", tableName);
+                return false;
+            }
+        }
     }
 
     public class CsvImportResult
@@ -296,5 +392,16 @@ namespace HooverCanvassingApi.Services
         public List<string> Columns { get; set; } = new();
         public int RecordCount { get; set; }
         public List<Dictionary<string, object?>> SampleData { get; set; } = new();
+    }
+
+    public class StagingTableMetadata
+    {
+        public string TableName { get; set; } = string.Empty;
+        public int RowCount { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public string? UploadedBy { get; set; }
+        public string? FileName { get; set; }
+        public bool IsImported { get; set; }
+        public DateTime? ImportedAt { get; set; }
     }
 }

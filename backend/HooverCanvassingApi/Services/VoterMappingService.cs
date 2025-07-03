@@ -158,6 +158,16 @@ namespace HooverCanvassingApi.Services
                 columns.Add($"\"{mapping.ReligionColumn}\" as religion");
             if (!string.IsNullOrEmpty(mapping.IncomeColumn))
                 columns.Add($"\"{mapping.IncomeColumn}\" as income");
+            if (!string.IsNullOrEmpty(mapping.LatitudeColumn))
+                columns.Add($"\"{mapping.LatitudeColumn}\" as latitude");
+            if (!string.IsNullOrEmpty(mapping.LongitudeColumn))
+                columns.Add($"\"{mapping.LongitudeColumn}\" as longitude");
+            if (!string.IsNullOrEmpty(mapping.VoterSupportColumn))
+                columns.Add($"\"{mapping.VoterSupportColumn}\" as voter_support");
+            if (!string.IsNullOrEmpty(mapping.LastContactStatusColumn))
+                columns.Add($"\"{mapping.LastContactStatusColumn}\" as last_contact_status");
+            if (!string.IsNullOrEmpty(mapping.SmsConsentStatusColumn))
+                columns.Add($"\"{mapping.SmsConsentStatusColumn}\" as sms_consent_status");
             
             var columnList = string.Join(", ", columns);
             return $"SELECT {columnList} FROM \"{tableName}\"";
@@ -227,6 +237,41 @@ namespace HooverCanvassingApi.Services
             var voteFreq = GetStringValue(reader, "vote_frequency");
             voter.VoteFrequency = ParseVoteFrequency(voteFreq);
 
+            // Parse latitude
+            var latStr = GetStringValue(reader, "latitude");
+            if (!string.IsNullOrEmpty(latStr) && double.TryParse(latStr, out var lat))
+            {
+                voter.Latitude = lat;
+            }
+
+            // Parse longitude
+            var lonStr = GetStringValue(reader, "longitude");
+            if (!string.IsNullOrEmpty(lonStr) && double.TryParse(lonStr, out var lon))
+            {
+                voter.Longitude = lon;
+            }
+
+            // Parse voter support
+            var supportStr = GetStringValue(reader, "voter_support");
+            if (!string.IsNullOrEmpty(supportStr))
+            {
+                voter.VoterSupport = ParseVoterSupport(supportStr);
+            }
+
+            // Parse last contact status
+            var contactStatusStr = GetStringValue(reader, "last_contact_status");
+            if (!string.IsNullOrEmpty(contactStatusStr))
+            {
+                voter.LastContactStatus = ParseContactStatus(contactStatusStr);
+            }
+
+            // Parse SMS consent status
+            var smsConsentStr = GetStringValue(reader, "sms_consent_status");
+            if (!string.IsNullOrEmpty(smsConsentStr))
+            {
+                voter.SmsConsentStatus = ParseSmsConsentStatus(smsConsentStr);
+            }
+
             return voter;
         }
 
@@ -257,6 +302,73 @@ namespace HooverCanvassingApi.Services
                 return VoteFrequency.Infrequent;
                 
             return VoteFrequency.NonVoter;
+        }
+
+        private VoterSupport? ParseVoterSupport(string? support)
+        {
+            if (string.IsNullOrEmpty(support))
+                return null;
+
+            var normalized = support.ToLower().Trim();
+            
+            if (normalized.Contains("strong") && normalized.Contains("yes"))
+                return VoterSupport.StrongYes;
+            if (normalized.Contains("leaning") && normalized.Contains("yes"))
+                return VoterSupport.LeaningYes;
+            if (normalized.Contains("undecided"))
+                return VoterSupport.Undecided;
+            if (normalized.Contains("leaning") && normalized.Contains("no"))
+                return VoterSupport.LeaningNo;
+            if (normalized.Contains("strong") && normalized.Contains("no"))
+                return VoterSupport.StrongNo;
+
+            // Try to parse enum directly
+            if (Enum.TryParse<VoterSupport>(support, true, out var result))
+                return result;
+
+            return null;
+        }
+
+        private ContactStatus? ParseContactStatus(string? status)
+        {
+            if (string.IsNullOrEmpty(status))
+                return null;
+
+            var normalized = status.ToLower().Trim();
+            
+            if (normalized.Contains("reached"))
+                return ContactStatus.Reached;
+            if (normalized.Contains("not") && normalized.Contains("home"))
+                return ContactStatus.NotHome;
+            if (normalized.Contains("refused"))
+                return ContactStatus.Refused;
+            if (normalized.Contains("follow"))
+                return ContactStatus.NeedsFollowUp;
+
+            // Try to parse enum directly
+            if (Enum.TryParse<ContactStatus>(status, true, out var result))
+                return result;
+
+            return null;
+        }
+
+        private SmsConsentStatus ParseSmsConsentStatus(string? status)
+        {
+            if (string.IsNullOrEmpty(status))
+                return SmsConsentStatus.Unknown;
+
+            var normalized = status.ToLower().Trim();
+            
+            if (normalized.Contains("opted") && normalized.Contains("in"))
+                return SmsConsentStatus.OptedIn;
+            if (normalized.Contains("opted") && normalized.Contains("out"))
+                return SmsConsentStatus.OptedOut;
+
+            // Try to parse enum directly
+            if (Enum.TryParse<SmsConsentStatus>(status, true, out var result))
+                return result;
+
+            return SmsConsentStatus.Unknown;
         }
 
         private string? FormatPhoneNumber(string? phone)
@@ -317,6 +429,11 @@ namespace HooverCanvassingApi.Services
         public string? EthnicityColumn { get; set; }
         public string? ReligionColumn { get; set; }
         public string? IncomeColumn { get; set; }
+        public string? LatitudeColumn { get; set; }
+        public string? LongitudeColumn { get; set; }
+        public string? VoterSupportColumn { get; set; }
+        public string? LastContactStatusColumn { get; set; }
+        public string? SmsConsentStatusColumn { get; set; }
     }
 
     public class MappingResult

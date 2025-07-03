@@ -40,6 +40,7 @@ import { ApiErrorHandler, ApiError } from '../utils/apiErrorHandler';
 
 interface VoterStagingImportProps {
   onComplete?: () => void;
+  existingStagingTable?: string;
 }
 
 interface StagingTableInfo {
@@ -64,17 +65,25 @@ interface ColumnMapping {
   emailColumn?: string;
   partyColumn?: string;
   voteFrequencyColumn?: string;
+  ethnicityColumn?: string;
+  religionColumn?: string;
+  incomeColumn?: string;
+  latitudeColumn?: string;
+  longitudeColumn?: string;
+  voterSupportColumn?: string;
+  lastContactStatusColumn?: string;
+  smsConsentStatusColumn?: string;
 }
 
-const VoterStagingImport: React.FC<VoterStagingImportProps> = ({ onComplete }) => {
-  const [activeStep, setActiveStep] = useState(0);
+const VoterStagingImport: React.FC<VoterStagingImportProps> = ({ onComplete, existingStagingTable }) => {
+  const [activeStep, setActiveStep] = useState(existingStagingTable ? 1 : 0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   
   // Step 1: File upload
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [uploadResult, setUploadResult] = useState<any>(null);
+  const [uploadResult, setUploadResult] = useState<any>(existingStagingTable ? { stagingTableName: existingStagingTable } : null);
   
   // Step 2: Column mapping
   const [tableInfo, setTableInfo] = useState<StagingTableInfo | null>(null);
@@ -85,6 +94,43 @@ const VoterStagingImport: React.FC<VoterStagingImportProps> = ({ onComplete }) =
   const [showResultDialog, setShowResultDialog] = useState(false);
   
   const steps = ['Upload CSV', 'Map Columns', 'Import Voters'];
+
+  // Load existing staging table info if provided
+  useEffect(() => {
+    if (existingStagingTable && uploadResult) {
+      fetchTableInfo();
+    }
+  }, [existingStagingTable, uploadResult]);
+  
+  const fetchTableInfo = async () => {
+    if (!uploadResult?.stagingTableName) return;
+    
+    setLoading(true);
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/voterimport/staging-tables/${uploadResult.stagingTableName}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          },
+        }
+      );
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch table info');
+      }
+      
+      const info = await response.json();
+      setTableInfo(info);
+      
+      // Auto-detect common column mappings
+      autoDetectColumns(info.columns);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch table info');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
@@ -188,6 +234,14 @@ const VoterStagingImport: React.FC<VoterStagingImportProps> = ({ onComplete }) =
       emailColumn: ['email', 'email_address', 'voters_email'],
       partyColumn: ['party', 'party_affiliation', 'parties_description', 'political_party'],
       voteFrequencyColumn: ['vote_frequency', 'voting_frequency', 'voter_frequency'],
+      ethnicityColumn: ['ethnicity', 'race', 'ethnic', 'race_ethnicity'],
+      religionColumn: ['religion', 'religious', 'faith', 'religious_affiliation'],
+      incomeColumn: ['income', 'income_level', 'household_income', 'income_range'],
+      latitudeColumn: ['latitude', 'lat', 'geo_lat', 'y_coord'],
+      longitudeColumn: ['longitude', 'lng', 'lon', 'geo_lng', 'x_coord'],
+      voterSupportColumn: ['voter_support', 'support_level', 'candidate_support'],
+      lastContactStatusColumn: ['last_contact', 'contact_status', 'last_contact_status'],
+      smsConsentStatusColumn: ['sms_consent', 'sms_optin', 'text_consent', 'sms_status'],
     };
     
     for (const [field, fieldPatterns] of Object.entries(patterns)) {
@@ -216,8 +270,12 @@ const VoterStagingImport: React.FC<VoterStagingImportProps> = ({ onComplete }) =
     setError(null);
     
     try {
+      const endpoint = existingStagingTable 
+        ? `${API_BASE_URL}/api/voterimport/remap`
+        : `${API_BASE_URL}/api/voterimport/import`;
+        
       const result = await ApiErrorHandler.makeAuthenticatedRequest(
-        `${API_BASE_URL}/api/voterimport/import`,
+        endpoint,
         {
           method: 'POST',
           body: JSON.stringify({
@@ -252,6 +310,10 @@ const VoterStagingImport: React.FC<VoterStagingImportProps> = ({ onComplete }) =
   const renderStepContent = () => {
     switch (activeStep) {
       case 0:
+        if (existingStagingTable) {
+          // Skip to next step for remapping
+          return null;
+        }
         return (
           <Card>
             <CardContent>
@@ -334,6 +396,14 @@ const VoterStagingImport: React.FC<VoterStagingImportProps> = ({ onComplete }) =
                       { field: 'emailColumn', label: 'Email' },
                       { field: 'partyColumn', label: 'Party Affiliation' },
                       { field: 'voteFrequencyColumn', label: 'Vote Frequency' },
+                      { field: 'ethnicityColumn', label: 'Ethnicity' },
+                      { field: 'religionColumn', label: 'Religion' },
+                      { field: 'incomeColumn', label: 'Income' },
+                      { field: 'latitudeColumn', label: 'Latitude' },
+                      { field: 'longitudeColumn', label: 'Longitude' },
+                      { field: 'voterSupportColumn', label: 'Voter Support' },
+                      { field: 'lastContactStatusColumn', label: 'Last Contact Status' },
+                      { field: 'smsConsentStatusColumn', label: 'SMS Consent Status' },
                     ].map(({ field, label, required }) => (
                       <FormControl key={field} fullWidth size="small">
                         <InputLabel>{label}</InputLabel>
