@@ -77,10 +77,21 @@ const Analytics: React.FC<AnalyticsProps> = ({ user }) => {
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
 
   useEffect(() => {
-    fetchAnalytics();
-  }, []);
+    if (user && user.token) {
+      fetchAnalytics();
+    }
+  }, [user]);
 
   const fetchAnalytics = async () => {
+    if (!user || !user.token) {
+      console.error('Analytics: User not authenticated', { user, hasToken: !!user?.token });
+      setError('User not authenticated');
+      setLoading(false);
+      return;
+    }
+
+    console.log('Analytics: Fetching with token', user.token.substring(0, 20) + '...');
+
     try {
       setLoading(true);
       
