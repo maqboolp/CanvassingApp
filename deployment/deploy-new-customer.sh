@@ -127,6 +127,10 @@ services:
     value: ""
   - key: REACT_APP_CAMPAIGN_YOUTUBE
     value: ""
+  - key: REACT_APP_VOTER_REGISTRATION_URL
+    value: ""
+  - key: REACT_APP_VOLUNTEER_HOTLINE
+    value: ""
 
 databases:
 - name: db
