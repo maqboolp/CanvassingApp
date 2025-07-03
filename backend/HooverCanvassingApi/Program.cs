@@ -194,6 +194,7 @@ else
 builder.Services.AddHostedService<AudioCleanupService>();
 
 builder.Services.AddHttpClient();
+builder.Services.AddHttpClient<VoterImportService>();
 
 // Configure Email Service
 builder.Services.Configure<EmailSettings>(options =>

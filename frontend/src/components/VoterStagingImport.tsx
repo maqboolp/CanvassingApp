@@ -162,8 +162,8 @@ const VoterStagingImport: React.FC<VoterStagingImportProps> = ({ onComplete }) =
       voteFrequencyColumn: ['vote_frequency', 'voting_frequency', 'voter_frequency'],
     };
     
-    for (const [field, patterns] of Object.entries(patterns)) {
-      for (const pattern of patterns) {
+    for (const [field, fieldPatterns] of Object.entries(patterns)) {
+      for (const pattern of fieldPatterns) {
         const match = lowerColumns.find(c => c.lower.includes(pattern));
         if (match) {
           (mapping as any)[field] = match.original;
