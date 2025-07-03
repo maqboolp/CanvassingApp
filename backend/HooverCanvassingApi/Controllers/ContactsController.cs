@@ -208,7 +208,9 @@ namespace HooverCanvassingApi.Controllers
                     "image/jpg", 
                     "image/png", 
                     "image/gif", 
-                    "image/webp"
+                    "image/webp",
+                    "image/heic",
+                    "image/heif"
                 };
                 
                 if (!allowedTypes.Contains(photoFile.ContentType))

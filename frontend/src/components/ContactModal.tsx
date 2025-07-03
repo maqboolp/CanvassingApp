@@ -203,18 +203,76 @@ const ContactModal: React.FC<ContactModalProps> = ({
   };
 
   // Photo handling functions
-  const handlePhotoSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      setPhotoFile(file);
-      
-      // Create preview URL
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPhotoPreviewUrl(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      // Check if it's a HEIC file
+      if (file.type === 'image/heic' || file.type === 'image/heif' || file.name.toLowerCase().endsWith('.heic')) {
+        // Convert HEIC to JPEG
+        try {
+          const convertedFile = await convertHeicToJpeg(file);
+          setPhotoFile(convertedFile);
+          
+          // Create preview URL
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            setPhotoPreviewUrl(reader.result as string);
+          };
+          reader.readAsDataURL(convertedFile);
+        } catch (error) {
+          console.error('Error converting HEIC image:', error);
+          alert('Unable to process HEIC image. Please try a different format.');
+        }
+      } else {
+        setPhotoFile(file);
+        
+        // Create preview URL
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setPhotoPreviewUrl(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+      }
     }
+  };
+
+  const convertHeicToJpeg = async (heicFile: File): Promise<File> => {
+    // Create a canvas element
+    const img = new Image();
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    return new Promise((resolve, reject) => {
+      // For HEIC files, we'll use the browser's built-in image decoding
+      // This works in Safari and some other browsers that support HEIC
+      const url = URL.createObjectURL(heicFile);
+      
+      img.onload = () => {
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx?.drawImage(img, 0, 0);
+        
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const convertedFile = new File([blob], heicFile.name.replace(/\.heic$/i, '.jpg'), {
+              type: 'image/jpeg',
+              lastModified: Date.now(),
+            });
+            resolve(convertedFile);
+          } else {
+            reject(new Error('Failed to convert image'));
+          }
+          URL.revokeObjectURL(url);
+        }, 'image/jpeg', 0.9);
+      };
+      
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error('Failed to load HEIC image'));
+      };
+      
+      img.src = url;
+    });
   };
 
   const deletePhoto = () => {

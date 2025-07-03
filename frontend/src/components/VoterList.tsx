@@ -981,10 +981,22 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
                         {isMobile && (
                           <>
                             <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                              Age {voter.age} • {voter.gender}{voter.partyAffiliation && ` • ${voter.partyAffiliation}`}
+                              Age {voter.age} • {voter.gender}{voter.ethnicity && ` • ${voter.ethnicity}`}{voter.partyAffiliation && ` • ${voter.partyAffiliation}`}
                             </Typography>
                             {voter.cellPhone && (
-                              <Typography variant="caption" color="primary" sx={{ display: 'block' }}>
+                              <Typography 
+                                variant="caption" 
+                                component="a"
+                                href={`tel:${voter.cellPhone}`}
+                                sx={{ 
+                                  display: 'block',
+                                  color: 'primary.main',
+                                  textDecoration: 'none',
+                                  '&:hover': {
+                                    textDecoration: 'underline'
+                                  }
+                                }}
+                              >
                                 📞 {voter.cellPhone}
                               </Typography>
                             )}
@@ -1049,6 +1061,7 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
                         {voter.gender}
+                        {voter.ethnicity && ` • ${voter.ethnicity}`}
                       </Typography>
                     </TableCell>
                   )}
@@ -1126,7 +1139,18 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
                         {voter.cellPhone && (
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                             <Phone fontSize="small" color="action" />
-                            <Typography variant="caption">
+                            <Typography 
+                              variant="caption"
+                              component="a"
+                              href={`tel:${voter.cellPhone}`}
+                              sx={{ 
+                                color: 'primary.main', 
+                                textDecoration: 'none',
+                                '&:hover': {
+                                  textDecoration: 'underline'
+                                }
+                              }}
+                            >
                               {voter.cellPhone}
                             </Typography>
                           </Box>
