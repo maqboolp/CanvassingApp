@@ -1,7 +1,7 @@
 {
-  "short_name": "T4H Canvas",
-  "name": "Tanveer for Hoover - Canvassing Portal",
-  "description": "Canvassing and voter outreach portal for Tanveer Patel's Hoover City Council campaign",
+  "short_name": "Canvas",
+  "name": "Canvassing Portal",
+  "description": "Canvassing and voter outreach portal",
   "icons": [
     {
       "src": "favicon.svg",

@@ -13,6 +13,7 @@ import ResetPassword from './components/ResetPassword';
 import CompleteRegistration from './components/CompleteRegistration';
 import SelfRegistration from './components/SelfRegistration';
 import OptInForm from './components/OptInForm';
+import { customerConfig } from './config/customerConfig';
 
 // Create Material-UI theme matching tanveer4hoover.com
 const theme = createTheme({
@@ -110,6 +111,9 @@ function App() {
   const [loginError, setLoginError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Set document title based on customer configuration
+    document.title = customerConfig.appTitle || 'Canvas App';
+    
     // Check if user is already logged in
     const currentUser = authService.getCurrentUser();
     if (currentUser) {
