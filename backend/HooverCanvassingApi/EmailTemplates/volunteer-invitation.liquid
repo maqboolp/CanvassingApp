@@ -1,0 +1,26 @@
+{% layout '_layout' %}
+
+{% block content %}
+<h2>Join the {{ Campaign.CampaignName }} Team!</h2>
+
+<p>Hi there,</p>
+
+<p><strong>{{ InviterName }}</strong> has invited you to join the {{ Campaign.CampaignName }} team. We're building a grassroots movement to bring positive change to our community, and we'd love to have you on board!</p>
+
+<div class="highlight-box">
+    <p style="margin: 0;"><strong>You're invited to join as:</strong> {{ Role }}</p>
+</div>
+
+<p>As a member of our campaign team, you'll have access to our canvassing tools and be able to help us connect with voters in {{ Campaign.Jurisdiction }}.</p>
+
+<div style="text-align: center;">
+    <a href="{{ RegistrationUrl }}" class="button">Accept Invitation</a>
+</div>
+
+<p>This invitation link will expire in 7 days. If you have any questions, feel free to reach out to us.</p>
+
+<p>Looking forward to having you on the team!</p>
+
+<p>Best regards,<br>
+The {{ Campaign.CampaignName }} Team</p>
+{% endblock %}

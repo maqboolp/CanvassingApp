@@ -26,6 +26,7 @@ import {
   Lock
 } from '@mui/icons-material';
 import { API_BASE_URL } from '../config';
+import { campaignConfig } from '../config/customerConfig';
 
 const CompleteRegistration: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -219,7 +220,7 @@ const CompleteRegistration: React.FC = () => {
               Complete Your Registration
             </Typography>
             <Typography variant="body1" color="text.secondary">
-              Welcome to the Tanveer for Hoover Campaign Team!
+              Welcome to the {campaignConfig.campaignName} Team!
             </Typography>
           </Box>
 

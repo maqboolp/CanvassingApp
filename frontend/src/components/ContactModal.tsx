@@ -21,6 +21,7 @@ import {
 import { ContactPhone, Person, LocationOn, Mic, Stop, Delete, CameraAlt, PhotoCamera } from '@mui/icons-material';
 import { Voter, ContactStatus, VoterSupport, AuthUser } from '../types';
 import { API_BASE_URL } from '../config';
+import { campaignConfig } from '../config/customerConfig';
 
 interface ContactModalProps {
   open: boolean;
@@ -537,7 +538,7 @@ const ContactModal: React.FC<ContactModalProps> = ({
           <FormControl component="fieldset" sx={{ mb: 3 }}>
             <FormLabel component="legend">Voter Support Level (Optional)</FormLabel>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-              How does this voter feel about Tanveer's candidacy?
+              How does this voter feel about {campaignConfig.candidateName}'s candidacy?
             </Typography>
             <RadioGroup
               value={voterSupport || ''}
@@ -546,12 +547,12 @@ const ContactModal: React.FC<ContactModalProps> = ({
               <FormControlLabel
                 value="strongyes"
                 control={<Radio />}
-                label="Strong Yes - Will vote for Tanveer"
+                label={`Strong Yes - Will vote for ${campaignConfig.candidateName}`}
               />
               <FormControlLabel
                 value="leaningyes"
                 control={<Radio />}
-                label="Leaning Yes - May vote for Tanveer"
+                label={`Leaning Yes - May vote for ${campaignConfig.candidateName}`}
               />
               <FormControlLabel
                 value="undecided"
@@ -561,12 +562,12 @@ const ContactModal: React.FC<ContactModalProps> = ({
               <FormControlLabel
                 value="leaningno"
                 control={<Radio />}
-                label="Leaning No - Not into Tanveer"
+                label={`Leaning No - Not into ${campaignConfig.candidateName}`}
               />
               <FormControlLabel
                 value="strongno"
                 control={<Radio />}
-                label="Strong No - Definitely not voting for Tanveer"
+                label={`Strong No - Definitely not voting for ${campaignConfig.candidateName}`}
               />
               <FormControlLabel
                 value=""

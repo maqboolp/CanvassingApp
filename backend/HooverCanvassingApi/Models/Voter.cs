@@ -69,11 +69,11 @@ namespace HooverCanvassingApi.Models
 
     public enum VoterSupport
     {
-        StrongYes,      // Strong yes - will Vote for Tanveer
-        LeaningYes,     // Leaning yes - May vote for Tanveer - but hadn't heard of her before, or was a little softer enthusiasm
+        StrongYes,      // Strong yes - will vote for the candidate
+        LeaningYes,     // Leaning yes - May vote for the candidate - but hadn't heard of them before, or was a little softer enthusiasm
         Undecided,      // Undecided - they won't share or say they need to do research (even if they seem somewhat positive)
-        LeaningNo,      // Leaning against - Not into Tanveer
-        StrongNo        // Strong no - Definitely not voting for Tanveer
+        LeaningNo,      // Leaning against - Not supportive of the candidate
+        StrongNo        // Strong no - Definitely not voting for the candidate
     }
 
     public enum SmsConsentStatus

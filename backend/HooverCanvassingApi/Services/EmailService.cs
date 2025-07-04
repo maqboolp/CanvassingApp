@@ -4,42 +4,79 @@ using MimeKit;
 using SendGrid;
 using SendGrid.Helpers.Mail;
 using HooverCanvassingApi.Models;
+using HooverCanvassingApi.Configuration;
+using HooverCanvassingApi.Services.EmailTemplates;
 
 namespace HooverCanvassingApi.Services;
 
 public class EmailService : IEmailService
 {
     private readonly EmailSettings _emailSettings;
+    private readonly CampaignSettings _campaignSettings;
+    private readonly IEmailTemplateService _templateService;
     private readonly ILogger<EmailService> _logger;
 
-    public EmailService(IOptions<EmailSettings> emailSettings, ILogger<EmailService> logger)
+    public EmailService(
+        IOptions<EmailSettings> emailSettings, 
+        IOptions<CampaignSettings> campaignSettings,
+        IEmailTemplateService templateService,
+        ILogger<EmailService> logger)
     {
         _emailSettings = emailSettings.Value;
+        _campaignSettings = campaignSettings.Value;
+        _templateService = templateService;
         _logger = logger;
     }
 
     public async Task<bool> SendPasswordResetEmailAsync(string email, string firstName, string resetToken, string resetUrl)
     {
-        var subject = "Reset Your Password - Tanveer for Hoover Campaign";
-        var htmlContent = GeneratePasswordResetHtml(firstName, resetUrl);
-        var textContent = GeneratePasswordResetText(firstName, resetUrl);
+        try
+        {
+            var model = new
+            {
+                FirstName = firstName,
+                ResetUrl = resetUrl,
+                ResetToken = resetToken
+            };
 
-        return await SendEmailAsync(email, subject, htmlContent, textContent);
+            var (subject, htmlContent, textContent) = await _templateService.RenderEmailAsync("password-reset", model);
+            return await SendEmailAsync(email, subject, htmlContent, textContent);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error sending password reset email to {Email}", email);
+            return false;
+        }
     }
 
     public async Task<bool> SendContactNotificationEmailAsync(string email, ContactNotificationData data)
     {
-        var subject = "New Voter Contact - Tanveer for Hoover Campaign";
-        var htmlContent = GenerateContactNotificationHtml(data);
-        var textContent = GenerateContactNotificationText(data);
+        try
+        {
+            var model = new
+            {
+                VolunteerName = data.VolunteerName,
+                VoterName = data.VoterName,
+                VoterAddress = data.VoterAddress,
+                VoterPhone = data.VoterPhone,
+                VoterEmail = data.VoterEmail,
+                Status = data.Status,
+                VoterSupport = data.VoterSupport,
+                Timestamp = data.Timestamp,
+                Notes = data.Notes,
+                HasIssues = !string.IsNullOrEmpty(data.Issues),
+                Issues = data.Issues,
+                DashboardUrl = $"{_emailSettings.FromEmail}/admin" // You might want to configure this
+            };
 
-        _logger.LogInformation("=== EMAIL SERVICE: Sending contact notification to {Email} ===", email);
-        _logger.LogInformation("Email subject: {Subject}", subject);
-        
-        var result = await SendEmailAsync(email, subject, htmlContent, textContent);
-        
-        _logger.LogInformation("Email service result for {Email}: {Result}", email, result ? "SUCCESS" : "FAILED");
-        return result;
+            var (subject, htmlContent, textContent) = await _templateService.RenderEmailAsync("contact-notification", model);
+            return await SendEmailAsync(email, subject, htmlContent, textContent);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error sending contact notification email to {Email}", email);
+            return false;
+        }
     }
 
     public async Task<bool> SendContactDeletionNotificationEmailAsync(string email, ContactDeletionNotificationData data)

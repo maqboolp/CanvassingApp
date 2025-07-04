@@ -1,0 +1,49 @@
+{% layout '_layout' %}
+
+{% block content %}
+<h2>New Voter Contact Recorded</h2>
+
+<p>A new voter contact has been recorded by <strong>{{ VolunteerName }}</strong>.</p>
+
+<div class="highlight-box">
+    <h3 style="margin-top: 0;">Voter Information</h3>
+    <p><strong>Name:</strong> {{ VoterName }}<br>
+    <strong>Address:</strong> {{ VoterAddress }}<br>
+    {% if VoterPhone %}<strong>Phone:</strong> {{ VoterPhone }}<br>{% endif %}
+    {% if VoterEmail %}<strong>Email:</strong> {{ VoterEmail }}<br>{% endif %}
+    </p>
+</div>
+
+<h3>Contact Details</h3>
+<table style="width: 100%; border-collapse: collapse;">
+    <tr>
+        <td style="padding: 8px; border-bottom: 1px solid #e0e0e0;"><strong>Contact Status:</strong></td>
+        <td style="padding: 8px; border-bottom: 1px solid #e0e0e0;">{{ Status }}</td>
+    </tr>
+    <tr>
+        <td style="padding: 8px; border-bottom: 1px solid #e0e0e0;"><strong>Voter Support:</strong></td>
+        <td style="padding: 8px; border-bottom: 1px solid #e0e0e0;">{{ VoterSupport }}</td>
+    </tr>
+    <tr>
+        <td style="padding: 8px; border-bottom: 1px solid #e0e0e0;"><strong>Date/Time:</strong></td>
+        <td style="padding: 8px; border-bottom: 1px solid #e0e0e0;">{{ Timestamp | date: 'MMM dd, yyyy h:mm tt' }}</td>
+    </tr>
+    {% if HasIssues %}
+    <tr>
+        <td style="padding: 8px; border-bottom: 1px solid #e0e0e0;"><strong>Issues:</strong></td>
+        <td style="padding: 8px; border-bottom: 1px solid #e0e0e0;">{{ Issues }}</td>
+    </tr>
+    {% endif %}
+</table>
+
+{% if Notes %}
+<h3>Notes</h3>
+<div style="background-color: #f8f8f8; padding: 15px; border-radius: 5px; margin: 15px 0;">
+    <p style="margin: 0;">{{ Notes }}</p>
+</div>
+{% endif %}
+
+<p style="margin-top: 30px;">
+<a href="{{ DashboardUrl }}" class="button">View in Dashboard</a>
+</p>
+{% endblock %}

@@ -8,9 +8,10 @@ using System.Collections;
 using HooverCanvassingApi.Data;
 using HooverCanvassingApi.Models;
 using HooverCanvassingApi.Services;
+using HooverCanvassingApi.Services.EmailTemplates;
 using HooverCanvassingApi.Middleware;
-using HooverCanvassingApi;
 using HooverCanvassingApi.Configuration;
+using HooverCanvassingApi;
 using Amazon.S3;
 using Amazon;
 
@@ -63,6 +64,10 @@ builder.Services.AddCors(options =>
 
 // Add environment variables explicitly
 builder.Configuration.AddEnvironmentVariables();
+
+// Configure Campaign Settings
+builder.Services.Configure<CampaignSettings>(
+    builder.Configuration.GetSection("Campaign"));
 
 // Use standard .NET configuration for connection string
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
@@ -209,6 +214,7 @@ builder.Services.Configure<EmailSettings>(options =>
         options.SendGridApiKey = sendGridApiKey;
     }
 });
+builder.Services.AddTransient<IEmailTemplateService, FluidEmailTemplateService>();
 builder.Services.AddTransient<IEmailService, EmailService>();
 
 // Configure Opt-In Settings

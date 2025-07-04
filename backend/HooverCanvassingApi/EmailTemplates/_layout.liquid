@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ EmailTitle | default: Campaign.CampaignName }}</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .email-container {
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .email-header {
+            background-color: #673ab7;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .email-header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 600;
+        }
+        .email-header p {
+            margin: 5px 0 0 0;
+            opacity: 0.9;
+            font-size: 16px;
+        }
+        .email-body {
+            padding: 40px 30px;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 30px;
+            background-color: #673ab7;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: 600;
+            margin: 20px 0;
+        }
+        .button:hover {
+            background-color: #5e35b1;
+        }
+        .footer {
+            background-color: #f8f8f8;
+            padding: 30px;
+            text-align: center;
+            font-size: 14px;
+            color: #666;
+        }
+        .footer p {
+            margin: 5px 0;
+        }
+        .social-links {
+            margin: 20px 0;
+        }
+        .social-links a {
+            margin: 0 10px;
+            color: #673ab7;
+            text-decoration: none;
+        }
+        .divider {
+            height: 1px;
+            background-color: #e0e0e0;
+            margin: 20px 0;
+        }
+        .highlight-box {
+            background-color: #f5f3ff;
+            border-left: 4px solid #673ab7;
+            padding: 15px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="email-header">
+            <h1>{{ Campaign.CampaignName }}</h1>
+            <p>{{ Campaign.CampaignTitle }}</p>
+        </div>
+        
+        <div class="email-body">
+            {% block content %}
+            {% endblock %}
+        </div>
+        
+        <div class="footer">
+            {% if ShowUnsubscribe %}
+            <p style="margin-bottom: 15px;">
+                <a href="{{ UnsubscribeUrl }}" style="color: #673ab7; text-decoration: none;">Unsubscribe</a> | 
+                <a href="{{ PreferencesUrl }}" style="color: #673ab7; text-decoration: none;">Update Preferences</a>
+            </p>
+            {% endif %}
+            
+            <div class="divider"></div>
+            
+            <p><strong>{{ Campaign.CampaignTitle }}</strong></p>
+            
+            {% if Campaign.CampaignAddress %}
+            <p>{{ Campaign.CampaignAddress }}</p>
+            {% endif %}
+            
+            {% if Campaign.CampaignEmail or Campaign.CampaignPhone %}
+            <p>
+                {% if Campaign.CampaignEmail %}
+                <a href="mailto:{{ Campaign.CampaignEmail }}" style="color: #673ab7; text-decoration: none;">{{ Campaign.CampaignEmail }}</a>
+                {% endif %}
+                {% if Campaign.CampaignEmail and Campaign.CampaignPhone %} | {% endif %}
+                {% if Campaign.CampaignPhone %}
+                <a href="tel:{{ Campaign.CampaignPhone }}" style="color: #673ab7; text-decoration: none;">{{ Campaign.CampaignPhone }}</a>
+                {% endif %}
+            </p>
+            {% endif %}
+            
+            {% if Campaign.CampaignWebsite %}
+            <p>
+                <a href="{{ Campaign.CampaignWebsite }}" style="color: #673ab7; text-decoration: none;">{{ Campaign.CampaignWebsite }}</a>
+            </p>
+            {% endif %}
+            
+            <div class="social-links">
+                {% if Campaign.FacebookUrl %}
+                <a href="{{ Campaign.FacebookUrl }}">Facebook</a>
+                {% endif %}
+                {% if Campaign.TwitterUrl %}
+                <a href="{{ Campaign.TwitterUrl }}">Twitter</a>
+                {% endif %}
+                {% if Campaign.InstagramUrl %}
+                <a href="{{ Campaign.InstagramUrl }}">Instagram</a>
+                {% endif %}
+            </div>
+            
+            <div class="divider"></div>
+            
+            <p style="font-size: 12px; color: #999;">
+                {{ Campaign.PaidForBy }}<br>
+                &copy; {{ CurrentYear }} {{ Campaign.CampaignName }}. All rights reserved.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

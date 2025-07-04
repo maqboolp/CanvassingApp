@@ -26,7 +26,7 @@ import {
 import { OptInRequest } from '../types';
 import { optInService } from '../services/optInService';
 import VersionInfo from './VersionInfo';
-import { customerConfig } from '../config/customerConfig';
+import { customerConfig, campaignConfig } from '../config/customerConfig';
 
 const OptInForm: React.FC = () => {
   const navigate = useNavigate();
@@ -115,7 +115,7 @@ const OptInForm: React.FC = () => {
               Successfully Opted In!
             </Typography>
             <Typography variant="body1" sx={{ mb: 3 }}>
-              Thank you for joining Tanveer for Hoover's campaign updates!
+              Thank you for joining {campaignConfig.campaignName}'s campaign updates!
             </Typography>
             <Alert severity="success" sx={{ mb: 3, textAlign: 'left' }}>
               <Typography variant="body2">
@@ -293,8 +293,7 @@ const OptInForm: React.FC = () => {
               }
               label={
                 <Typography variant="body2" color={validationErrors.consent ? 'error' : 'textSecondary'}>
-                  I agree to receive texts and robocalls from Tanveer for Hoover. 
-                  Message and data rates may apply. Reply STOP to opt out.
+                  {campaignConfig.consentText}
                 </Typography>
               }
               sx={{ mt: 2, mb: 1 }}

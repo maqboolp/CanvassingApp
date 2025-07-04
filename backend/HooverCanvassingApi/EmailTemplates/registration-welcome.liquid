@@ -1,0 +1,41 @@
+{% layout '_layout' %}
+
+{% block content %}
+<h2>Welcome to the {{ Campaign.CampaignName }} Team, {{ FirstName }}!</h2>
+
+<p>We're thrilled to have you join our grassroots movement to bring positive change to {{ Campaign.Jurisdiction }}.</p>
+
+<div class="highlight-box">
+    <h3 style="margin-top: 0;">Your Account Details</h3>
+    <p style="margin: 0;">
+        <strong>Username:</strong> {{ Email }}<br>
+        <strong>Role:</strong> {{ Role }}<br>
+        <strong>Status:</strong> Active
+    </p>
+</div>
+
+<h3>What's Next?</h3>
+<p>Here are some ways you can get started:</p>
+
+<ul>
+    <li><strong>Download the App:</strong> Access our canvassing tools on your mobile device</li>
+    <li><strong>Join a Canvassing Event:</strong> Check our calendar for upcoming events</li>
+    <li><strong>Complete Training:</strong> Review our volunteer resources and training materials</li>
+    <li><strong>Connect with the Team:</strong> Join our volunteer chat and meet other supporters</li>
+</ul>
+
+<div style="text-align: center; margin: 30px 0;">
+    <a href="{{ LoginUrl }}" class="button">Log In to Get Started</a>
+</div>
+
+{% if Campaign.VolunteerSignupUrl %}
+<p>Need more information? Visit our <a href="{{ Campaign.VolunteerSignupUrl }}" style="color: #673ab7;">volunteer resources page</a>.</p>
+{% endif %}
+
+<p>If you have any questions, don't hesitate to reach out to our volunteer coordinator.</p>
+
+<p>Thank you for your commitment to making a difference!</p>
+
+<p>Best regards,<br>
+The {{ Campaign.CampaignName }} Team</p>
+{% endblock %}
