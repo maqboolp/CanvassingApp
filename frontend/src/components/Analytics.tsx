@@ -75,6 +75,17 @@ const Analytics: React.FC<AnalyticsProps> = ({ user }) => {
 
   // Color scheme for charts
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
+  
+  // Party-specific colors
+  const getPartyColor = (party: string) => {
+    const partyName = party.toLowerCase();
+    if (partyName.includes('republican')) return '#DC3545'; // Red
+    if (partyName.includes('democrat')) return '#0066CC'; // Blue
+    if (partyName.includes('independent')) return '#6C757D'; // Gray
+    if (partyName.includes('libertarian')) return '#FFC107'; // Yellow
+    if (partyName.includes('green')) return '#28A745'; // Green
+    return '#6C757D'; // Default gray for others
+  };
 
   useEffect(() => {
     if (user && user.token) {
@@ -288,16 +299,21 @@ const Analytics: React.FC<AnalyticsProps> = ({ user }) => {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={(entry) => `${entry.party} (${entry.percentage}%)`}
+                  label={false}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="count"
                 >
                   {voterData?.partyAffiliationStats?.map((entry: any, index: number) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    <Cell key={`cell-${index}`} fill={getPartyColor(entry.party)} />
                   ))}
                 </Pie>
                 <Tooltip />
+                <Legend 
+                  verticalAlign="bottom" 
+                  height={36}
+                  formatter={(value: any, entry: any) => `${entry.payload.party} (${entry.payload.percentage}%)`}
+                />
               </PieChart>
             </ResponsiveContainer>
           </Paper>
@@ -343,7 +359,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ user }) => {
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={(entry) => `${entry.ethnicity} (${entry.percentage}%)`}
+                    label={false}
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="count"
@@ -353,6 +369,11 @@ const Analytics: React.FC<AnalyticsProps> = ({ user }) => {
                     ))}
                   </Pie>
                   <Tooltip />
+                  <Legend 
+                    verticalAlign="bottom" 
+                    height={36}
+                    formatter={(value: any, entry: any) => `${entry.payload.ethnicity} (${entry.payload.percentage}%)`}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             </Paper>
@@ -369,7 +390,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ user }) => {
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={(entry) => `${entry.religion} (${entry.percentage}%)`}
+                    label={false}
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="count"
@@ -379,6 +400,11 @@ const Analytics: React.FC<AnalyticsProps> = ({ user }) => {
                     ))}
                   </Pie>
                   <Tooltip />
+                  <Legend 
+                    verticalAlign="bottom" 
+                    height={36}
+                    formatter={(value: any, entry: any) => `${entry.payload.religion} (${entry.payload.percentage}%)`}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             </Paper>
