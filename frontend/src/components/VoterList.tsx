@@ -100,7 +100,6 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
   });
 
   const [filterInputs, setFilterInputs] = useState({
-    zipCode: '',
     voteFrequency: '',
     ageGroup: '',
     contactStatus: 'not-contacted',
@@ -258,7 +257,6 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
   const applyFilters = () => {
     setFilters({
       ...filters,
-      zipCode: filterInputs.zipCode || undefined,
       voteFrequency: filterInputs.voteFrequency as any || undefined,
       ageGroup: filterInputs.ageGroup as any || undefined,
       contactStatus: filterInputs.contactStatus as any || undefined,
@@ -271,7 +269,6 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
 
   const clearFilters = () => {
     setFilterInputs({
-      zipCode: '',
       voteFrequency: '',
       ageGroup: '',
       contactStatus: 'not-contacted',
@@ -652,17 +649,16 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
             label="Search"
             value={filterInputs.searchName}
             onChange={(e) => handleFilterChange('searchName', e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                applyFilters();
+              }
+            }}
             sx={{ minWidth: { xs: 120, sm: 200 }, flex: { xs: '1 1 auto', sm: 'none' } }}
             placeholder="Name, address, city or ZIP"
           />
           
-          <TextField
-            size="small"
-            label="ZIP Code"
-            value={filterInputs.zipCode}
-            onChange={(e) => handleFilterChange('zipCode', e.target.value)}
-            sx={{ minWidth: { xs: 80, sm: 120 }, flex: { xs: '0 1 auto', sm: 'none' } }}
-          />
           
           <FormControl size="small" sx={{ minWidth: { xs: 100, sm: 140 }, flex: { xs: '1 1 auto', sm: 'none' } }}>
             <InputLabel>Contact Status</InputLabel>
