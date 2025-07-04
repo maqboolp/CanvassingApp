@@ -29,9 +29,9 @@ const VolunteerResourcesSection: React.FC<VolunteerResourcesSectionProps> = ({
           Campaign Information
         </Typography>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-          {campaignConfig.campaignWebsite && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Language fontSize="small" sx={{ color: '#2f1c6a' }} />
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Language fontSize="small" sx={{ color: '#2f1c6a' }} />
+            {campaignConfig.campaignWebsite ? (
               <a 
                 href={campaignConfig.campaignWebsite} 
                 target="_blank" 
@@ -40,11 +40,15 @@ const VolunteerResourcesSection: React.FC<VolunteerResourcesSectionProps> = ({
               >
                 Campaign Website <OpenInNew fontSize="small" sx={{ ml: 0.5, verticalAlign: 'middle' }} />
               </a>
-            </Box>
-          )}
-          {campaignConfig.campaignYoutube && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <VideoLibrary fontSize="small" sx={{ color: '#2f1c6a' }} />
+            ) : (
+              <Typography variant="body2" sx={{ color: '#999', fontStyle: 'italic', fontSize: '14px' }}>
+                [REACT_APP_CAMPAIGN_WEBSITE]
+              </Typography>
+            )}
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <VideoLibrary fontSize="small" sx={{ color: '#2f1c6a' }} />
+            {campaignConfig.campaignYoutube ? (
               <a 
                 href={campaignConfig.campaignYoutube} 
                 target="_blank" 
@@ -53,45 +57,55 @@ const VolunteerResourcesSection: React.FC<VolunteerResourcesSectionProps> = ({
               >
                 Campaign Videos <OpenInNew fontSize="small" sx={{ ml: 0.5, verticalAlign: 'middle' }} />
               </a>
-            </Box>
-          )}
+            ) : (
+              <Typography variant="body2" sx={{ color: '#999', fontStyle: 'italic', fontSize: '14px' }}>
+                [REACT_APP_CAMPAIGN_YOUTUBE]
+              </Typography>
+            )}
+          </Box>
         </Box>
       </Box>
 
       {/* Support the Campaign */}
-      {campaignConfig.campaignVenmo && (
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: '#2f1c6a' }}>
-            Support the Campaign
-          </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Payment fontSize="small" sx={{ color: '#2f1c6a' }} />
-              <Typography variant="body2" sx={{ color: '#2f1c6a' }}>
-                Venmo: {campaignConfig.campaignVenmo}
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: '#2f1c6a' }}>
+          Support the Campaign
+        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Payment fontSize="small" sx={{ color: '#2f1c6a' }} />
+            {campaignConfig.campaignVenmo ? (
+              <>
+                <Typography variant="body2" sx={{ color: '#2f1c6a' }}>
+                  Venmo: {campaignConfig.campaignVenmo}
+                </Typography>
+                {showQRCode && (
+                  <Box sx={{ p: 1, bgcolor: 'white', borderRadius: 1, border: '1px solid #e0e0e0', ml: 1 }}>
+                    <QRCode 
+                      value={`https://venmo.com/${campaignConfig.campaignVenmo.replace('@', '')}`} 
+                      size={80}
+                      style={{ height: "auto", maxWidth: "100%", width: "100%" }}
+                    />
+                  </Box>
+                )}
+              </>
+            ) : (
+              <Typography variant="body2" sx={{ color: '#999', fontStyle: 'italic' }}>
+                [REACT_APP_CAMPAIGN_VENMO]
               </Typography>
-            </Box>
-            {showQRCode && (
-              <Box sx={{ p: 1, bgcolor: 'white', borderRadius: 1, border: '1px solid #e0e0e0' }}>
-                <QRCode 
-                  value={`https://venmo.com/${campaignConfig.campaignVenmo.replace('@', '')}`} 
-                  size={80}
-                  style={{ height: "auto", maxWidth: "100%", width: "100%" }}
-                />
-              </Box>
             )}
           </Box>
         </Box>
-      )}
+      </Box>
 
       {/* Voter Resources */}
-      {campaignConfig.voterRegistrationUrl && (
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: '#2f1c6a' }}>
-            Voter Resources
-          </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <HowToReg fontSize="small" sx={{ color: '#2f1c6a' }} />
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: '#2f1c6a' }}>
+          Voter Resources
+        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <HowToReg fontSize="small" sx={{ color: '#2f1c6a' }} />
+          {campaignConfig.voterRegistrationUrl ? (
             <a 
               href={campaignConfig.voterRegistrationUrl} 
               target="_blank" 
@@ -100,9 +114,13 @@ const VolunteerResourcesSection: React.FC<VolunteerResourcesSectionProps> = ({
             >
               Check Voter Registration <OpenInNew fontSize="small" sx={{ ml: 0.5, verticalAlign: 'middle' }} />
             </a>
-          </Box>
+          ) : (
+            <Typography variant="body2" sx={{ color: '#999', fontStyle: 'italic', fontSize: '14px' }}>
+              [REACT_APP_VOTER_REGISTRATION_URL]
+            </Typography>
+          )}
         </Box>
-      )}
+      </Box>
 
       {/* Support & Help */}
       <Box sx={{ mb: 3 }}>
@@ -110,22 +128,18 @@ const VolunteerResourcesSection: React.FC<VolunteerResourcesSectionProps> = ({
           Support & Help
         </Typography>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-          {campaignConfig.volunteerHotline && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Phone fontSize="small" sx={{ color: '#2f1c6a' }} />
-              <Typography variant="body2" sx={{ color: '#2f1c6a' }}>
-                Volunteer Hotline: {campaignConfig.volunteerHotline}
-              </Typography>
-            </Box>
-          )}
-          {campaignConfig.supportEmail && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Help fontSize="small" sx={{ color: '#2f1c6a' }} />
-              <Typography variant="body2" sx={{ color: '#2f1c6a' }}>
-                App Support: Email {campaignConfig.supportEmail}
-              </Typography>
-            </Box>
-          )}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Phone fontSize="small" sx={{ color: '#2f1c6a' }} />
+            <Typography variant="body2" sx={{ color: campaignConfig.volunteerHotline ? '#2f1c6a' : '#999', fontStyle: campaignConfig.volunteerHotline ? 'normal' : 'italic' }}>
+              Volunteer Hotline: {campaignConfig.volunteerHotline || '[REACT_APP_VOLUNTEER_HOTLINE]'}
+            </Typography>
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Help fontSize="small" sx={{ color: '#2f1c6a' }} />
+            <Typography variant="body2" sx={{ color: campaignConfig.supportEmail ? '#2f1c6a' : '#999', fontStyle: campaignConfig.supportEmail ? 'normal' : 'italic' }}>
+              App Support: Email {campaignConfig.supportEmail || '[REACT_APP_SUPPORT_EMAIL]'}
+            </Typography>
+          </Box>
         </Box>
       </Box>
 
