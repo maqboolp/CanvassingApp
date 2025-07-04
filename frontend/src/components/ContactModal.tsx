@@ -16,9 +16,10 @@ import {
   Divider,
   IconButton,
   Chip,
-  CircularProgress
+  CircularProgress,
+  InputAdornment
 } from '@mui/material';
-import { ContactPhone, Person, LocationOn, Mic, Stop, Delete, CameraAlt, PhotoCamera } from '@mui/icons-material';
+import { ContactPhone, Person, LocationOn, Mic, Stop, Delete, CameraAlt, PhotoCamera, MicOff } from '@mui/icons-material';
 import { Voter, ContactStatus, VoterSupport, AuthUser } from '../types';
 import { API_BASE_URL } from '../config';
 import { campaignConfig } from '../config/customerConfig';
@@ -60,6 +61,11 @@ const ContactModal: React.FC<ContactModalProps> = ({
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  
+  // Speech recognition states
+  const [isListening, setIsListening] = useState(false);
+  const [speechSupported, setSpeechSupported] = useState(false);
+  const recognitionRef = useRef<any>(null);
 
   // Calculate distance between two coordinates using Haversine formula
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
@@ -116,6 +122,108 @@ const ContactModal: React.FC<ContactModalProps> = ({
       );
     }
   }, [open, voter]);
+
+  // Initialize speech recognition
+  React.useEffect(() => {
+    // Check for speech recognition support
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    
+    if (SpeechRecognition) {
+      setSpeechSupported(true);
+      
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+      
+      recognition.onresult = (event: any) => {
+        let finalTranscript = '';
+        let interimTranscript = '';
+        
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            finalTranscript += transcript + ' ';
+          } else {
+            interimTranscript += transcript;
+          }
+        }
+        
+        if (finalTranscript) {
+          setNotes(prevNotes => {
+            // Add a space if there's already content
+            const separator = prevNotes && !prevNotes.endsWith(' ') ? ' ' : '';
+            return prevNotes + separator + finalTranscript.trim();
+          });
+        }
+      };
+      
+      recognition.onerror = (event: any) => {
+        console.error('Speech recognition error:', event.error);
+        setIsListening(false);
+        
+        if (event.error === 'no-speech') {
+          // Silently stop - this is normal
+        } else if (event.error === 'not-allowed') {
+          alert('Microphone access denied. Please allow microphone access to use voice-to-text.');
+        } else {
+          alert(`Speech recognition error: ${event.error}`);
+        }
+      };
+      
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+      
+      recognitionRef.current = recognition;
+    } else {
+      setSpeechSupported(false);
+      console.log('Speech recognition not supported in this browser');
+    }
+    
+    // Cleanup
+    return () => {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch (e) {
+          // Ignore errors during cleanup
+        }
+      }
+    };
+  }, []);
+
+  // Speech recognition functions
+  const startListening = () => {
+    if (recognitionRef.current && !isListening) {
+      try {
+        recognitionRef.current.start();
+        setIsListening(true);
+      } catch (e) {
+        console.error('Error starting speech recognition:', e);
+        alert('Could not start voice input. Please try again.');
+      }
+    }
+  };
+
+  const stopListening = () => {
+    if (recognitionRef.current && isListening) {
+      try {
+        recognitionRef.current.stop();
+        setIsListening(false);
+      } catch (e) {
+        console.error('Error stopping speech recognition:', e);
+      }
+    }
+  };
+
+  const toggleListening = () => {
+    if (isListening) {
+      stopListening();
+    } else {
+      startListening();
+    }
+  };
 
   // Voice recording functions
   const startRecording = async () => {
@@ -373,6 +481,10 @@ const ContactModal: React.FC<ContactModalProps> = ({
     if (recordingIntervalRef.current) {
       clearInterval(recordingIntervalRef.current);
     }
+    // Stop speech recognition if active
+    if (isListening) {
+      stopListening();
+    }
     onClose();
   };
 
@@ -580,9 +692,26 @@ const ContactModal: React.FC<ContactModalProps> = ({
 
         {/* Notes */}
         <Box sx={{ mb: 2 }}>
-          <Typography variant="subtitle2" gutterBottom>
-            Notes (Optional)
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+            <Typography variant="subtitle2">
+              Notes (Optional)
+            </Typography>
+            {isListening && (
+              <Chip
+                label="Listening..."
+                color="error"
+                size="small"
+                icon={<CircularProgress size={14} color="inherit" />}
+              />
+            )}
+          </Box>
+          
+          {/* Voice input helper text */}
+          {speechSupported && !isListening && (
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+              💡 Tap the microphone icon in the text field to use voice-to-text
+            </Typography>
+          )}
           
           {/* Voice Recording Controls */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
@@ -699,6 +828,20 @@ const ContactModal: React.FC<ContactModalProps> = ({
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             variant="outlined"
+            InputProps={{
+              endAdornment: speechSupported ? (
+                <InputAdornment position="end" sx={{ alignSelf: 'flex-start', mt: 1 }}>
+                  <IconButton
+                    onClick={toggleListening}
+                    color={isListening ? "error" : "default"}
+                    size="small"
+                    title={isListening ? "Stop voice input" : "Start voice input"}
+                  >
+                    {isListening ? <MicOff /> : <Mic />}
+                  </IconButton>
+                </InputAdornment>
+              ) : null
+            }}
           />
         </Box>
 
