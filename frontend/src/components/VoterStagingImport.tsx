@@ -326,27 +326,23 @@ const VoterStagingImport: React.FC<VoterStagingImportProps> = ({ onComplete, exi
               </Typography>
               
               <Box sx={{ mt: 3 }}>
-                <Button
-                  variant="outlined"
-                  component="label"
-                  fullWidth
-                  startIcon={<UploadIcon />}
-                  sx={{ height: 100, border: '2px dashed' }}
-                >
-                  {selectedFile ? selectedFile.name : 'Select CSV File'}
-                  <input
-                    type="file"
-                    hidden
-                    accept=".csv"
-                    onChange={handleFileSelect}
-                  />
-                </Button>
-                
-                {selectedFile && (
-                  <Box sx={{ mt: 2 }}>
-                    <Typography variant="body2">
-                      File: {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
-                    </Typography>
+                {selectedFile ? (
+                  <Box>
+                    <Box sx={{ 
+                      p: 3, 
+                      border: '2px dashed #ccc', 
+                      borderRadius: 1,
+                      backgroundColor: '#f5f5f5',
+                      textAlign: 'center'
+                    }}>
+                      <UploadIcon sx={{ fontSize: 40, color: 'primary.main', mb: 1 }} />
+                      <Typography variant="body1" gutterBottom>
+                        {selectedFile.name}
+                      </Typography>
+                      <Typography variant="body2" color="textSecondary">
+                        File: {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
+                      </Typography>
+                    </Box>
                     <Button
                       variant="contained"
                       onClick={handleUpload}
@@ -356,7 +352,37 @@ const VoterStagingImport: React.FC<VoterStagingImportProps> = ({ onComplete, exi
                     >
                       {loading ? <CircularProgress size={24} /> : 'Upload File'}
                     </Button>
+                    <Button
+                      variant="outlined"
+                      component="label"
+                      sx={{ mt: 1 }}
+                      fullWidth
+                    >
+                      Choose Different File
+                      <input
+                        type="file"
+                        hidden
+                        accept=".csv"
+                        onChange={handleFileSelect}
+                      />
+                    </Button>
                   </Box>
+                ) : (
+                  <Button
+                    variant="contained"
+                    component="label"
+                    fullWidth
+                    startIcon={<UploadIcon />}
+                    size="large"
+                  >
+                    Select CSV File
+                    <input
+                      type="file"
+                      hidden
+                      accept=".csv"
+                      onChange={handleFileSelect}
+                    />
+                  </Button>
                 )}
               </Box>
             </CardContent>
@@ -380,7 +406,14 @@ const VoterStagingImport: React.FC<VoterStagingImportProps> = ({ onComplete, exi
                     Found {tableInfo.recordCount} records with {tableInfo.columns.length} columns
                   </Alert>
                   
-                  <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                  <Box sx={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, 
+                    gap: 2,
+                    maxHeight: '60vh',
+                    overflowY: 'auto',
+                    pr: 1
+                  }}>
                     {[
                       { field: 'firstNameColumn', label: 'First Name *', required: true },
                       { field: 'lastNameColumn', label: 'Last Name *', required: true },

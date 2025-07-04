@@ -18,6 +18,7 @@ export interface CampaignConfig {
   campaignYoutube?: string;
   voterRegistrationUrl?: string;
   volunteerHotline?: string;
+  supportEmail?: string;
 }
 
 // Get customer configuration from environment variables
@@ -43,6 +44,7 @@ export const getCampaignConfig = (): CampaignConfig => {
     campaignYoutube: process.env.REACT_APP_CAMPAIGN_YOUTUBE,
     voterRegistrationUrl: process.env.REACT_APP_VOTER_REGISTRATION_URL,
     volunteerHotline: process.env.REACT_APP_VOLUNTEER_HOTLINE,
+    supportEmail: process.env.REACT_APP_SUPPORT_EMAIL,
   };
 };
 

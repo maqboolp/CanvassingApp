@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using HooverCanvassingApi.Data;
 using HooverCanvassingApi.Models;
+using HooverCanvassingApi.Configuration;
+using Microsoft.Extensions.Options;
 using System.Security.Claims;
 
 namespace HooverCanvassingApi.Controllers
@@ -14,11 +16,16 @@ namespace HooverCanvassingApi.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<VolunteerResourcesController> _logger;
+        private readonly CampaignSettings _campaignSettings;
 
-        public VolunteerResourcesController(ApplicationDbContext context, ILogger<VolunteerResourcesController> logger)
+        public VolunteerResourcesController(
+            ApplicationDbContext context, 
+            ILogger<VolunteerResourcesController> logger,
+            IOptions<CampaignSettings> campaignSettings)
         {
             _context = context;
             _logger = logger;
+            _campaignSettings = campaignSettings.Value;
         }
 
         [HttpGet]
@@ -60,7 +67,7 @@ namespace HooverCanvassingApi.Controllers
                     var defaultContent = resourceType.ToLower() switch
                     {
                         "quicktips" => "• Always wear your volunteer badge\n• Be respectful and polite\n• Don't argue with voters\n• Use the app to log all contacts\n• Ask for help if you need it",
-                        "script" => "Hi, my name is [Your Name] and I'm a volunteer for Tanveer Patel's campaign for Hoover City Council.\n\nI'd like to take just a moment to talk to you about the upcoming election. Tanveer is running to bring fresh perspectives and innovative solutions to our community.\n\nAre you planning to vote in the upcoming election?",
+                        "script" => _campaignSettings.DefaultCanvassingScript,
                         _ => ""
                     };
 

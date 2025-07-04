@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import QRCode from 'react-qr-code';
 import VersionInfo from './VersionInfo';
-import { customerConfig } from '../config/customerConfig';
+import VolunteerResourcesSection from './VolunteerResourcesSection';
+import { customerConfig, campaignConfig } from '../config/customerConfig';
 import {
   TextField,
   Button,
@@ -24,13 +24,7 @@ import {
 import { 
   Login as LoginIcon, 
   Visibility, 
-  VisibilityOff,
-  Language,
-  VideoLibrary,
-  Payment,
-  HowToReg,
-  Phone,
-  OpenInNew
+  VisibilityOff
 } from '@mui/icons-material';
 import { LoginRequest } from '../types';
 import { authService } from '../services/authService';
@@ -39,13 +33,6 @@ import { authService } from '../services/authService';
 const campaignSlogan = process.env.REACT_APP_CAMPAIGN_SLOGAN || "Join our campaign!";
 const campaignMessage = process.env.REACT_APP_CAMPAIGN_MESSAGE || "Join the movement for positive change";
 const campaignDisclaimer = process.env.REACT_APP_CAMPAIGN_DISCLAIMER || `Paid for by ${customerConfig.appTitle}`;
-const campaignWebsite = process.env.REACT_APP_CAMPAIGN_WEBSITE;
-const campaignVenmo = process.env.REACT_APP_CAMPAIGN_VENMO;
-const campaignYoutube = process.env.REACT_APP_CAMPAIGN_YOUTUBE;
-
-// Get customer-specific voter resources
-const voterRegistrationUrl = process.env.REACT_APP_VOTER_REGISTRATION_URL;
-const volunteerHotline = process.env.REACT_APP_VOLUNTEER_HOTLINE;
 
 interface LoginProps {
   onLogin: (credentials: LoginRequest) => Promise<void>;
@@ -267,123 +254,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, isLoading = false, error }) => {
               <Typography variant="h6" align="center" sx={{ mb: 2, color: '#2f1c6a', fontWeight: 600 }}>
                 Volunteer Resources
               </Typography>
-              
-              {/* Campaign Information */}
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: '#2f1c6a' }}>
-                  Campaign Information
-                </Typography>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                  {campaignWebsite && (
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Language fontSize="small" sx={{ color: '#2f1c6a' }} />
-                      <a 
-                        href={campaignWebsite} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        style={{ color: '#2f1c6a', textDecoration: 'none', fontSize: '14px' }}
-                      >
-                        Campaign Website <OpenInNew fontSize="small" sx={{ ml: 0.5, verticalAlign: 'middle' }} />
-                      </a>
-                    </Box>
-                  )}
-                  {campaignYoutube && (
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <VideoLibrary fontSize="small" sx={{ color: '#2f1c6a' }} />
-                      <a 
-                        href={campaignYoutube} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        style={{ color: '#2f1c6a', textDecoration: 'none', fontSize: '14px' }}
-                      >
-                        Campaign Videos <OpenInNew fontSize="small" sx={{ ml: 0.5, verticalAlign: 'middle' }} />
-                      </a>
-                    </Box>
-                  )}
-                </Box>
-              </Box>
-
-              {/* Support the Campaign */}
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: '#2f1c6a' }}>
-                  Support the Campaign
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-                  {campaignVenmo && (
-                    <>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Payment fontSize="small" sx={{ color: '#2f1c6a' }} />
-                        <Typography variant="body2" sx={{ color: '#2f1c6a' }}>
-                          Venmo: {campaignVenmo}
-                        </Typography>
-                      </Box>
-                      <Box sx={{ p: 1, bgcolor: 'white', borderRadius: 1, border: '1px solid #e0e0e0' }}>
-                        <QRCode 
-                          value={`https://venmo.com/${campaignVenmo.replace('@', '')}`} 
-                          size={80}
-                          style={{ height: "auto", maxWidth: "100%", width: "100%" }}
-                        />
-                      </Box>
-                    </>
-                  )}
-                </Box>
-              </Box>
-
-              {/* Voter Resources */}
-              {voterRegistrationUrl && (
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: '#2f1c6a' }}>
-                    Voter Resources
-                  </Typography>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <HowToReg fontSize="small" sx={{ color: '#2f1c6a' }} />
-                    <a 
-                      href={voterRegistrationUrl} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      style={{ color: '#2f1c6a', textDecoration: 'none', fontSize: '14px' }}
-                    >
-                      Check Voter Registration <OpenInNew fontSize="small" sx={{ ml: 0.5, verticalAlign: 'middle' }} />
-                    </a>
-                  </Box>
-                </Box>
-              )}
-
-              {/* Support & Help */}
-              {volunteerHotline && (
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: '#2f1c6a' }}>
-                    Support & Help
-                  </Typography>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Phone fontSize="small" sx={{ color: '#2f1c6a' }} />
-                      <Typography variant="body2" sx={{ color: '#2f1c6a' }}>
-                        Volunteer Hotline: {volunteerHotline}
-                      </Typography>
-                    </Box>
-                  </Box>
-                </Box>
-              )}
-
-              {/* Quick Tips */}
-              <Box sx={{ 
-                p: 2, 
-                background: 'rgba(47, 28, 106, 0.05)',
-                borderRadius: 2,
-                border: '1px solid rgba(47, 28, 106, 0.1)'
-              }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: '#2f1c6a' }}>
-                  Canvassing Quick Tips
-                </Typography>
-                <Typography variant="body2" sx={{ color: '#2f1c6a', fontSize: '12px', lineHeight: 1.4 }}>
-                  • Always wear your volunteer badge<br/>
-                  • Be respectful and polite<br/>
-                  • Don't argue with voters<br/>
-                  • Use the app to log all contacts<br/>
-                  • Ask for help if you need it
-                </Typography>
-              </Box>
+              <VolunteerResourcesSection showQuickTips={true} showQRCode={true} />
             </Box>
 
             {/* Version Information */}

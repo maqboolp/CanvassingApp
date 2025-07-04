@@ -37,12 +37,6 @@ import {
   EmojiEvents,
   Star,
   Language,
-  VideoLibrary,
-  Payment,
-  HowToReg,
-  Phone,
-  Help,
-  OpenInNew,
   Visibility,
   VisibilityOff,
   Edit
@@ -50,8 +44,9 @@ import {
 import { AuthUser, Voter, ContactStatus, VoterSupport } from '../types';
 import VoterList from './VoterList';
 import ContactModal from './ContactModal';
+import VolunteerResourcesSection from './VolunteerResourcesSection';
 import { API_BASE_URL } from '../config';
-import { customerConfig } from '../config/customerConfig';
+import { customerConfig, campaignConfig } from '../config/customerConfig';
 
 // Get customer-specific campaign info
 const campaignWebsite = process.env.REACT_APP_CAMPAIGN_WEBSITE;
@@ -1255,116 +1250,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       <Dialog open={resourcesDialog} onClose={() => setResourcesDialog(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Volunteer Resources</DialogTitle>
         <DialogContent>
-          {/* Campaign Information */}
-          <Box sx={{ mb: 2 }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: '#2f1c6a' }}>
-              Campaign Information
-            </Typography>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Language fontSize="small" sx={{ color: '#2f1c6a' }} />
-                <a 
-                  href="https://tanveer4hoover.com" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  style={{ color: '#2f1c6a', textDecoration: 'none', fontSize: '14px' }}
-                >
-                  Campaign Website <OpenInNew fontSize="small" sx={{ ml: 0.5, verticalAlign: 'middle' }} />
-                </a>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <VideoLibrary fontSize="small" sx={{ color: '#2f1c6a' }} />
-                <a 
-                  href="https://youtube.com/@tanveer4hoover" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  style={{ color: '#2f1c6a', textDecoration: 'none', fontSize: '14px' }}
-                >
-                  Campaign Videos <OpenInNew fontSize="small" sx={{ ml: 0.5, verticalAlign: 'middle' }} />
-                </a>
-              </Box>
-            </Box>
-          </Box>
-
-          {/* Support the Campaign */}
-          <Box sx={{ mb: 2 }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: '#2f1c6a' }}>
-              Support the Campaign
-            </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Payment fontSize="small" sx={{ color: '#2f1c6a' }} />
-                <Typography variant="body2" sx={{ color: '#2f1c6a' }}>
-                  Venmo: @tanveerforhoover
-                </Typography>
-              </Box>
-              <Box sx={{ p: 1, bgcolor: 'white', borderRadius: 1, border: '1px solid #e0e0e0' }}>
-                <QRCode 
-                  value="https://venmo.com/tanveerforhoover" 
-                  size={80}
-                  style={{ height: "auto", maxWidth: "100%", width: "100%" }}
-                />
-              </Box>
-            </Box>
-          </Box>
-
-          {/* Voter Resources */}
-          <Box sx={{ mb: 2 }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: '#2f1c6a' }}>
-              Voter Resources
-            </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <HowToReg fontSize="small" sx={{ color: '#2f1c6a' }} />
-              <a 
-                href="https://myinfo.alabamavotes.gov/VoterView" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                style={{ color: '#2f1c6a', textDecoration: 'none', fontSize: '14px' }}
-              >
-                Check Voter Registration <OpenInNew fontSize="small" sx={{ ml: 0.5, verticalAlign: 'middle' }} />
-              </a>
-            </Box>
-          </Box>
-
-          {/* Support & Help */}
-          <Box sx={{ mb: 2 }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: '#2f1c6a' }}>
-              Support & Help
-            </Typography>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Phone fontSize="small" sx={{ color: '#2f1c6a' }} />
-                <Typography variant="body2" sx={{ color: '#2f1c6a' }}>
-                  Volunteer Hotline: (205) 555-VOTE
-                </Typography>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Help fontSize="small" sx={{ color: '#2f1c6a' }} />
-                <Typography variant="body2" sx={{ color: '#2f1c6a' }}>
-                  App Support: Email support@tanveer4hoover.com
-                </Typography>
-              </Box>
-            </Box>
-          </Box>
-
-          {/* Quick Tips */}
-          <Box sx={{ 
-            p: 2, 
-            background: 'rgba(47, 28, 106, 0.05)',
-            borderRadius: 2,
-            border: '1px solid rgba(47, 28, 106, 0.1)'
-          }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: '#2f1c6a' }}>
-              Canvassing Quick Tips
-            </Typography>
-            <Typography variant="body2" sx={{ color: '#2f1c6a', fontSize: '12px', lineHeight: 1.4 }}>
-              • Always wear your volunteer badge<br/>
-              • Be respectful and polite<br/>
-              • Don't argue with voters<br/>
-              • Use the app to log all contacts<br/>
-              • Ask for help if you need it
-            </Typography>
-          </Box>
+          <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+            Campaign information, resources, and support for volunteers.
+          </Typography>
+          <VolunteerResourcesSection showQuickTips={true} showQRCode={true} />
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setResourcesDialog(false)}>
