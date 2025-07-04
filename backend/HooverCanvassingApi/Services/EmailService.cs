@@ -79,7 +79,7 @@ public class EmailService : IEmailService
 
     public async Task<bool> SendContactDeletionNotificationEmailAsync(string email, ContactDeletionNotificationData data)
     {
-        var subject = "🗑️ Contact Deleted - Tanveer for Hoover Campaign";
+        var subject = $"🗑️ Contact Deleted - {_campaignSettings.CampaignName}";
         var htmlContent = GenerateContactDeletionNotificationHtml(data);
         var textContent = GenerateContactDeletionNotificationText(data);
 
@@ -94,7 +94,7 @@ public class EmailService : IEmailService
 
     public async Task<bool> SendInvitationEmailAsync(string email, string inviterName, string registrationUrl, string role)
     {
-        var subject = "You're Invited to Join Tanveer for Hoover Campaign";
+        var subject = $"You're Invited to Join {_campaignSettings.CampaignName}";
         var htmlContent = GenerateInvitationHtml(email, inviterName, registrationUrl, role);
         var textContent = GenerateInvitationText(email, inviterName, registrationUrl, role);
 
@@ -115,8 +115,8 @@ public class EmailService : IEmailService
     public async Task<bool> SendRegistrationStatusEmailAsync(string email, string firstName, bool approved, string? adminNotes = null)
     {
         var subject = approved 
-            ? "Welcome to Tanveer for Hoover Campaign Team!" 
-            : "Registration Update - Tanveer for Hoover Campaign";
+            ? $"Welcome to {_campaignSettings.CampaignName} Team!" 
+            : $"Registration Update - {_campaignSettings.CampaignName}";
         var htmlContent = GenerateRegistrationStatusHtml(firstName, approved, adminNotes);
         var textContent = GenerateRegistrationStatusText(firstName, approved, adminNotes);
 
@@ -261,7 +261,7 @@ public class EmailService : IEmailService
 <body>
     <div class='container'>
         <div class='header'>
-            <h1 style='color: #673ab7; margin: 0;'>Tanveer for Hoover Campaign</h1>
+            <h1 style='color: #673ab7; margin: 0;'>{_campaignSettings.CampaignName}</h1>
             <p style='color: #666; margin: 5px 0 0 0;'>Canvassing Portal</p>
         </div>
         
@@ -269,7 +269,7 @@ public class EmailService : IEmailService
             <h2>Password Reset Request</h2>
             <p>Hello {firstName},</p>
             
-            <p>We received a request to reset your password for your Tanveer for Hoover canvassing account. If you made this request, click the button below to reset your password:</p>
+            <p>We received a request to reset your password for your {_campaignSettings.CampaignName} canvassing account. If you made this request, click the button below to reset your password:</p>
             
             <div style='text-align: center;'>
                 <a href='{resetUrl}' class='button'>Reset Password</a>
@@ -289,13 +289,13 @@ public class EmailService : IEmailService
             <p>Thank you for your dedication to the campaign!</p>
             
             <p>Best regards,<br>
-            The Tanveer for Hoover Campaign Team</p>
+            The {_campaignSettings.CampaignName} Team</p>
         </div>
         
         <div class='footer'>
-            <p>Tanveer Patel for Hoover City Council<br>
-            August 26, 2025 Election<br>
-            Paid for by Tanveer for Hoover</p>
+            <p>{_campaignSettings.CampaignTitle}<br>
+            {(!string.IsNullOrEmpty(_campaignSettings.ElectionDate) ? _campaignSettings.ElectionDate + " Election<br>" : "")}
+            {_campaignSettings.PaidForBy}</p>
             
             <p>This is an automated message. Please do not reply to this email.</p>
         </div>
@@ -307,11 +307,11 @@ public class EmailService : IEmailService
     private string GeneratePasswordResetText(string firstName, string resetUrl)
     {
         return $@"
-Tanveer for Hoover Campaign - Password Reset Request
+{_campaignSettings.CampaignName} - Password Reset Request
 
 Hello {firstName},
 
-We received a request to reset your password for your Tanveer for Hoover canvassing account.
+We received a request to reset your password for your {_campaignSettings.CampaignName} canvassing account.
 
 To reset your password, visit this link:
 {resetUrl}
@@ -325,12 +325,12 @@ If you have any questions or need assistance, please contact our support team.
 Thank you for your dedication to the campaign!
 
 Best regards,
-The Tanveer for Hoover Campaign Team
+The {_campaignSettings.CampaignName} Team
 
 ---
-Tanveer Patel for Hoover City Council
-August 26, 2025 Election
-Paid for by Tanveer for Hoover
+{_campaignSettings.CampaignTitle}
+{(!string.IsNullOrEmpty(_campaignSettings.ElectionDate) ? _campaignSettings.ElectionDate + " Election" : "")}
+{_campaignSettings.PaidForBy}
 
 This is an automated message. Please do not reply to this email.
 ";
@@ -365,7 +365,7 @@ This is an automated message. Please do not reply to this email.
     <div class='container'>
         <div class='header'>
             <h1 style='color: #673ab7; margin: 0;'>📞 New Voter Contact</h1>
-            <p style='color: #666; margin: 5px 0 0 0;'>Tanveer for Hoover Campaign</p>
+            <p style='color: #666; margin: 5px 0 0 0;'>{_campaignSettings.CampaignName}</p>
         </div>
         
         <div class='content'>
@@ -428,9 +428,9 @@ This is an automated message. Please do not reply to this email.
         </div>
         
         <div class='footer'>
-            <p>Tanveer Patel for Hoover City Council<br>
-            August 26, 2025 Election<br>
-            Paid for by Tanveer for Hoover</p>
+            <p>{_campaignSettings.CampaignTitle}<br>
+            {(!string.IsNullOrEmpty(_campaignSettings.ElectionDate) ? _campaignSettings.ElectionDate + " Election<br>" : "")}
+            {_campaignSettings.PaidForBy}</p>
             
             <p>This is an automated notification. Please do not reply to this email.</p>
         </div>
@@ -463,9 +463,9 @@ This contact has been automatically logged in the campaign management system. Yo
 Keep up the great work! Every contact brings us closer to victory on Election Day.
 
 ---
-Tanveer Patel for Hoover City Council
-August 26, 2025 Election
-Paid for by Tanveer for Hoover
+{_campaignSettings.CampaignTitle}
+{(!string.IsNullOrEmpty(_campaignSettings.ElectionDate) ? _campaignSettings.ElectionDate + " Election" : "")}
+{_campaignSettings.PaidForBy}
 
 This is an automated notification. Please do not reply to this email.
 ";
@@ -516,7 +516,7 @@ This is an automated notification. Please do not reply to this email.
     <div class='container'>
         <div class='header'>
             <h1 style='color: #673ab7; margin: 0;'>🎉 You're Invited!</h1>
-            <p style='color: #666; margin: 5px 0 0 0;'>Join the Tanveer for Hoover Campaign Team</p>
+            <p style='color: #666; margin: 5px 0 0 0;'>Join the {_campaignSettings.CampaignName} Team</p>
         </div>
         
         <div class='content'>
@@ -526,7 +526,7 @@ This is an automated notification. Please do not reply to this email.
             
             <p>Hello!</p>
             
-            <p><strong>{inviterName}</strong> has invited you to join the Tanveer for Hoover campaign team. We're building a grassroots movement to bring positive change to our community, and we'd love to have you on board!</p>
+            <p><strong>{inviterName}</strong> has invited you to join the {_campaignSettings.CampaignName} team. We're building a grassroots movement to bring positive change to our community, and we'd love to have you on board!</p>
             
             <p>As a <strong>{role.ToLower()}</strong>, you'll be able to:</p>
             <ul>
@@ -550,13 +550,13 @@ This is an automated notification. Please do not reply to this email.
             <p>We're excited to have you join our team and work together towards a better future for Hoover!</p>
             
             <p>Best regards,<br>
-            The Tanveer for Hoover Campaign Team</p>
+            The {_campaignSettings.CampaignName} Team</p>
         </div>
         
         <div class='footer'>
-            <p>Tanveer Patel for Hoover City Council<br>
-            August 26, 2025 Election<br>
-            Paid for by Tanveer for Hoover</p>
+            <p>{_campaignSettings.CampaignTitle}<br>
+            {(!string.IsNullOrEmpty(_campaignSettings.ElectionDate) ? _campaignSettings.ElectionDate + " Election<br>" : "")}
+            {_campaignSettings.PaidForBy}</p>
             
             <p>This invitation was sent to {email}. If you received this in error, please ignore this message.</p>
         </div>
@@ -574,7 +574,7 @@ You're Invited to Join Our Campaign!
 
 Hello!
 
-{inviterName} has invited you to join the Tanveer for Hoover campaign team as a {role}.
+{inviterName} has invited you to join the {_campaignSettings.CampaignName} team as a {role}.
 
 We're building a grassroots movement to bring positive change to our community, and we'd love to have you on board!
 
@@ -592,12 +592,12 @@ IMPORTANT: This invitation link will expire in 7 days for security reasons.
 We're excited to have you join our team and work together towards a better future for Hoover!
 
 Best regards,
-The Tanveer for Hoover Campaign Team
+The {_campaignSettings.CampaignName} Team
 
 ---
-Tanveer Patel for Hoover City Council
-August 26, 2025 Election
-Paid for by Tanveer for Hoover
+{_campaignSettings.CampaignTitle}
+{(!string.IsNullOrEmpty(_campaignSettings.ElectionDate) ? _campaignSettings.ElectionDate + " Election" : "")}
+{_campaignSettings.PaidForBy}
 
 This invitation was sent to {email}. If you received this in error, please ignore this message.
 ";
@@ -668,7 +668,7 @@ This invitation was sent to {email}. If you received this in error, please ignor
             
             <div style='text-align: center; margin: 30px 0;'>
                 <p><strong>Please review this registration and take action:</strong></p>
-                <a href='https://t4h-canvas-2uwxt.ondigitalocean.app/admin/pending-volunteers' class='button'>
+                <a href='{_emailSettings.FrontendBaseUrl}/admin/pending-volunteers' class='button'>
                     Review in Admin Dashboard
                 </a>
             </div>
@@ -679,9 +679,9 @@ This invitation was sent to {email}. If you received this in error, please ignor
         </div>
         
         <div class='footer'>
-            <p>Tanveer Patel for Hoover City Council<br>
-            August 26, 2025 Election<br>
-            Paid for by Tanveer for Hoover</p>
+            <p>{_campaignSettings.CampaignTitle}<br>
+            {(!string.IsNullOrEmpty(_campaignSettings.ElectionDate) ? _campaignSettings.ElectionDate + " Election<br>" : "")}
+            {_campaignSettings.PaidForBy}</p>
             
             <p>This is an automated notification. Please do not reply to this email.</p>
         </div>
@@ -706,16 +706,16 @@ Requested Role: {data.RequestedRole}
 Registration Time: {data.RegistrationTime:MMM dd, yyyy 'at' h:mm tt} UTC
 
 Please review this registration in the admin dashboard:
-https://t4h-canvas-2uwxt.ondigitalocean.app/admin/pending-volunteers
+{_emailSettings.FrontendBaseUrl}/admin/pending-volunteers
 
 This volunteer is waiting for approval to join the campaign. Please log into the admin dashboard to approve or reject this registration.
 
 Keep building our amazing volunteer team!
 
 ---
-Tanveer Patel for Hoover City Council
-August 26, 2025 Election
-Paid for by Tanveer for Hoover
+{_campaignSettings.CampaignTitle}
+{(!string.IsNullOrEmpty(_campaignSettings.ElectionDate) ? _campaignSettings.ElectionDate + " Election" : "")}
+{_campaignSettings.PaidForBy}
 
 This is an automated notification. Please do not reply to this email.
 ";
@@ -737,13 +737,13 @@ This is an automated notification. Please do not reply to this email.
             <p>Congratulations! Your registration has been approved and your account is now active. You can log in to the campaign portal and start making a difference in our community.</p>
             
             <div style='text-align: center; margin: 30px 0;'>
-                <a href='https://t4h-canvas-2uwxt.ondigitalocean.app/login' class='button'>
+                <a href='{_emailSettings.FrontendBaseUrl}/login' class='button' style='color: white !important; text-decoration: none !important;'>
                     Log In to Campaign Portal
                 </a>
             </div>
             
-            <p>Welcome to the team! We're excited to work with you to bring positive change to Hoover.</p>" : $@"
-            <p>Thank you for your interest in joining the Tanveer for Hoover campaign. Unfortunately, your registration was not approved at this time.</p>
+            <p>Welcome to the team! We're excited to work with you to bring positive change to {_campaignSettings.Jurisdiction}.</p>" : $@"
+            <p>Thank you for your interest in joining the {_campaignSettings.CampaignName} campaign. Unfortunately, your registration was not approved at this time.</p>
             
             <p>If you have questions about this decision or would like to discuss other ways to support the campaign, please feel free to reach out to our team.</p>";
 
@@ -756,7 +756,7 @@ This is an automated notification. Please do not reply to this email.
         .container {{ max-width: 600px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
         .header {{ text-align: center; margin-bottom: 30px; }}
         .content {{ line-height: 1.6; color: #333; }}
-        .button {{ display: inline-block; padding: 15px 30px; background-color: #673ab7; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 20px 0; }}
+        .button {{ display: inline-block; padding: 15px 30px; background-color: #673ab7 !important; color: white !important; text-decoration: none !important; border-radius: 5px; font-weight: bold; margin: 20px 0; }}
         .footer {{ margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #666; text-align: center; }}
         .status {{ background-color: {statusColor}; color: white; padding: 15px; border-radius: 5px; margin: 20px 0; text-align: center; font-weight: bold; }}
     </style>
@@ -765,7 +765,7 @@ This is an automated notification. Please do not reply to this email.
     <div class='container'>
         <div class='header'>
             <h1 style='color: #673ab7; margin: 0;'>{statusIcon} Registration {statusText}</h1>
-            <p style='color: #666; margin: 5px 0 0 0;'>Tanveer for Hoover Campaign</p>
+            <p style='color: #666; margin: 5px 0 0 0;'>{_campaignSettings.CampaignName}</p>
         </div>
         
         <div class='content'>
@@ -779,16 +779,16 @@ This is an automated notification. Please do not reply to this email.
             
             {notesSection}
             
-            <p>Thank you for your interest in supporting Tanveer Patel's campaign for Hoover City Council.</p>
+            <p>Thank you for your interest in supporting {_campaignSettings.CandidateName}'s campaign for {_campaignSettings.Office}.</p>
             
             <p>Best regards,<br>
-            The Tanveer for Hoover Campaign Team</p>
+            The {_campaignSettings.CampaignName} Team</p>
         </div>
         
         <div class='footer'>
-            <p>Tanveer Patel for Hoover City Council<br>
-            August 26, 2025 Election<br>
-            Paid for by Tanveer for Hoover</p>
+            <p>{_campaignSettings.CampaignTitle}<br>
+            {(!string.IsNullOrEmpty(_campaignSettings.ElectionDate) ? _campaignSettings.ElectionDate + " Election<br>" : "")}
+            {_campaignSettings.PaidForBy}</p>
             
             <p>This is an automated message. Please do not reply to this email.</p>
         </div>
@@ -808,10 +808,10 @@ MESSAGE FROM ADMIN:
         var mainContent = approved ? @"
 Congratulations! Your registration has been approved and your account is now active. You can log in to the campaign portal and start making a difference in our community.
 
-Log in here: https://t4h-canvas-2uwxt.ondigitalocean.app/login
+Log in here: {_emailSettings.FrontendBaseUrl}/login
 
 Welcome to the team! We're excited to work with you to bring positive change to Hoover." : @"
-Thank you for your interest in joining the Tanveer for Hoover campaign. Unfortunately, your registration was not approved at this time.
+Thank you for your interest in joining the {_campaignSettings.CampaignName}. Unfortunately, your registration was not approved at this time.
 
 If you have questions about this decision or would like to discuss other ways to support the campaign, please feel free to reach out to our team.";
 
@@ -822,15 +822,15 @@ Hello {firstName},
 
 {mainContent}{notesSection}
 
-Thank you for your interest in supporting Tanveer Patel's campaign for Hoover City Council.
+Thank you for your interest in supporting {_campaignSettings.CandidateName}'s campaign for {_campaignSettings.Office}.
 
 Best regards,
-The Tanveer for Hoover Campaign Team
+The {_campaignSettings.CampaignName} Team
 
 ---
-Tanveer Patel for Hoover City Council
-August 26, 2025 Election
-Paid for by Tanveer for Hoover
+{_campaignSettings.CampaignTitle}
+{(!string.IsNullOrEmpty(_campaignSettings.ElectionDate) ? _campaignSettings.ElectionDate + " Election" : "")}
+{_campaignSettings.PaidForBy}
 
 This is an automated message. Please do not reply to this email.
 ";
@@ -870,7 +870,7 @@ This is an automated message. Please do not reply to this email.
     <div class='container'>
         <div class='header'>
             <h1 style='color: #dc3545; margin: 0;'>🗑️ Contact Deleted</h1>
-            <p style='color: #666; margin: 5px 0 0 0;'>Tanveer for Hoover Campaign</p>
+            <p style='color: #666; margin: 5px 0 0 0;'>{_campaignSettings.CampaignName}</p>
         </div>
         
         <div class='content'>
@@ -953,9 +953,9 @@ This is an automated message. Please do not reply to this email.
         </div>
         
         <div class='footer'>
-            <p>Tanveer Patel for Hoover City Council<br>
-            August 26, 2025 Election<br>
-            Paid for by Tanveer for Hoover</p>
+            <p>{_campaignSettings.CampaignTitle}<br>
+            {(!string.IsNullOrEmpty(_campaignSettings.ElectionDate) ? _campaignSettings.ElectionDate + " Election<br>" : "")}
+            {_campaignSettings.PaidForBy}</p>
             
             <p>This is an automated audit notification. Please do not reply to this email.</p>
         </div>
@@ -999,9 +999,9 @@ IMPORTANT: This action is permanent and cannot be undone. The contact record has
 This notification is sent to all SuperAdmins for audit trail purposes.
 
 ---
-Tanveer Patel for Hoover City Council
-August 26, 2025 Election
-Paid for by Tanveer for Hoover
+{_campaignSettings.CampaignTitle}
+{(!string.IsNullOrEmpty(_campaignSettings.ElectionDate) ? _campaignSettings.ElectionDate + " Election" : "")}
+{_campaignSettings.PaidForBy}
 
 This is an automated audit notification. Please do not reply to this email.
 ";

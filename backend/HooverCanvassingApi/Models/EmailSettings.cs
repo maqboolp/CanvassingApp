@@ -16,4 +16,7 @@ public class EmailSettings
     
     // Email provider selector
     public string Provider { get; set; } = "SendGrid"; // "SendGrid" or "SMTP"
+    
+    // Frontend URL for email links
+    public string FrontendBaseUrl { get; set; } = "[Frontend__BaseUrl]";
 }

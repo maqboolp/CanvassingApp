@@ -244,6 +244,13 @@ builder.Services.Configure<EmailSettings>(options =>
     {
         options.SendGridApiKey = sendGridApiKey;
     }
+    
+    // Get frontend base URL from configuration
+    var frontendBaseUrl = builder.Configuration["Frontend:BaseUrl"];
+    if (!string.IsNullOrEmpty(frontendBaseUrl))
+    {
+        options.FrontendBaseUrl = frontendBaseUrl;
+    }
 });
 builder.Services.AddTransient<IEmailTemplateService, FluidEmailTemplateService>();
 builder.Services.AddTransient<IEmailService, EmailService>();
