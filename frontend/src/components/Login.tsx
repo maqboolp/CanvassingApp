@@ -32,7 +32,7 @@ import { authService } from '../services/authService';
 // Get customer-specific campaign info
 const campaignSlogan = process.env.REACT_APP_CAMPAIGN_SLOGAN || "Join our campaign!";
 const campaignMessage = process.env.REACT_APP_CAMPAIGN_MESSAGE || "Join the movement for positive change";
-const campaignDisclaimer = process.env.REACT_APP_CAMPAIGN_DISCLAIMER || `Paid for by ${customerConfig.appTitle}`;
+const campaignDisclaimer = process.env.REACT_APP_CAMPAIGN_DISCLAIMER || `Paid for by ${campaignConfig.campaignName}`;
 
 interface LoginProps {
   onLogin: (credentials: LoginRequest) => Promise<void>;

@@ -649,11 +649,11 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
         <Box sx={{ display: 'flex', gap: { xs: 1, sm: 2 }, flexWrap: 'wrap', alignItems: 'center', mb: 2 }}>
           <TextField
             size="small"
-            label="Search Name"
+            label="Search"
             value={filterInputs.searchName}
             onChange={(e) => handleFilterChange('searchName', e.target.value)}
-            sx={{ minWidth: { xs: 120, sm: 160 }, flex: { xs: '1 1 auto', sm: 'none' } }}
-            placeholder="First or Last Name"
+            sx={{ minWidth: { xs: 120, sm: 200 }, flex: { xs: '1 1 auto', sm: 'none' } }}
+            placeholder="Name, address, city or ZIP"
           />
           
           <TextField

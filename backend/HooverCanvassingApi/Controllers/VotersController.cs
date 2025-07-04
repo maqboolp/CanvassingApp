@@ -57,7 +57,10 @@ namespace HooverCanvassingApi.Controllers
                     query = query.Where(v => 
                         v.FirstName.ToLower().Contains(searchLower) || 
                         v.LastName.ToLower().Contains(searchLower) ||
-                        (v.FirstName + " " + v.LastName).ToLower().Contains(searchLower));
+                        (v.FirstName + " " + v.LastName).ToLower().Contains(searchLower) ||
+                        v.AddressLine.ToLower().Contains(searchLower) ||
+                        v.City.ToLower().Contains(searchLower) ||
+                        v.Zip.Contains(searchName)); // Use original case for ZIP code
                 }
 
                 if (!string.IsNullOrEmpty(zipCode))

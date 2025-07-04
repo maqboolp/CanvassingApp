@@ -66,8 +66,36 @@ builder.Services.AddCors(options =>
 builder.Configuration.AddEnvironmentVariables();
 
 // Configure Campaign Settings
-builder.Services.Configure<CampaignSettings>(
-    builder.Configuration.GetSection("Campaign"));
+builder.Services.Configure<CampaignSettings>(options =>
+{
+    // First bind from Campaign section in appsettings.json
+    builder.Configuration.GetSection("Campaign").Bind(options);
+    
+    // Then override with REACT_APP_ environment variables if they exist (for consistency with frontend)
+    var candidateName = builder.Configuration["REACT_APP_CANDIDATE_NAME"];
+    if (!string.IsNullOrEmpty(candidateName))
+        options.CandidateName = candidateName;
+    
+    var campaignName = builder.Configuration["REACT_APP_CAMPAIGN_NAME"];
+    if (!string.IsNullOrEmpty(campaignName))
+        options.CampaignName = campaignName;
+    
+    var campaignTitle = builder.Configuration["REACT_APP_CAMPAIGN_TITLE"];
+    if (!string.IsNullOrEmpty(campaignTitle))
+        options.CampaignTitle = campaignTitle;
+        
+    // For office, we can derive it from title or use a separate env var
+    var office = builder.Configuration["REACT_APP_OFFICE"];
+    if (!string.IsNullOrEmpty(office))
+        options.Office = office;
+    else if (!string.IsNullOrEmpty(campaignTitle) && campaignTitle.Contains(" for "))
+    {
+        // Extract office from title like "Cindy Myrex for Alabama House"
+        var parts = campaignTitle.Split(" for ");
+        if (parts.Length > 1)
+            options.Office = parts[1];
+    }
+});
 
 // Add configuration validation service
 builder.Services.AddHostedService<ConfigurationValidationService>();

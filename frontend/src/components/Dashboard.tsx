@@ -924,114 +924,14 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
           <Typography variant="h5" gutterBottom>
             Volunteer Resources
           </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            Campaign information, resources, and support for volunteers.
+          </Typography>
           
-          {/* Campaign Information */}
-          {(campaignWebsite || campaignYoutube) && (
-            <Card sx={{ mb: 3 }}>
-              <CardContent>
-                <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: '#2f1c6a' }}>
-                  Campaign Information
-                </Typography>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  {campaignWebsite && (
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Language fontSize="small" sx={{ color: '#2f1c6a' }} />
-                      <a 
-                        href={campaignWebsite} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        style={{ color: '#2f1c6a', textDecoration: 'none', fontSize: '14px' }}
-                      >
-                        Campaign Website <OpenInNew fontSize="small" sx={{ ml: 0.5, verticalAlign: 'middle' }} />
-                      </a>
-                    </Box>
-                  )}
-                  {campaignYoutube && (
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <VideoLibrary fontSize="small" sx={{ color: '#2f1c6a' }} />
-                      <a 
-                        href={campaignYoutube} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        style={{ color: '#2f1c6a', textDecoration: 'none', fontSize: '14px' }}
-                      >
-                        Campaign Videos <OpenInNew fontSize="small" sx={{ ml: 0.5, verticalAlign: 'middle' }} />
-                      </a>
-                    </Box>
-                  )}
-                </Box>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Support the Campaign */}
-          {campaignVenmo && (
-            <Card sx={{ mb: 3 }}>
-              <CardContent>
-                <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: '#2f1c6a' }}>
-                  Support the Campaign
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Payment fontSize="small" sx={{ color: '#2f1c6a' }} />
-                    <Typography variant="body2" sx={{ color: '#2f1c6a' }}>
-                      Venmo: {campaignVenmo}
-                    </Typography>
-                  </Box>
-                  <Box sx={{ p: 1, bgcolor: 'white', borderRadius: 1, border: '1px solid #e0e0e0' }}>
-                    <QRCode 
-                      value={`https://venmo.com/${campaignVenmo.replace('@', '')}`} 
-                      size={80}
-                      style={{ height: "auto", maxWidth: "100%", width: "100%" }}
-                    />
-                  </Box>
-                </Box>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Voter Resources */}
-          {voterRegistrationUrl && (
-            <Card sx={{ mb: 3 }}>
-              <CardContent>
-                <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: '#2f1c6a' }}>
-                  Voter Resources
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <HowToReg fontSize="small" sx={{ color: '#2f1c6a' }} />
-                  <a 
-                    href={voterRegistrationUrl} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    style={{ color: '#2f1c6a', textDecoration: 'none', fontSize: '14px' }}
-                  >
-                    Check Voter Registration <OpenInNew fontSize="small" sx={{ ml: 0.5, verticalAlign: 'middle' }} />
-                  </a>
-                </Box>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Support & Help */}
-          {volunteerHotline && (
-            <Card sx={{ mb: 3 }}>
-              <CardContent>
-                <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: '#2f1c6a' }}>
-                  Support & Help
-                </Typography>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Phone fontSize="small" sx={{ color: '#2f1c6a' }} />
-                    <Typography variant="body2" sx={{ color: '#2f1c6a' }}>
-                      Volunteer Hotline: {volunteerHotline}
-                    </Typography>
-                  </Box>
-                </Box>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Quick Tips */}
+          {/* Use the shared VolunteerResourcesSection component */}
+          <VolunteerResourcesSection showQuickTips={false} showQRCode={true} />
+          
+          {/* Quick Tips with Edit capability */}
           <Card sx={{ mb: 3 }}>
             <CardContent sx={{ 
               background: 'rgba(47, 28, 106, 0.05)',
@@ -1060,7 +960,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             </CardContent>
           </Card>
 
-          {/* Script */}
+          {/* Script with Edit capability */}
           <Card>
             <CardContent sx={{ 
               background: 'rgba(47, 28, 106, 0.05)',
@@ -1084,7 +984,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                 variant="body2" 
                 sx={{ color: '#2f1c6a', lineHeight: 1.6, whiteSpace: 'pre-line' }}
               >
-                {volunteerResources.script.replace('[Volunteer Name]', `${user.firstName} ${user.lastName}`)}
+                {volunteerResources.script.replace('[Volunteer Name]', `${user.firstName} ${user.lastName}`).replace('[Your Name]', `${user.firstName} ${user.lastName}`)}
               </Typography>
             </CardContent>
           </Card>

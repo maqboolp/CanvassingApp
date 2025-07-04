@@ -67,7 +67,9 @@ namespace HooverCanvassingApi.Controllers
                     var defaultContent = resourceType.ToLower() switch
                     {
                         "quicktips" => "• Always wear your volunteer badge\n• Be respectful and polite\n• Don't argue with voters\n• Use the app to log all contacts\n• Ask for help if you need it",
-                        "script" => _campaignSettings.DefaultCanvassingScript,
+                        "script" => _campaignSettings.DefaultCanvassingScript
+                            .Replace("[Campaign__CandidateName]", _campaignSettings.CandidateName)
+                            .Replace("[Campaign__Office]", _campaignSettings.Office),
                         _ => ""
                     };
 
