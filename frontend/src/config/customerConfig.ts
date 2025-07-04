@@ -23,9 +23,9 @@ export interface CampaignConfig {
 // Get customer configuration from environment variables
 export const getCustomerConfig = (): CustomerConfig => {
   return {
-    logoUrl: process.env.REACT_APP_LOGO_URL || '/campaign-logo.png',
-    logoAlt: process.env.REACT_APP_LOGO_ALT || 'Campaign Logo',
-    appTitle: process.env.REACT_APP_TITLE || 'Canvassing App',
+    logoUrl: process.env.REACT_APP_LOGO_URL || '[REACT_APP_LOGO_URL]',
+    logoAlt: process.env.REACT_APP_LOGO_ALT || '[REACT_APP_LOGO_ALT]',
+    appTitle: process.env.REACT_APP_TITLE || '[REACT_APP_TITLE]',
     primaryColor: process.env.REACT_APP_PRIMARY_COLOR,
     secondaryColor: process.env.REACT_APP_SECONDARY_COLOR,
   };
@@ -34,10 +34,10 @@ export const getCustomerConfig = (): CustomerConfig => {
 // Get campaign configuration from environment variables
 export const getCampaignConfig = (): CampaignConfig => {
   return {
-    candidateName: process.env.REACT_APP_CANDIDATE_NAME || 'Your Candidate',
-    campaignName: process.env.REACT_APP_CAMPAIGN_NAME || 'Your Campaign',
-    campaignTitle: process.env.REACT_APP_CAMPAIGN_TITLE || 'Campaign for Office',
-    consentText: process.env.REACT_APP_CONSENT_TEXT || 'I agree to receive texts and robocalls from the campaign. Message and data rates may apply. Reply STOP to opt out.',
+    candidateName: process.env.REACT_APP_CANDIDATE_NAME || '[REACT_APP_CANDIDATE_NAME]',
+    campaignName: process.env.REACT_APP_CAMPAIGN_NAME || '[REACT_APP_CAMPAIGN_NAME]',
+    campaignTitle: process.env.REACT_APP_CAMPAIGN_TITLE || '[REACT_APP_CAMPAIGN_TITLE]',
+    consentText: process.env.REACT_APP_CONSENT_TEXT || '[REACT_APP_CONSENT_TEXT]',
     campaignWebsite: process.env.REACT_APP_CAMPAIGN_WEBSITE,
     campaignVenmo: process.env.REACT_APP_CAMPAIGN_VENMO,
     campaignYoutube: process.env.REACT_APP_CAMPAIGN_YOUTUBE,

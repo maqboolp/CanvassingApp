@@ -69,6 +69,9 @@ builder.Configuration.AddEnvironmentVariables();
 builder.Services.Configure<CampaignSettings>(
     builder.Configuration.GetSection("Campaign"));
 
+// Add configuration validation service
+builder.Services.AddHostedService<ConfigurationValidationService>();
+
 // Use standard .NET configuration for connection string
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
