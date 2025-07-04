@@ -2,9 +2,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Options;
 using HooverCanvassingApi.Data;
 using HooverCanvassingApi.Models;
 using HooverCanvassingApi.Services;
+using HooverCanvassingApi.Configuration;
 using System.Security.Claims;
 using HooverCanvassingApi;
 
@@ -20,14 +22,22 @@ namespace HooverCanvassingApi.Controllers
         private readonly ILogger<AdminController> _logger;
         private readonly UserManager<Volunteer> _userManager;
         private readonly IEmailService _emailService;
+        private readonly CampaignSettings _campaignSettings;
 
-        public AdminController(ApplicationDbContext context, VoterImportService importService, ILogger<AdminController> logger, UserManager<Volunteer> userManager, IEmailService emailService)
+        public AdminController(
+            ApplicationDbContext context, 
+            VoterImportService importService, 
+            ILogger<AdminController> logger, 
+            UserManager<Volunteer> userManager, 
+            IEmailService emailService,
+            IOptions<CampaignSettings> campaignSettings)
         {
             _context = context;
             _importService = importService;
             _logger = logger;
             _userManager = userManager;
             _emailService = emailService;
+            _campaignSettings = campaignSettings.Value;
         }
 
         [HttpPost("import-voters")]
@@ -1175,7 +1185,7 @@ namespace HooverCanvassingApi.Controllers
 <body>
     <div class='container'>
         <div class='header'>
-            <h1 style='color: #673ab7; margin: 0;'>Tanveer for Hoover Campaign</h1>
+            <h1 style='color: #673ab7; margin: 0;'>{_campaignSettings.CampaignName}</h1>
             <p style='color: #666; margin: 5px 0 0 0;'>Campaign Update</p>
         </div>
         
@@ -1186,13 +1196,13 @@ namespace HooverCanvassingApi.Controllers
             
             <p style='margin-top: 30px;'>Best regards,<br>
             {senderName}<br>
-            Tanveer for Hoover Campaign Team</p>
+            {_campaignSettings.CampaignName} Team</p>
         </div>
         
         <div class='footer'>
-            <p>Tanveer Patel for Hoover City Council<br>
-            August 26, 2025 Election<br>
-            Paid for by Tanveer for Hoover</p>
+            <p>{_campaignSettings.CampaignTitle}<br>
+            {(!string.IsNullOrEmpty(_campaignSettings.ElectionDate) ? _campaignSettings.ElectionDate + " Election<br>" : "")}
+            {_campaignSettings.PaidForBy}</p>
             
             <p>This is an automated message from the campaign management system.</p>
         </div>
@@ -1204,7 +1214,7 @@ namespace HooverCanvassingApi.Controllers
         private string GenerateEngagementEmailText(string content, string senderName)
         {
             return $@"
-Tanveer for Hoover Campaign - Campaign Update
+{_campaignSettings.CampaignName} - Campaign Update
 
 Hello {{RecipientName}},
 
@@ -1212,12 +1222,12 @@ Hello {{RecipientName}},
 
 Best regards,
 {senderName}
-Tanveer for Hoover Campaign Team
+{_campaignSettings.CampaignName} Team
 
 ---
-Tanveer Patel for Hoover City Council
-August 26, 2025 Election
-Paid for by Tanveer for Hoover
+{_campaignSettings.CampaignTitle}
+{(!string.IsNullOrEmpty(_campaignSettings.ElectionDate) ? _campaignSettings.ElectionDate + " Election" : "")}
+{_campaignSettings.PaidForBy}
 
 This is an automated message from the campaign management system.
 ";

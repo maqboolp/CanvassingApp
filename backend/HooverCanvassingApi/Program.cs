@@ -35,6 +35,9 @@ builder.WebHost.ConfigureKestrel(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// Get Frontend URL early for use in CORS and other configurations
+var frontendUrl = Environment.GetEnvironmentVariable("FRONTEND_URL") ?? builder.Configuration["Frontend:BaseUrl"];
+
 // Configure CORS
 builder.Services.AddCors(options =>
 {
@@ -49,15 +52,43 @@ builder.Services.AddCors(options =>
         }
         else
         {
-            // Production CORS - allow the deployed app domains
-            policy.WithOrigins(
-                    "https://t4h-canvas-2uwxt.ondigitalocean.app",
-                    "https://t4happ.com",
-                    "https://www.t4happ.com"
-                  )
-                  .AllowAnyHeader()
-                  .AllowAnyMethod()
-                  .AllowCredentials();
+            // Production CORS - use environment variable or configuration
+            var allowedOrigins = new List<string>();
+            
+            // Add frontend URL if available
+            if (!string.IsNullOrEmpty(frontendUrl))
+            {
+                allowedOrigins.Add(frontendUrl);
+            }
+            
+            // Add any additional CORS origins from environment variable (comma-separated)
+            var corsOrigins = Environment.GetEnvironmentVariable("CORS_ORIGINS");
+            if (!string.IsNullOrEmpty(corsOrigins))
+            {
+                allowedOrigins.AddRange(corsOrigins.Split(',', StringSplitOptions.RemoveEmptyEntries));
+            }
+            
+            // Add configured origins from appsettings
+            var configuredOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
+            if (configuredOrigins != null && configuredOrigins.Length > 0)
+            {
+                allowedOrigins.AddRange(configuredOrigins);
+            }
+            
+            // Fallback to allow any origin if none configured (not recommended for production)
+            if (allowedOrigins.Count == 0)
+            {
+                policy.AllowAnyOrigin()
+                      .AllowAnyHeader()
+                      .AllowAnyMethod();
+            }
+            else
+            {
+                policy.WithOrigins(allowedOrigins.Distinct().ToArray())
+                      .AllowAnyHeader()
+                      .AllowAnyMethod()
+                      .AllowCredentials();
+            }
         }
     });
 });
@@ -161,11 +192,15 @@ builder.Services.AddIdentity<Volunteer, IdentityRole>(options =>
 
 // Configure JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
-var secret = jwtSettings["Secret"];
+var secret = Environment.GetEnvironmentVariable("JWT_SECRET") ?? jwtSettings["Secret"];
 if (string.IsNullOrEmpty(secret))
 {
     throw new InvalidOperationException("JWT Secret not configured");
 }
+
+// Get JWT issuer/audience (use frontend URL as default)
+var jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER") ?? jwtSettings["Issuer"] ?? frontendUrl;
+var jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE") ?? jwtSettings["Audience"] ?? frontendUrl;
 
 builder.Services.AddAuthentication(options =>
 {
@@ -180,8 +215,8 @@ builder.Services.AddAuthentication(options =>
         ValidateAudience = true,
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
-        ValidIssuer = jwtSettings["Issuer"],
-        ValidAudience = jwtSettings["Audience"],
+        ValidIssuer = jwtIssuer,
+        ValidAudience = jwtAudience,
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret)),
         ClockSkew = TimeSpan.Zero
     };
@@ -245,11 +280,10 @@ builder.Services.Configure<EmailSettings>(options =>
         options.SendGridApiKey = sendGridApiKey;
     }
     
-    // Get frontend base URL from configuration
-    var frontendBaseUrl = builder.Configuration["Frontend:BaseUrl"];
-    if (!string.IsNullOrEmpty(frontendBaseUrl))
+    // Use the frontend URL we already determined
+    if (!string.IsNullOrEmpty(frontendUrl))
     {
-        options.FrontendBaseUrl = frontendBaseUrl;
+        options.FrontendBaseUrl = frontendUrl;
     }
     
     // Use campaign name for FromName if not explicitly set
