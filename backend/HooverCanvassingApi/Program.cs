@@ -251,6 +251,20 @@ builder.Services.Configure<EmailSettings>(options =>
     {
         options.FrontendBaseUrl = frontendBaseUrl;
     }
+    
+    // Use campaign name for FromName if not explicitly set
+    var campaignName = builder.Configuration["Campaign:CampaignName"] ?? builder.Configuration["REACT_APP_CAMPAIGN_NAME"];
+    if (!string.IsNullOrEmpty(campaignName) && (string.IsNullOrEmpty(options.FromName) || options.FromName.Contains("Tanveer")))
+    {
+        options.FromName = campaignName;
+    }
+    
+    // Override FromEmail with environment variable if provided
+    var fromEmail = Environment.GetEnvironmentVariable("EMAIL_FROM_ADDRESS");
+    if (!string.IsNullOrEmpty(fromEmail))
+    {
+        options.FromEmail = fromEmail;
+    }
 });
 builder.Services.AddTransient<IEmailTemplateService, FluidEmailTemplateService>();
 builder.Services.AddTransient<IEmailService, EmailService>();

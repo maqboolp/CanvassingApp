@@ -5,7 +5,7 @@ public class EmailSettings
     // SendGrid settings
     public string SendGridApiKey { get; set; } = "[EmailSettings__SendGridApiKey]";
     public string FromEmail { get; set; } = "[EmailSettings__FromEmail]";
-    public string FromName { get; set; } = "[EmailSettings__FromName]";
+    public string FromName { get; set; } = "[Campaign__CampaignName]";
     
     // Legacy SMTP settings (kept for backward compatibility)
     public string SmtpServer { get; set; } = "[EmailSettings__SmtpServer]";
