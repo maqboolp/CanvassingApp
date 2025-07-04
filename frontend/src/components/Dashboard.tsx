@@ -39,7 +39,13 @@ import {
   Language,
   Visibility,
   VisibilityOff,
-  Edit
+  Edit,
+  VideoLibrary,
+  Payment,
+  HowToReg,
+  Phone,
+  Help,
+  OpenInNew
 } from '@mui/icons-material';
 import { AuthUser, Voter, ContactStatus, VoterSupport } from '../types';
 import VoterList from './VoterList';

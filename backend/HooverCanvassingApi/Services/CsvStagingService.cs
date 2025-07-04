@@ -278,7 +278,7 @@ namespace HooverCanvassingApi.Services
                 .ToLower();
         }
 
-        public async Task<List<StagingTableMetadata>> GetStagingTablesAsync()
+        public async Task<List<StagingTableMetadata>> GetStagingTablesWithMetadataAsync()
         {
             var tables = new List<StagingTableMetadata>();
             

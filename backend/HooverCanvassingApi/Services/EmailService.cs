@@ -56,16 +56,14 @@ public class EmailService : IEmailService
             var model = new
             {
                 VolunteerName = data.VolunteerName,
+                VolunteerEmail = data.VolunteerEmail,
                 VoterName = data.VoterName,
                 VoterAddress = data.VoterAddress,
-                VoterPhone = data.VoterPhone,
-                VoterEmail = data.VoterEmail,
-                Status = data.Status,
+                ContactStatus = data.ContactStatus,
                 VoterSupport = data.VoterSupport,
-                Timestamp = data.Timestamp,
+                ContactTime = data.ContactTime,
                 Notes = data.Notes,
-                HasIssues = !string.IsNullOrEmpty(data.Issues),
-                Issues = data.Issues,
+                Location = data.Location,
                 DashboardUrl = $"{_emailSettings.FromEmail}/admin" // You might want to configure this
             };
 

@@ -106,20 +106,6 @@ namespace HooverCanvassingApi.Controllers
             }
         }
 
-        [HttpGet("staging-tables")]
-        public async Task<IActionResult> GetStagingTables()
-        {
-            try
-            {
-                var tables = await _stagingService.GetStagingTablesAsync();
-                return Ok(tables);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting staging tables");
-                return StatusCode(500, "An error occurred while retrieving staging tables");
-            }
-        }
 
         [HttpGet("staging-tables/{tableName}")]
         public async Task<IActionResult> GetStagingTableInfo(string tableName)
@@ -212,7 +198,7 @@ namespace HooverCanvassingApi.Controllers
         {
             try
             {
-                var tables = await _stagingService.GetStagingTablesAsync();
+                var tables = await _stagingService.GetStagingTablesWithMetadataAsync();
                 
                 return Ok(new
                 {

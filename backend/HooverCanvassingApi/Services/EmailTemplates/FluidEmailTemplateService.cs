@@ -1,4 +1,5 @@
 using Fluid;
+using Fluid.Values;
 using HooverCanvassingApi.Configuration;
 using Microsoft.Extensions.Options;
 
@@ -34,10 +35,10 @@ namespace HooverCanvassingApi.Services.EmailTemplates
             // Register custom filters if needed
             _templateOptions.Filters.AddFilter("date", (input, arguments, context) =>
             {
-                if (input is DateTime dateTime)
+                if (input.ToObjectValue() is DateTime dateTime)
                 {
-                    var format = arguments.At(0).ToStringValue() ?? "MM/dd/yyyy";
-                    return new StringValue(dateTime.ToString(format));
+                    var format = arguments.At(0).Or(StringValue.Create("MM/dd/yyyy")).ToStringValue();
+                    return StringValue.Create(dateTime.ToString(format));
                 }
                 return NilValue.Instance;
             });
