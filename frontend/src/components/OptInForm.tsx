@@ -183,7 +183,14 @@ const OptInForm: React.FC = () => {
           <Alert severity="info" sx={{ mb: 3 }}>
             <Typography variant="body2">
               <strong>Privacy Promise:</strong> Your information is secure and will only be used for campaign communications. 
-              Standard message and data rates may apply.
+              Standard message and data rates may apply. View our{' '}
+              <Link component={RouterLink} to="/privacy-policy" target="_blank" rel="noopener">
+                Privacy Policy
+              </Link>{' '}
+              and{' '}
+              <Link component={RouterLink} to="/terms" target="_blank" rel="noopener">
+                Terms of Service
+              </Link>.
             </Typography>
           </Alert>
 
