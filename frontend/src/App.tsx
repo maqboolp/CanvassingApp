@@ -13,6 +13,8 @@ import ResetPassword from './components/ResetPassword';
 import CompleteRegistration from './components/CompleteRegistration';
 import SelfRegistration from './components/SelfRegistration';
 import OptInForm from './components/OptInForm';
+import PrivacyPolicy from './components/PrivacyPolicy';
+import TermsOfService from './components/TermsOfService';
 import { customerConfig } from './config/customerConfig';
 
 // Create Material-UI theme matching tanveer4hoover.com
@@ -219,6 +221,16 @@ function App() {
           <Route
             path="/opt-in"
             element={<OptInForm />}
+          />
+
+          <Route
+            path="/privacy-policy"
+            element={<PrivacyPolicy />}
+          />
+
+          <Route
+            path="/terms"
+            element={<TermsOfService />}
           />
 
           {/* Protected routes */}

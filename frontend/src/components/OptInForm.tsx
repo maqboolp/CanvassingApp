@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import {
   Container,
   Card,
@@ -293,7 +293,14 @@ const OptInForm: React.FC = () => {
               }
               label={
                 <Typography variant="body2" color={validationErrors.consent ? 'error' : 'textSecondary'}>
-                  {campaignConfig.consentText}
+                  {campaignConfig.consentText}{' '}
+                  <Link component={RouterLink} to="/privacy-policy" target="_blank" rel="noopener">
+                    Privacy Policy
+                  </Link>{' '}
+                  and{' '}
+                  <Link component={RouterLink} to="/terms" target="_blank" rel="noopener">
+                    Terms of Service
+                  </Link>
                 </Typography>
               }
               sx={{ mt: 2, mb: 1 }}

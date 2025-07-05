@@ -19,6 +19,7 @@ export interface CampaignConfig {
   voterRegistrationUrl?: string;
   volunteerHotline?: string;
   supportEmail?: string;
+  contactEmail?: string;
 }
 
 // Get customer configuration from environment variables
@@ -45,6 +46,7 @@ export const getCampaignConfig = (): CampaignConfig => {
     voterRegistrationUrl: process.env.REACT_APP_VOTER_REGISTRATION_URL,
     volunteerHotline: process.env.REACT_APP_VOLUNTEER_HOTLINE,
     supportEmail: process.env.REACT_APP_SUPPORT_EMAIL,
+    contactEmail: process.env.REACT_APP_CONTACT_EMAIL || process.env.REACT_APP_SUPPORT_EMAIL,
   };
 };
 
