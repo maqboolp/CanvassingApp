@@ -6,8 +6,9 @@ import { campaignConfig } from '../config/customerConfig';
 const TermsOfService: React.FC = () => {
   const campaignName = campaignConfig.campaignName || 'Campaign';
   const campaignTitle = campaignConfig.campaignTitle || 'Campaign';
-  // Use configured campaign email or fallback to generated email
-  const contactEmail = campaignConfig.campaignEmail || 
+  // Use EMAIL_FROM_ADDRESS as primary source, then other configured emails
+  const contactEmail = campaignConfig.emailFromAddress ||
+                      campaignConfig.campaignEmail || 
                       campaignConfig.contactEmail || 
                       campaignConfig.supportEmail || 
                       'info@campaign.com';
