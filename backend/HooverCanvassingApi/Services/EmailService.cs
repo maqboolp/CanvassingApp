@@ -446,7 +446,7 @@ This is an automated message. Please do not reply to this email.
         var notesText = !string.IsNullOrEmpty(data.Notes) ? $"\nNotes: \"{data.Notes}\"" : "";
 
         return $@"
-TANVEER FOR HOOVER CAMPAIGN - NEW VOTER CONTACT
+{_campaignSettings.CampaignName.ToUpper()} - NEW VOTER CONTACT
 
 Contact Alert: A new voter contact has been logged in the canvassing system.
 
@@ -547,7 +547,7 @@ This is an automated notification. Please do not reply to this email.
             <p>If the button above doesn't work, copy and paste this link into your browser:</p>
             <p style='word-break: break-all; background-color: #f8f9fa; padding: 10px; border-radius: 3px; font-family: monospace;'>{registrationUrl}</p>
             
-            <p>We're excited to have you join our team and work together towards a better future for Hoover!</p>
+            <p>We're excited to have you join our team and work together towards a better future for {_campaignSettings.Jurisdiction}!</p>
             
             <p>Best regards,<br>
             The {_campaignSettings.CampaignName} Team</p>
@@ -568,7 +568,7 @@ This is an automated notification. Please do not reply to this email.
     private string GenerateInvitationText(string email, string inviterName, string registrationUrl, string role)
     {
         return $@"
-TANVEER FOR HOOVER CAMPAIGN - TEAM INVITATION
+{_campaignSettings.CampaignName.ToUpper()} - TEAM INVITATION
 
 You're Invited to Join Our Campaign!
 
@@ -589,7 +589,7 @@ To complete your registration and join the team, visit this link:
 
 IMPORTANT: This invitation link will expire in 7 days for security reasons.
 
-We're excited to have you join our team and work together towards a better future for Hoover!
+We're excited to have you join our team and work together towards a better future for {_campaignSettings.Jurisdiction}!
 
 Best regards,
 The {_campaignSettings.CampaignName} Team
@@ -693,7 +693,7 @@ This invitation was sent to {email}. If you received this in error, please ignor
     private string GenerateRegistrationApprovalText(PendingRegistrationData data)
     {
         return $@"
-TANVEER FOR HOOVER CAMPAIGN - NEW VOLUNTEER REGISTRATION
+{_campaignSettings.CampaignName.ToUpper()} - NEW VOLUNTEER REGISTRATION
 
 Action Required: A new volunteer has registered and is awaiting approval.
 
@@ -810,13 +810,13 @@ Congratulations! Your registration has been approved and your account is now act
 
 Log in here: {_emailSettings.FrontendBaseUrl}/login
 
-Welcome to the team! We're excited to work with you to bring positive change to Hoover." : @"
+Welcome to the team! We're excited to work with you to bring positive change to {_campaignSettings.Jurisdiction}." : @"
 Thank you for your interest in joining the {_campaignSettings.CampaignName}. Unfortunately, your registration was not approved at this time.
 
 If you have questions about this decision or would like to discuss other ways to support the campaign, please feel free to reach out to our team.";
 
         return $@"
-TANVEER FOR HOOVER CAMPAIGN - REGISTRATION {statusText}
+{_campaignSettings.CampaignName.ToUpper()} - REGISTRATION {statusText}
 
 Hello {firstName},
 
@@ -971,7 +971,7 @@ This is an automated message. Please do not reply to this email.
         var notesText = !string.IsNullOrEmpty(data.Notes) ? $"\nNotes: \"{data.Notes}\"" : "";
 
         return $@"
-TANVEER FOR HOOVER CAMPAIGN - CONTACT DELETED
+{_campaignSettings.CampaignName.ToUpper()} - CONTACT DELETED
 
 ⚠️ ADMIN ALERT: A voter contact record has been permanently deleted from the system by a SuperAdmin.
 
