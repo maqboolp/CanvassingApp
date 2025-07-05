@@ -20,6 +20,7 @@ export interface CampaignConfig {
   volunteerHotline?: string;
   supportEmail?: string;
   contactEmail?: string;
+  campaignEmail?: string;
 }
 
 // Get customer configuration from environment variables
@@ -47,6 +48,7 @@ export const getCampaignConfig = (): CampaignConfig => {
     volunteerHotline: process.env.REACT_APP_VOLUNTEER_HOTLINE,
     supportEmail: process.env.REACT_APP_SUPPORT_EMAIL,
     contactEmail: process.env.REACT_APP_CONTACT_EMAIL || process.env.REACT_APP_SUPPORT_EMAIL,
+    campaignEmail: process.env.REACT_APP_CAMPAIGN_EMAIL,
   };
 };
 

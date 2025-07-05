@@ -7,23 +7,11 @@ const PrivacyPolicy: React.FC = () => {
   const campaignName = campaignConfig.campaignName || 'Campaign';
   const campaignTitle = campaignConfig.campaignTitle || 'Campaign';
   const campaignWebsite = campaignConfig.campaignWebsite || window.location.origin;
-  // Generate contact email from campaign website domain or use configured email
-  const getContactEmail = () => {
-    if (campaignConfig.contactEmail) return campaignConfig.contactEmail;
-    if (campaignConfig.supportEmail) return campaignConfig.supportEmail;
-    if (campaignConfig.campaignWebsite) {
-      // Extract domain from website URL
-      try {
-        const url = new URL(campaignConfig.campaignWebsite);
-        const domain = url.hostname.replace('www.', '');
-        return `info@${domain}`;
-      } catch (e) {
-        // If URL parsing fails, fallback
-      }
-    }
-    return 'info@campaign.com';
-  };
-  const contactEmail = getContactEmail();
+  // Use configured campaign email or fallback to generated email
+  const contactEmail = campaignConfig.campaignEmail || 
+                      campaignConfig.contactEmail || 
+                      campaignConfig.supportEmail || 
+                      'info@campaign.com';
   const optInUrl = `${window.location.origin}/opt-in`;
 
   return (
