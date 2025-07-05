@@ -86,6 +86,9 @@ const Analytics: React.FC<AnalyticsProps> = ({ user }) => {
     if (partyName.includes('green')) return '#28A745'; // Green
     return '#6C757D'; // Default gray for others
   };
+  
+  // Format percentage for display
+  const formatPercent = (value: number) => `${value}%`;
 
   useEffect(() => {
     if (user && user.token) {
@@ -264,7 +267,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ user }) => {
                   label={(entry) => `${entry.gender} (${entry.percentage}%)`}
                   outerRadius={80}
                   fill="#8884d8"
-                  dataKey="count"
+                  dataKey="percentage"
                 >
                   {voterData?.genderStats?.map((entry: any, index: number) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -282,9 +285,9 @@ const Analytics: React.FC<AnalyticsProps> = ({ user }) => {
               <BarChart data={voterData?.ageGroupStats || []}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="ageGroup" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="count" fill="#0088FE" />
+                <YAxis tickFormatter={formatPercent} />
+                <Tooltip formatter={(value: any) => `${value}%`} />
+                <Bar dataKey="percentage" fill="#0088FE" />
               </BarChart>
             </ResponsiveContainer>
           </Paper>
@@ -302,7 +305,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ user }) => {
                   label={false}
                   outerRadius={80}
                   fill="#8884d8"
-                  dataKey="count"
+                  dataKey="percentage"
                 >
                   {voterData?.partyAffiliationStats?.map((entry: any, index: number) => (
                     <Cell key={`cell-${index}`} fill={getPartyColor(entry.party)} />
@@ -325,9 +328,9 @@ const Analytics: React.FC<AnalyticsProps> = ({ user }) => {
               <BarChart data={voterData?.voteFrequencyStats || []}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="frequency" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="count" fill="#00C49F" />
+                <YAxis tickFormatter={formatPercent} />
+                <Tooltip formatter={(value: any) => `${value}%`} />
+                <Bar dataKey="percentage" fill="#00C49F" />
               </BarChart>
             </ResponsiveContainer>
           </Paper>
@@ -340,9 +343,9 @@ const Analytics: React.FC<AnalyticsProps> = ({ user }) => {
                 <BarChart data={voterData?.voterSupportStats || []}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="support" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="count" fill="#FFBB28" />
+                  <YAxis tickFormatter={formatPercent} />
+                  <Tooltip formatter={(value: any) => `${value}%`} />
+                  <Bar dataKey="percentage" fill="#FFBB28" />
                 </BarChart>
               </ResponsiveContainer>
             </Paper>
@@ -362,7 +365,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ user }) => {
                     label={false}
                     outerRadius={80}
                     fill="#8884d8"
-                    dataKey="count"
+                    dataKey="percentage"
                   >
                     {voterData?.ethnicityStats?.map((entry: any, index: number) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -393,7 +396,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ user }) => {
                     label={false}
                     outerRadius={80}
                     fill="#8884d8"
-                    dataKey="count"
+                    dataKey="percentage"
                   >
                     {voterData?.religionStats?.map((entry: any, index: number) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -418,9 +421,9 @@ const Analytics: React.FC<AnalyticsProps> = ({ user }) => {
                 <BarChart data={voterData?.incomeStats || []}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="income" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="count" fill="#82CA9D" />
+                  <YAxis tickFormatter={formatPercent} />
+                  <Tooltip formatter={(value: any) => `${value}%`} />
+                  <Bar dataKey="percentage" fill="#82CA9D" />
                 </BarChart>
               </ResponsiveContainer>
             </Paper>
@@ -443,7 +446,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ user }) => {
                   label={(entry) => `${entry.status} (${entry.percentage}%)`}
                   outerRadius={80}
                   fill="#8884d8"
-                  dataKey="count"
+                  dataKey="percentage"
                 >
                   {contactData?.contactsByStatus?.map((entry: any, index: number) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
