@@ -22,6 +22,7 @@ export interface CampaignConfig {
   contactEmail?: string;
   campaignEmail?: string;
   emailFromAddress?: string;
+  smsOptInNumber?: string;
 }
 
 // Get customer configuration from environment variables
@@ -51,6 +52,7 @@ export const getCampaignConfig = (): CampaignConfig => {
     contactEmail: process.env.REACT_APP_CONTACT_EMAIL || process.env.REACT_APP_SUPPORT_EMAIL,
     campaignEmail: process.env.REACT_APP_CAMPAIGN_EMAIL,
     emailFromAddress: process.env.REACT_APP_EMAIL_FROM_ADDRESS,
+    smsOptInNumber: process.env.REACT_APP_SMS_OPT_IN_NUMBER,
   };
 };
 

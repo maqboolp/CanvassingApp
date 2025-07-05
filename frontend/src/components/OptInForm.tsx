@@ -353,6 +353,12 @@ const OptInForm: React.FC = () => {
 
             <Box sx={{ textAlign: 'center', mt: 3, pt: 2, borderTop: 1, borderColor: 'divider' }}>
               <Typography variant="caption" color="text.secondary">
+                {campaignConfig.smsOptInNumber && (
+                  <>
+                    Text JOIN to {campaignConfig.smsOptInNumber} to opt-in
+                    <br />
+                  </>
+                )}
                 Reply STOP to opt out at any time
               </Typography>
             </Box>
