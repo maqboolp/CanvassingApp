@@ -240,7 +240,22 @@ namespace HooverCanvassingApi.Controllers
                 
                 if (existingPending != null)
                 {
-                    return BadRequest(new { error = "A registration with this email is already pending approval" });
+                    // Check the status and provide appropriate message
+                    switch (existingPending.Status)
+                    {
+                        case PendingVolunteerStatus.Pending:
+                            return BadRequest(new { error = "A registration with this email is already pending approval. You will receive an email once it's reviewed." });
+                        
+                        case PendingVolunteerStatus.Approved:
+                            return BadRequest(new { error = "Your registration was already approved! Please check your email for login instructions. If you didn't receive it, try resetting your password." });
+                        
+                        case PendingVolunteerStatus.Rejected:
+                            // For rejected, we could allow re-registration or provide a different message
+                            return BadRequest(new { error = "Your previous registration was not approved. Please contact support if you have questions." });
+                        
+                        default:
+                            return BadRequest(new { error = "A registration with this email already exists. Please contact support for assistance." });
+                    }
                 }
 
                 // Create pending volunteer record
@@ -273,6 +288,7 @@ namespace HooverCanvassingApi.Controllers
                 return StatusCode(500, new { error = "Failed to process registration" });
             }
         }
+
 
         // Get invitation details (for registration form pre-fill)
         [HttpGet("invitation/{token}")]
