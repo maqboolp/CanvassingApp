@@ -1,0 +1,27 @@
+# Backend Dockerfile for Digital Ocean
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+
+# Copy csproj and restore dependencies
+COPY backend/HooverCanvassingApi/*.csproj ./
+RUN dotnet restore
+
+# Copy everything else and build
+COPY backend/HooverCanvassingApi/. ./
+RUN dotnet publish -c Release -o /app/out
+
+# Runtime stage
+FROM mcr.microsoft.com/dotnet/aspnet:8.0
+WORKDIR /app
+COPY --from=build /app/out .
+
+# Create non-root user
+RUN adduser --disabled-password --gecos '' appuser && chown -R appuser /app
+USER appuser
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:5000/health || exit 1
+
+EXPOSE 5000
+ENTRYPOINT ["dotnet", "HooverCanvassingApi.dll"]

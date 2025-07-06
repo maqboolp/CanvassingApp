@@ -1,0 +1,65 @@
+name: hoover-canvassing-app
+region: nyc
+services:
+  - name: api
+    environment_slug: node-js
+    github:
+      repo: your-github-username/hoover-canvassing-app
+      branch: main
+      deploy_on_push: true
+    source_dir: backend/HooverCanvassingApi
+    build_command: dotnet publish -c Release -o out
+    run_command: dotnet out/HooverCanvassingApi.dll
+    http_port: 5000
+    envs:
+      # System Configuration
+      - key: SYSTEM_ADMIN_EMAIL
+        value: "admin@yourcampaign.com"
+        type: GENERAL
+      - key: EMAIL_FROM_ADDRESS
+        value: "noreply@yourcampaign.com"
+        type: GENERAL
+      # Database Connection (use Digital Ocean managed database)
+      - key: DATABASE_URL
+        scope: RUN_TIME
+        value: ${db.DATABASE_URL}
+      # Email Service (SendGrid example)
+      - key: SENDGRID_API_KEY
+        type: SECRET
+        value: "your-sendgrid-api-key"
+      # JWT Configuration
+      - key: JWT_SECRET
+        type: SECRET
+        value: "your-jwt-secret-key-here"
+      - key: JWT_ISSUER
+        value: "https://your-app.ondigitalocean.app"
+      - key: JWT_AUDIENCE
+        value: "https://your-app.ondigitalocean.app"
+      # Other settings
+      - key: ASPNETCORE_ENVIRONMENT
+        value: "Production"
+      - key: ASPNETCORE_URLS
+        value: "http://+:5000"
+
+  - name: frontend
+    environment_slug: node-js
+    github:
+      repo: your-github-username/hoover-canvassing-app
+      branch: main
+      deploy_on_push: true
+    source_dir: frontend
+    build_command: npm ci && npm run build
+    run_command: npm start
+    http_port: 3000
+    envs:
+      - key: REACT_APP_API_URL
+        value: "${APP_URL}/api"
+      - key: NODE_ENV
+        value: "production"
+    routes:
+      - path: /
+
+databases:
+  - name: db
+    engine: PG
+    version: "15"
