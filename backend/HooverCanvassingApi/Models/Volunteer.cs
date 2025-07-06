@@ -9,6 +9,7 @@ namespace HooverCanvassingApi.Models
         public string LastName { get; set; } = string.Empty;
         public VolunteerRole Role { get; set; } = VolunteerRole.Volunteer;
         public bool IsActive { get; set; } = true;
+        public bool IsSystemUser { get; set; } = false; // God-level admin that cannot be deleted
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         
         // Login tracking fields

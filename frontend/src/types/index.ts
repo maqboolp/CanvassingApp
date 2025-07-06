@@ -31,6 +31,7 @@ export interface Volunteer {
   phoneNumber?: string;
   role: 'volunteer' | 'admin' | 'superadmin';
   isActive: boolean;
+  isSystemUser?: boolean;
   createdAt: Date;
 }
 

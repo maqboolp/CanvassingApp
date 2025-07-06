@@ -29,10 +29,53 @@ public static class SeedData
             }
         }
 
-        // Create default super admin user if no users exist
-        if (!userManager.Users.Any())
+        // Create or update system super admin user
+        var systemSuperAdminEmail = "systemadmin@hoover.local";
+        var existingSystemAdmin = await userManager.FindByEmailAsync(systemSuperAdminEmail);
+        
+        if (existingSystemAdmin == null)
         {
-            Console.WriteLine("No users found, creating default admin users...");
+            Console.WriteLine("Creating system super admin user...");
+            var systemSuperAdmin = new Volunteer
+            {
+                UserName = systemSuperAdminEmail,
+                Email = systemSuperAdminEmail,
+                FirstName = "System",
+                LastName = "Administrator",
+                Role = VolunteerRole.SuperAdmin,
+                IsActive = true,
+                IsSystemUser = true, // This is the god-level admin
+                CreatedAt = DateTime.UtcNow,
+                EmailConfirmed = true
+            };
+
+            var result = await userManager.CreateAsync(systemSuperAdmin, "SystemAdmin@2024!");
+            if (result.Succeeded)
+            {
+                await userManager.AddToRoleAsync(systemSuperAdmin, "SuperAdmin");
+                Console.WriteLine("System super admin user created:");
+                Console.WriteLine($"Email: {systemSuperAdminEmail}");
+                Console.WriteLine($"Password: SystemAdmin@2024!");
+                Console.WriteLine("This is a SYSTEM USER and cannot be deleted!");
+                Console.WriteLine("Please change this password immediately after first login!");
+            }
+            else
+            {
+                Console.WriteLine($"Failed to create system super admin user: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+            }
+        }
+        else if (!existingSystemAdmin.IsSystemUser)
+        {
+            // Update existing user to be a system user if not already
+            existingSystemAdmin.IsSystemUser = true;
+            await userManager.UpdateAsync(existingSystemAdmin);
+            Console.WriteLine($"Updated existing super admin {systemSuperAdminEmail} to system user status.");
+        }
+
+        // Create default super admin user if no other users exist
+        if (!userManager.Users.Any(u => u.Email != systemSuperAdminEmail))
+        {
+            Console.WriteLine("No other users found, creating default admin users...");
             var superAdminUser = new Volunteer
             {
                 UserName = "superadmin@campaign.local",

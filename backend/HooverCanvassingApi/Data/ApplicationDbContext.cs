@@ -22,6 +22,8 @@ namespace HooverCanvassingApi.Data
         public DbSet<VoterTagAssignment> VoterTagAssignments { get; set; }
         public DbSet<ConsentRecord> ConsentRecords { get; set; }
         public DbSet<VoiceRecording> VoiceRecordings { get; set; }
+        public DbSet<AdditionalResource> AdditionalResources { get; set; }
+        public DbSet<AppSetting> AppSettings { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -244,6 +246,35 @@ namespace HooverCanvassingApi.Data
                 .WithMany(v => v.ConsentRecords)
                 .HasForeignKey(cr => cr.VoterId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // Configure AdditionalResource entity
+            builder.Entity<AdditionalResource>(entity =>
+            {
+                entity.HasKey(ar => ar.Id);
+                entity.Property(ar => ar.Title).IsRequired().HasMaxLength(200);
+                entity.Property(ar => ar.Url).IsRequired().HasMaxLength(500);
+                entity.Property(ar => ar.Description).HasMaxLength(500);
+                entity.Property(ar => ar.Category).HasMaxLength(100);
+                entity.Property(ar => ar.CreatedBy).HasMaxLength(100);
+                entity.Property(ar => ar.UpdatedBy).HasMaxLength(100);
+                entity.HasIndex(ar => ar.Category);
+                entity.HasIndex(ar => ar.IsActive);
+                entity.HasIndex(ar => ar.DisplayOrder);
+            });
+
+            // Configure AppSetting entity
+            builder.Entity<AppSetting>(entity =>
+            {
+                entity.HasKey(app => app.Id);
+                entity.Property(app => app.Key).IsRequired().HasMaxLength(100);
+                entity.Property(app => app.Value).IsRequired();
+                entity.Property(app => app.Description).HasMaxLength(500);
+                entity.Property(app => app.Category).HasMaxLength(100);
+                entity.Property(app => app.UpdatedBy).HasMaxLength(100);
+                entity.HasIndex(app => app.Key).IsUnique();
+                entity.HasIndex(app => app.Category);
+                entity.HasIndex(app => app.IsPublic);
+            });
         }
     }
 }

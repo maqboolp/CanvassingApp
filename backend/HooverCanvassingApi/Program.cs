@@ -232,6 +232,8 @@ builder.Services.AddScoped<IOptInInvitationService, OptInInvitationService>();
 builder.Services.AddScoped<IAudioConversionService, AudioConversionService>();
 builder.Services.AddScoped<CsvStagingService>();
 builder.Services.AddScoped<VoterMappingService>();
+builder.Services.AddSingleton<IAppSettingsService, AppSettingsService>();
+builder.Services.AddMemoryCache();
 
 // Configure file storage based on settings
 var useS3 = builder.Configuration.GetValue<bool>("AWS:S3:UseS3");

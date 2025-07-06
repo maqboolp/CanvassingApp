@@ -23,6 +23,8 @@ namespace HooverCanvassingApi.Controllers
         private readonly UserManager<Volunteer> _userManager;
         private readonly IEmailService _emailService;
         private readonly CampaignSettings _campaignSettings;
+        private readonly IOptions<EmailSettings> _emailSettings;
+        private readonly IConfiguration _configuration;
 
         public AdminController(
             ApplicationDbContext context, 
@@ -30,7 +32,9 @@ namespace HooverCanvassingApi.Controllers
             ILogger<AdminController> logger, 
             UserManager<Volunteer> userManager, 
             IEmailService emailService,
-            IOptions<CampaignSettings> campaignSettings)
+            IOptions<CampaignSettings> campaignSettings,
+            IOptions<EmailSettings> emailSettings,
+            IConfiguration configuration)
         {
             _context = context;
             _importService = importService;
@@ -38,6 +42,8 @@ namespace HooverCanvassingApi.Controllers
             _userManager = userManager;
             _emailService = emailService;
             _campaignSettings = campaignSettings.Value;
+            _emailSettings = emailSettings;
+            _configuration = configuration;
         }
 
         [HttpPost("import-voters")]
@@ -249,6 +255,7 @@ namespace HooverCanvassingApi.Controllers
                         PhoneNumber = v.PhoneNumber,
                         Role = v.Role.ToString(),
                         IsActive = v.IsActive,
+                        IsSystemUser = v.IsSystemUser,
                         CreatedAt = v.CreatedAt,
                         ContactCount = v.Contacts.Count(),
                         LoginCount = v.LoginCount,
@@ -785,6 +792,16 @@ namespace HooverCanvassingApi.Controllers
                     return BadRequest(new { error = "Cannot reset your own password using this method" });
                 }
 
+                // Check if this is a system user
+                if (user.IsSystemUser)
+                {
+                    // No one can reset a system user's password except themselves
+                    return BadRequest(new { 
+                        error = "Cannot reset password for system user. System administrators must reset their own passwords through the forgot password feature.",
+                        isSystemUser = true
+                    });
+                }
+
                 // Regular admins can only reset volunteer passwords, not other admin/superadmin passwords
                 if (currentUserRole == "Admin" && (user.Role == VolunteerRole.Admin || user.Role == VolunteerRole.SuperAdmin))
                 {
@@ -942,6 +959,12 @@ namespace HooverCanvassingApi.Controllers
                     return BadRequest(new { error = "Cannot change your own status" });
                 }
 
+                // Check if this is a system user
+                if (targetUser.IsSystemUser)
+                {
+                    return BadRequest(new { error = "Cannot modify system user status. This is a protected administrator account." });
+                }
+
                 // Regular admins can only deactivate volunteers, not other admins/superadmins
                 if (currentUserRole == "Admin" && (targetUser.Role == VolunteerRole.Admin || targetUser.Role == VolunteerRole.SuperAdmin))
                 {
@@ -1003,6 +1026,12 @@ namespace HooverCanvassingApi.Controllers
                 if (targetUser.Id == currentUserId)
                 {
                     return BadRequest(new { error = "Cannot delete your own account" });
+                }
+
+                // Check if this is a system user
+                if (targetUser.IsSystemUser)
+                {
+                    return BadRequest(new { error = "Cannot delete system user. This is a protected administrator account." });
                 }
 
                 // Check if user has any contacts
@@ -1405,6 +1434,7 @@ This is an automated message from the campaign management system.
         public string? PhoneNumber { get; set; }
         public string Role { get; set; } = string.Empty;
         public bool IsActive { get; set; }
+        public bool IsSystemUser { get; set; }
         public DateTime CreatedAt { get; set; }
         public int ContactCount { get; set; }
         

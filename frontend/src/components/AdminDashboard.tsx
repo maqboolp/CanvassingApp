@@ -38,7 +38,8 @@ import {
   InputAdornment,
   Fab,
   useMediaQuery,
-  useTheme
+  useTheme,
+  Tooltip
 } from '@mui/material';
 import {
   ExitToApp,
@@ -69,7 +70,9 @@ import {
   Delete,
   Schedule,
   TableChart as TableIcon,
-  Close as CloseIcon
+  Close as CloseIcon,
+  Link as LinkIcon,
+  Settings as SettingsIcon
 } from '@mui/icons-material';
 import { AuthUser, Voter, ContactStatus, VoterSupport, VoterTagDetail } from '../types';
 import VoterList from './VoterList';
@@ -79,6 +82,8 @@ import VoiceRecordings from './VoiceRecordings';
 import VoterStagingImport from './VoterStagingImport';
 import AnalyticsComponent from './Analytics';
 import VolunteerResourcesSection from './VolunteerResourcesSection';
+import AdditionalResourcesManagement from './AdditionalResourcesManagement';
+import AppSettingsManagement from './AppSettingsManagement';
 import { API_BASE_URL } from '../config';
 import { customerConfig } from '../config/customerConfig';
 import { ApiErrorHandler, ApiError } from '../utils/apiErrorHandler';
@@ -129,7 +134,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
       ...(user.role === 'admin' || user.role === 'superadmin' ? ['voiceRecordings'] : []),
       ...(user.role === 'admin' || user.role === 'superadmin' ? ['tags'] : []),
       'resources',
+      ...(user.role === 'superadmin' ? ['additionalResources'] : []),
       'engagement',
+      ...(user.role === 'superadmin' ? ['settings'] : []),
       ...(user.role === 'admin' || user.role === 'superadmin' ? ['dataManagement'] : [])
     ];
     return tabs.indexOf(tabName);
@@ -912,7 +919,8 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
       } else {
         setResetPasswordResult({
           success: false,
-          error: data.error || 'Failed to reset password'
+          error: data.error || 'Failed to reset password',
+          isSystemUser: data.isSystemUser || false
         });
       }
     } catch (error) {
@@ -1414,6 +1422,9 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
             <Tab label="Tags" icon={<LocalOffer />} />
           )}
           <Tab label="Resources" icon={<MenuBook />} />
+          {user.role === 'superadmin' && (
+            <Tab label="Add'l Resources" icon={<LinkIcon />} />
+          )}
           <Tab 
             label="Engagement" 
             icon={<Email />} 
@@ -1423,6 +1434,9 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
               margin: { xs: '0 2px', sm: 0 }
             }}
           />
+          {user.role === 'superadmin' && (
+            <Tab label="Settings" icon={<SettingsIcon />} />
+          )}
           {(user.role === 'admin' || user.role === 'superadmin') && (
             <Tab label="Data Mgmt" icon={<Upload />} />
           )}
@@ -1652,7 +1666,19 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
                         {volunteers.filter(volunteer => volunteer.role === 'SuperAdmin').map((superAdmin) => (
                           <TableRow key={superAdmin.id}>
                             <TableCell>
-                              {superAdmin.firstName} {superAdmin.lastName}
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                {superAdmin.firstName} {superAdmin.lastName}
+                                {superAdmin.isSystemUser && (
+                                  <Tooltip title="Protected system administrator account that cannot be deleted or deactivated">
+                                    <Chip 
+                                      label="SYSTEM" 
+                                      size="small" 
+                                      color="warning"
+                                      sx={{ fontWeight: 'bold' }}
+                                    />
+                                  </Tooltip>
+                                )}
+                              </Box>
                             </TableCell>
                             <TableCell>{superAdmin.email}</TableCell>
                             <TableCell>{superAdmin.phoneNumber || '-'}</TableCell>
@@ -1682,16 +1708,20 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
                             </TableCell>
                             <TableCell>
                               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                                <Button
-                                  size="small"
-                                  variant="outlined"
-                                  startIcon={<VpnKey />}
-                                  onClick={() => handleResetPassword(superAdmin)}
-                                  disabled={!superAdmin.isActive || superAdmin.id === user.id}
-                                >
-                                  Reset Password
-                                </Button>
-                                {user.role === 'superadmin' && superAdmin.id !== user.id && (
+                                <Tooltip title={superAdmin.isSystemUser ? "System users must reset their own passwords through the forgot password feature" : ""}>
+                                  <span>
+                                    <Button
+                                      size="small"
+                                      variant="outlined"
+                                      startIcon={<VpnKey />}
+                                      onClick={() => handleResetPassword(superAdmin)}
+                                      disabled={!superAdmin.isActive || superAdmin.id === user.id || superAdmin.isSystemUser}
+                                    >
+                                      Reset Password
+                                    </Button>
+                                  </span>
+                                </Tooltip>
+                                {user.role === 'superadmin' && superAdmin.id !== user.id && !superAdmin.isSystemUser && (
                                   <Button
                                     size="small"
                                     variant="outlined"
@@ -2260,6 +2290,13 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
           </Card>
         </TabPanel>
 
+        {/* Additional Resources Tab */}
+        {user.role === 'superadmin' && (
+          <TabPanel value={currentTab} index={getTabIndex('additionalResources')}>
+            <AdditionalResourcesManagement user={user} />
+          </TabPanel>
+        )}
+
         {/* Engagement Tab */}
         <TabPanel value={currentTab} index={getTabIndex('engagement')}>
           <Typography variant="h5" gutterBottom>
@@ -2427,6 +2464,13 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
             </Box>
           </Box>
         </TabPanel>
+
+        {/* Settings Tab */}
+        {user.role === 'superadmin' && (
+          <TabPanel value={currentTab} index={getTabIndex('settings')}>
+            <AppSettingsManagement user={user} />
+          </TabPanel>
+        )}
 
         {/* Data Management Tab - For Admins and SuperAdmins */}
         {(user.role === 'admin' || user.role === 'superadmin') && (
@@ -2925,8 +2969,13 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
               )}
 
               {resetPasswordResult && !resetPasswordResult.success && (
-                <Alert severity="error" sx={{ mb: 2 }}>
+                <Alert severity={resetPasswordResult.isSystemUser ? "info" : "error"} sx={{ mb: 2 }}>
                   {resetPasswordResult.error}
+                  {resetPasswordResult.isSystemUser && (
+                    <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                      This is a protected administrator account that requires enhanced security.
+                    </Typography>
+                  )}
                 </Alert>
               )}
             </>
