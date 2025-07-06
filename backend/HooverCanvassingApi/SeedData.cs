@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using HooverCanvassingApi.Models;
 using HooverCanvassingApi.Data;
 using Microsoft.EntityFrameworkCore;
+using HooverCanvassingApi.Services;
 
 namespace HooverCanvassingApi;
 
@@ -15,6 +16,7 @@ public static class SeedData
         var userManager = services.GetRequiredService<UserManager<Volunteer>>();
         var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
         var context = services.GetRequiredService<ApplicationDbContext>();
+        var appSettingsService = services.GetService<AppSettingsService>();
 
         Console.WriteLine("Initializing seed data...");
 
@@ -30,12 +32,26 @@ public static class SeedData
         }
 
         // Create or update system super admin user
+        // Try to get from app settings first (if service is available), then environment variable, then default
         var systemSuperAdminEmail = "systemadmin@hoover.local";
+        if (appSettingsService != null)
+        {
+            var (hasEmail, emailValue) = await appSettingsService.TryGetSettingAsync("SYSTEM_ADMIN_EMAIL");
+            if (hasEmail && !string.IsNullOrEmpty(emailValue))
+            {
+                systemSuperAdminEmail = emailValue;
+            }
+        }
+        else
+        {
+            // Fallback to environment variable if AppSettingsService not available
+            systemSuperAdminEmail = Environment.GetEnvironmentVariable("SYSTEM_ADMIN_EMAIL") ?? "systemadmin@hoover.local";
+        }
         var existingSystemAdmin = await userManager.FindByEmailAsync(systemSuperAdminEmail);
         
         if (existingSystemAdmin == null)
         {
-            Console.WriteLine("Creating system super admin user...");
+            Console.WriteLine($"Creating system super admin user with email: {systemSuperAdminEmail}...");
             var systemSuperAdmin = new Volunteer
             {
                 UserName = systemSuperAdminEmail,
