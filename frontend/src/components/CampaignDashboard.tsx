@@ -74,6 +74,8 @@ interface SendDialogState {
   open: boolean;
   campaignId: number | null;
   overrideOptIn: boolean;
+  batchSize?: number;
+  batchDelay?: number;
 }
 
 const getCampaignTypeEnum = (value: string): number => {
@@ -127,7 +129,9 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
   const [sendDialog, setSendDialog] = useState<SendDialogState>({
     open: false,
     campaignId: null,
-    overrideOptIn: false
+    overrideOptIn: false,
+    batchSize: 100,
+    batchDelay: 30
   });
 
   const [newCampaign, setNewCampaign] = useState({
@@ -363,16 +367,25 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
         ? `${API_BASE_URL}/api/campaigns/${sendDialog.campaignId}/retry-failed`
         : `${API_BASE_URL}/api/campaigns/${sendDialog.campaignId}/send`;
       
+      const campaign = campaigns.find(c => c.id === sendDialog.campaignId);
+      const requestBody: any = { overrideOptIn: sendDialog.overrideOptIn };
+      
+      // Add batch parameters for robocalls
+      if (campaign?.type === 1) {
+        requestBody.batchSize = sendDialog.batchSize;
+        requestBody.batchDelayMinutes = sendDialog.batchDelay;
+      }
+      
       await ApiErrorHandler.makeAuthenticatedRequest(
         endpoint,
         {
           method: 'POST',
-          body: JSON.stringify({ overrideOptIn: sendDialog.overrideOptIn })
+          body: JSON.stringify(requestBody)
         }
       );
 
       setSuccess(isRetry ? 'Retrying failed messages' : 'Campaign is being sent');
-      setSendDialog({ open: false, campaignId: null, overrideOptIn: false });
+      setSendDialog({ open: false, campaignId: null, overrideOptIn: false, batchSize: 100, batchDelay: 30 });
       fetchCampaigns();
     } catch (error) {
       if (error instanceof ApiError && error.isAuthError) {
@@ -675,7 +688,9 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                       onClick={() => setSendDialog({ 
                         open: true, 
                         campaignId: campaign.id, 
-                        overrideOptIn: false 
+                        overrideOptIn: false,
+                        batchSize: 100,
+                        batchDelay: 30
                       })}
                       variant="contained"
                       color="primary"
@@ -713,7 +728,9 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                   onClick={() => setSendDialog({ 
                     open: true, 
                     campaignId: campaign.id, 
-                    overrideOptIn: false 
+                    overrideOptIn: false,
+                    batchSize: 100,
+                    batchDelay: 30
                   })}
                   variant="outlined"
                   color="warning"
@@ -1195,7 +1212,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
       {/* Send Campaign Confirmation Dialog */}
       <Dialog 
         open={sendDialog.open} 
-        onClose={() => setSendDialog({ open: false, campaignId: null, overrideOptIn: false })}
+        onClose={() => setSendDialog({ open: false, campaignId: null, overrideOptIn: false, batchSize: 100, batchDelay: 30 })}
         maxWidth="sm" 
         fullWidth
       >
@@ -1243,11 +1260,50 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                 )}
               </>
             )}
+            
+            {/* Batch options for RoboCalls */}
+            {campaigns.find(c => c.id === sendDialog.campaignId)?.type === 1 && (
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="subtitle2" gutterBottom>
+                  Batch Sending Options
+                </Typography>
+                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                  <TextField
+                    label="Batch Size"
+                    type="number"
+                    value={sendDialog.batchSize}
+                    onChange={(e) => setSendDialog({ ...sendDialog, batchSize: parseInt(e.target.value) || 100 })}
+                    InputProps={{
+                      inputProps: { min: 10, max: 1000 }
+                    }}
+                    helperText="Number of calls per batch (10-1000)"
+                    size="small"
+                  />
+                  <TextField
+                    label="Delay Between Batches (minutes)"
+                    type="number"
+                    value={sendDialog.batchDelay}
+                    onChange={(e) => setSendDialog({ ...sendDialog, batchDelay: parseInt(e.target.value) || 30 })}
+                    InputProps={{
+                      inputProps: { min: 5, max: 120 }
+                    }}
+                    helperText="Wait time between batches (5-120 min)"
+                    size="small"
+                  />
+                </Box>
+                <Alert severity="info" sx={{ mt: 1 }}>
+                  <Typography variant="body2">
+                    Calls will be sent in batches of {sendDialog.batchSize} with {sendDialog.batchDelay} minutes between each batch.
+                    This helps manage call volume and improves delivery success rates.
+                  </Typography>
+                </Alert>
+              </Box>
+            )}
           </Stack>
         </DialogContent>
         <DialogActions>
           <Button 
-            onClick={() => setSendDialog({ open: false, campaignId: null, overrideOptIn: false })}
+            onClick={() => setSendDialog({ open: false, campaignId: null, overrideOptIn: false, batchSize: 100, batchDelay: 30 })}
           >
             Cancel
           </Button>

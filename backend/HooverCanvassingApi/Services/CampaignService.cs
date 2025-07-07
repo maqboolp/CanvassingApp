@@ -96,7 +96,7 @@ namespace HooverCanvassingApi.Services
             return true;
         }
 
-        public async Task<bool> SendCampaignAsync(int campaignId, bool overrideOptIn = false)
+        public async Task<bool> SendCampaignAsync(int campaignId, bool overrideOptIn = false, int? batchSize = null, int? batchDelayMinutes = null)
         {
             var campaign = await GetCampaignAsync(campaignId);
             if (campaign == null)
@@ -137,11 +137,11 @@ namespace HooverCanvassingApi.Services
             await _context.SaveChangesAsync();
 
             // Send messages in background with new scope
-            _logger.LogInformation($"Starting background task for campaign {campaignId} with overrideOptIn={overrideOptIn}");
+            _logger.LogInformation($"Starting background task for campaign {campaignId} with overrideOptIn={overrideOptIn}, batchSize={batchSize}, batchDelayMinutes={batchDelayMinutes}");
             _ = Task.Run(async () => 
             {
                 _logger.LogInformation($"Background task started for campaign {campaignId}");
-                await ProcessCampaignMessagesWithScopeAsync(campaignId, overrideOptIn);
+                await ProcessCampaignMessagesWithScopeAsync(campaignId, overrideOptIn, batchSize, batchDelayMinutes);
             });
 
             _logger.LogInformation($"Campaign {campaignId} started with {campaignMessages.Count} recipients");
@@ -492,7 +492,7 @@ namespace HooverCanvassingApi.Services
             await _context.SaveChangesAsync();
         }
 
-        private async Task ProcessCampaignMessagesWithScopeAsync(int campaignId, bool overrideOptIn = false)
+        private async Task ProcessCampaignMessagesWithScopeAsync(int campaignId, bool overrideOptIn = false, int? batchSize = null, int? batchDelayMinutes = null)
         {
             _logger.LogInformation($"ProcessCampaignMessagesWithScopeAsync called for campaign {campaignId} with overrideOptIn={overrideOptIn}");
             
@@ -552,33 +552,59 @@ namespace HooverCanvassingApi.Services
                     }
                     else
                     {
-                        // Keep individual processing for robo calls
-                        foreach (var message in pendingMessages)
+                        // Process robo calls with optional batching
+                        var effectiveBatchSize = batchSize ?? pendingMessages.Count; // Default to all messages if no batch size
+                        var effectiveDelayMinutes = batchDelayMinutes ?? 0; // Default to no delay if not specified
+                        
+                        scopedLogger.LogInformation($"Processing {pendingMessages.Count} robocalls in batches of {effectiveBatchSize} with {effectiveDelayMinutes} minute delays");
+                        
+                        for (int batchIndex = 0; batchIndex < pendingMessages.Count; batchIndex += effectiveBatchSize)
                         {
-                            try
+                            // If this is not the first batch and we have a delay, wait
+                            if (batchIndex > 0 && effectiveDelayMinutes > 0)
                             {
-                                // Add small delay to respect rate limits
-                                await Task.Delay(1000);
-
-                                var success = await scopedTwilioService.MakeRoboCallAsync(
-                                    message.RecipientPhone, 
-                                    campaign.VoiceUrl!, 
-                                    message.Id);
-
-                                if (success)
+                                scopedLogger.LogInformation($"Waiting {effectiveDelayMinutes} minutes before processing next batch...");
+                                await Task.Delay(TimeSpan.FromMinutes(effectiveDelayMinutes));
+                            }
+                            
+                            var batch = pendingMessages.Skip(batchIndex).Take(effectiveBatchSize).ToList();
+                            scopedLogger.LogInformation($"Processing batch {(batchIndex / effectiveBatchSize) + 1} with {batch.Count} calls");
+                            
+                            foreach (var message in batch)
+                            {
+                                try
                                 {
-                                    successfulDeliveries++;
-                                    // Update voter campaign tracking statistics
-                                    await UpdateVoterCampaignStatsWithContextAsync(scopedContext, message.VoterId, campaign.Id, campaign.Type);
+                                    // Add small delay to respect rate limits
+                                    await Task.Delay(1000);
+
+                                    var success = await scopedTwilioService.MakeRoboCallAsync(
+                                        message.RecipientPhone, 
+                                        campaign.VoiceUrl!, 
+                                        message.Id);
+
+                                    if (success)
+                                    {
+                                        successfulDeliveries++;
+                                        // Update voter campaign tracking statistics
+                                        await UpdateVoterCampaignStatsWithContextAsync(scopedContext, message.VoterId, campaign.Id, campaign.Type);
+                                    }
+                                    else
+                                        failedDeliveries++;
                                 }
-                                else
+                                catch (Exception ex)
+                                {
+                                    scopedLogger.LogError(ex, $"Error processing message {message.Id}");
                                     failedDeliveries++;
+                                }
                             }
-                            catch (Exception ex)
-                            {
-                                scopedLogger.LogError(ex, $"Error processing message {message.Id}");
-                                failedDeliveries++;
-                            }
+                            
+                            // Update campaign progress after each batch
+                            campaign.SuccessfulDeliveries = successfulDeliveries;
+                            campaign.FailedDeliveries = failedDeliveries;
+                            campaign.PendingDeliveries = pendingMessages.Count - (successfulDeliveries + failedDeliveries);
+                            await scopedContext.SaveChangesAsync();
+                            
+                            scopedLogger.LogInformation($"Batch completed. Total progress: {successfulDeliveries} successful, {failedDeliveries} failed, {campaign.PendingDeliveries} pending");
                         }
                     }
 
@@ -641,7 +667,7 @@ namespace HooverCanvassingApi.Services
             await context.SaveChangesAsync();
         }
 
-        public async Task<bool> RetryFailedMessagesAsync(int campaignId, bool overrideOptIn = false)
+        public async Task<bool> RetryFailedMessagesAsync(int campaignId, bool overrideOptIn = false, int? batchSize = null, int? batchDelayMinutes = null)
         {
             try
             {
@@ -701,12 +727,30 @@ namespace HooverCanvassingApi.Services
                 }
                 else if (campaign.Type == CampaignType.RoboCall)
                 {
-                    // Retry robo calls one by one
-                    foreach (var msg in messagesToRetry)
+                    // Retry robo calls with optional batching
+                    var effectiveBatchSize = batchSize ?? messagesToRetry.Count;
+                    var effectiveDelayMinutes = batchDelayMinutes ?? 0;
+                    
+                    _logger.LogInformation($"Retrying {messagesToRetry.Count} robocalls in batches of {effectiveBatchSize} with {effectiveDelayMinutes} minute delays");
+                    
+                    for (int batchIndex = 0; batchIndex < messagesToRetry.Count; batchIndex += effectiveBatchSize)
                     {
-                        if (!string.IsNullOrEmpty(msg.VoiceUrl))
+                        if (batchIndex > 0 && effectiveDelayMinutes > 0)
                         {
-                            await _twilioService.MakeRoboCallAsync(msg.PhoneNumber, msg.VoiceUrl, msg.CampaignMessageId);
+                            _logger.LogInformation($"Waiting {effectiveDelayMinutes} minutes before retrying next batch...");
+                            await Task.Delay(TimeSpan.FromMinutes(effectiveDelayMinutes));
+                        }
+                        
+                        var batch = messagesToRetry.Skip(batchIndex).Take(effectiveBatchSize).ToList();
+                        _logger.LogInformation($"Retrying batch {(batchIndex / effectiveBatchSize) + 1} with {batch.Count} calls");
+                        
+                        foreach (var msg in batch)
+                        {
+                            if (!string.IsNullOrEmpty(msg.VoiceUrl))
+                            {
+                                await Task.Delay(1000); // Small delay between calls
+                                await _twilioService.MakeRoboCallAsync(msg.PhoneNumber, msg.VoiceUrl, msg.CampaignMessageId);
+                            }
                         }
                     }
                 }

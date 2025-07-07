@@ -198,7 +198,11 @@ namespace HooverCanvassingApi.Controllers
         [Authorize(Roles = "SuperAdmin")]
         public async Task<ActionResult> SendCampaign(int id, SendCampaignRequest request)
         {
-            var success = await _campaignService.SendCampaignAsync(id, request?.OverrideOptIn ?? false);
+            var success = await _campaignService.SendCampaignAsync(
+                id, 
+                request?.OverrideOptIn ?? false,
+                request?.BatchSize,
+                request?.BatchDelayMinutes);
             if (!success)
                 return BadRequest("Campaign cannot be sent");
 
@@ -270,7 +274,11 @@ namespace HooverCanvassingApi.Controllers
         {
             try
             {
-                var success = await _campaignService.RetryFailedMessagesAsync(id, request?.OverrideOptIn ?? false);
+                var success = await _campaignService.RetryFailedMessagesAsync(
+                    id, 
+                    request?.OverrideOptIn ?? false,
+                    request?.BatchSize,
+                    request?.BatchDelayMinutes);
                 if (!success)
                 {
                     return BadRequest(new { error = "Failed to retry messages. Campaign may be sealed or have no failed messages." });
@@ -322,6 +330,8 @@ namespace HooverCanvassingApi.Controllers
     public class SendCampaignRequest
     {
         public bool OverrideOptIn { get; set; }
+        public int? BatchSize { get; set; }
+        public int? BatchDelayMinutes { get; set; }
     }
 
     public class PreviewAudienceRequest
