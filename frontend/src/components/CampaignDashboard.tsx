@@ -367,7 +367,6 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
         ? `${API_BASE_URL}/api/campaigns/${sendDialog.campaignId}/retry-failed`
         : `${API_BASE_URL}/api/campaigns/${sendDialog.campaignId}/send`;
       
-      const campaign = campaigns.find(c => c.id === sendDialog.campaignId);
       const requestBody: any = { overrideOptIn: sendDialog.overrideOptIn };
       
       // Add batch parameters for robocalls

@@ -250,43 +250,37 @@ namespace HooverCanvassingApi.Controllers
                 throw new NotFoundException("Voter", id);
             }
 
-                var voterDto = new VoterDto
-                {
-                    LalVoterId = voter.LalVoterId,
-                    FirstName = voter.FirstName,
-                    MiddleName = voter.MiddleName,
-                    LastName = voter.LastName,
-                    AddressLine = voter.AddressLine,
-                    City = voter.City,
-                    State = voter.State,
-                    Zip = voter.Zip,
-                    Age = voter.Age,
-                    Ethnicity = voter.Ethnicity,
-                    Gender = voter.Gender,
-                    VoteFrequency = voter.VoteFrequency.ToString().ToLower(),
-                    PartyAffiliation = voter.PartyAffiliation,
-                    CellPhone = voter.CellPhone,
-                    Email = voter.Email,
-                    Latitude = voter.Latitude,
-                    Longitude = voter.Longitude,
-                    IsContacted = voter.IsContacted,
-                    LastContactStatus = voter.LastContactStatus?.ToString().ToLower(),
-                    VoterSupport = voter.VoterSupport?.ToString().ToLower(),
-                    Tags = voter.TagAssignments.Select(ta => new TagDto
-                    {
-                        Id = ta.Tag.Id,
-                        TagName = ta.Tag.TagName,
-                        Color = ta.Tag.Color
-                    }).ToList()
-                };
-
-                return Ok(voterDto);
-            }
-            catch (Exception ex)
+            var voterDto = new VoterDto
             {
-                _logger.LogError(ex, "Error retrieving voter {VoterId}", id);
-                return StatusCode(500, new { error = "Failed to retrieve voter" });
-            }
+                LalVoterId = voter.LalVoterId,
+                FirstName = voter.FirstName,
+                MiddleName = voter.MiddleName,
+                LastName = voter.LastName,
+                AddressLine = voter.AddressLine,
+                City = voter.City,
+                State = voter.State,
+                Zip = voter.Zip,
+                Age = voter.Age,
+                Ethnicity = voter.Ethnicity,
+                Gender = voter.Gender,
+                VoteFrequency = voter.VoteFrequency.ToString().ToLower(),
+                PartyAffiliation = voter.PartyAffiliation,
+                CellPhone = voter.CellPhone,
+                Email = voter.Email,
+                Latitude = voter.Latitude,
+                Longitude = voter.Longitude,
+                IsContacted = voter.IsContacted,
+                LastContactStatus = voter.LastContactStatus?.ToString().ToLower(),
+                VoterSupport = voter.VoterSupport?.ToString().ToLower(),
+                Tags = voter.TagAssignments.Select(ta => new TagDto
+                {
+                    Id = ta.Tag.Id,
+                    TagName = ta.Tag.TagName,
+                    Color = ta.Tag.Color
+                }).ToList()
+            };
+
+            return Ok(voterDto);
         }
 
         [HttpGet("nearest")]

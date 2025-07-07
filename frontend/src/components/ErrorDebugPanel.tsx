@@ -201,9 +201,8 @@ const ErrorDebugPanel: React.FC = () => {
                 return (
                   <Paper key={logId} sx={{ mb: 1, p: 1 }}>
                     <ListItem
-                      button
                       onClick={() => toggleExpanded(logId)}
-                      sx={{ p: 1 }}
+                      sx={{ p: 1, cursor: 'pointer' }}
                     >
                       <ListItemIcon>
                         {getIcon(log.severity)}
