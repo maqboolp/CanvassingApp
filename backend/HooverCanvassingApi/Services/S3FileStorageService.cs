@@ -39,8 +39,15 @@ namespace HooverCanvassingApi.Services
         {
             try
             {
-                // Generate unique key
-                var key = $"{_audioPrefix}{Guid.NewGuid()}_{DateTime.UtcNow:yyyyMMddHHmmss}_{fileName}";
+                // Sanitize filename - replace spaces and special characters
+                var sanitizedFileName = System.Text.RegularExpressions.Regex.Replace(
+                    fileName, 
+                    @"[^\w\-_.]+", 
+                    "_"
+                );
+                
+                // Generate unique key with sanitized filename
+                var key = $"{_audioPrefix}{Guid.NewGuid()}_{DateTime.UtcNow:yyyyMMddHHmmss}_{sanitizedFileName}";
                 
                 // Determine content type from file extension
                 var contentType = Path.GetExtension(fileName).ToLower() switch
@@ -116,8 +123,15 @@ namespace HooverCanvassingApi.Services
         {
             try
             {
-                // Generate unique key
-                var key = $"{_photoPrefix}{Guid.NewGuid()}_{DateTime.UtcNow:yyyyMMddHHmmss}_{fileName}";
+                // Sanitize filename - replace spaces and special characters
+                var sanitizedFileName = System.Text.RegularExpressions.Regex.Replace(
+                    fileName, 
+                    @"[^\w\-_.]+", 
+                    "_"
+                );
+                
+                // Generate unique key with sanitized filename
+                var key = $"{_photoPrefix}{Guid.NewGuid()}_{DateTime.UtcNow:yyyyMMddHHmmss}_{sanitizedFileName}";
                 
                 // Determine content type from file extension
                 var contentType = Path.GetExtension(fileName).ToLower() switch

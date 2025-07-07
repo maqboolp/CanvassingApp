@@ -124,15 +124,24 @@ namespace HooverCanvassingApi.Controllers
                 // If audio URL is provided, use that instead of text-to-speech
                 if (!string.IsNullOrEmpty(audioUrl))
                 {
-                    _logger.LogInformation($"Voice response using audio file: {audioUrl}");
+                    _logger.LogInformation($"Voice response using audio file (raw): {audioUrl}");
                     
-                    // URL encode the audio URL if it contains spaces or special characters
-                    if (audioUrl.Contains(" ") || audioUrl.Contains("%20"))
+                    // Parse and properly encode the URL for XML/HTTP usage
+                    // ASP.NET Core automatically decodes query parameters, so we need to re-encode for Twilio
+                    try 
                     {
-                        // If the URL contains spaces, ensure they are properly encoded
                         var uri = new Uri(audioUrl);
-                        audioUrl = uri.AbsoluteUri;
-                        _logger.LogInformation($"Encoded audio URL: {audioUrl}");
+                        // This will properly encode spaces as %20 and other special characters
+                        var properlyEncodedUrl = uri.AbsoluteUri;
+                        _logger.LogInformation($"Properly encoded URL: {properlyEncodedUrl}");
+                        audioUrl = properlyEncodedUrl;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, $"Failed to parse/encode audio URL: {audioUrl}");
+                        // Try basic encoding as fallback
+                        audioUrl = audioUrl.Replace(" ", "%20");
+                        _logger.LogInformation($"Fallback encoded URL: {audioUrl}");
                     }
                     
                     // Add a fallback message in case the audio fails to play

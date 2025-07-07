@@ -35,8 +35,15 @@ namespace HooverCanvassingApi.Services
         {
             try
             {
-                // Generate unique filename
-                var uniqueFileName = $"{Guid.NewGuid()}_{DateTime.UtcNow:yyyyMMddHHmmss}_{fileName}";
+                // Sanitize filename - replace spaces and special characters
+                var sanitizedFileName = System.Text.RegularExpressions.Regex.Replace(
+                    fileName, 
+                    @"[^\w\-_.]+", 
+                    "_"
+                );
+                
+                // Generate unique filename with sanitized name
+                var uniqueFileName = $"{Guid.NewGuid()}_{DateTime.UtcNow:yyyyMMddHHmmss}_{sanitizedFileName}";
                 var filePath = Path.Combine(_uploadPath, uniqueFileName);
 
                 // Save file
@@ -107,8 +114,15 @@ namespace HooverCanvassingApi.Services
                     Directory.CreateDirectory(photoPath);
                 }
 
-                // Generate unique filename
-                var uniqueFileName = $"{Guid.NewGuid()}_{DateTime.UtcNow:yyyyMMddHHmmss}_{fileName}";
+                // Sanitize filename - replace spaces and special characters
+                var sanitizedFileName = System.Text.RegularExpressions.Regex.Replace(
+                    fileName, 
+                    @"[^\w\-_.]+", 
+                    "_"
+                );
+                
+                // Generate unique filename with sanitized name
+                var uniqueFileName = $"{Guid.NewGuid()}_{DateTime.UtcNow:yyyyMMddHHmmss}_{sanitizedFileName}";
                 var filePath = Path.Combine(photoPath, uniqueFileName);
 
                 // Save file
