@@ -126,9 +126,20 @@ namespace HooverCanvassingApi.Controllers
                 {
                     _logger.LogInformation($"Voice response using audio file: {audioUrl}");
                     
+                    // URL encode the audio URL if it contains spaces or special characters
+                    if (audioUrl.Contains(" ") || audioUrl.Contains("%20"))
+                    {
+                        // If the URL contains spaces, ensure they are properly encoded
+                        var uri = new Uri(audioUrl);
+                        audioUrl = uri.AbsoluteUri;
+                        _logger.LogInformation($"Encoded audio URL: {audioUrl}");
+                    }
+                    
+                    // Add a fallback message in case the audio fails to play
                     twiml = $@"<?xml version=""1.0"" encoding=""UTF-8""?>
 <Response>
-    <Play>{System.Security.SecurityElement.Escape(audioUrl)}</Play>
+    <Play loop=""1"">{System.Security.SecurityElement.Escape(audioUrl)}</Play>
+    <Say voice=""alice"">If you did not hear the message, please contact us. Thank you.</Say>
 </Response>";
                 }
                 else
@@ -153,6 +164,8 @@ namespace HooverCanvassingApi.Controllers
                     _logger.LogInformation($"Voice response generated for message: {message}");
                 }
 
+                _logger.LogInformation($"Returning TwiML: {twiml}");
+                
                 return Content(twiml, "application/xml");
             }
             catch (Exception ex)
