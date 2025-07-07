@@ -133,31 +133,10 @@ namespace HooverCanvassingApi.Controllers
                     .OrderByDescending(e => e.Count)
                     .ToListAsync();
 
-                // Religion breakdown (if available)
-                var religionStats = await _context.Voters
-                    .Where(v => v.Religion != null)
-                    .GroupBy(v => v.Religion)
-                    .Select(g => new ReligionStat
-                    {
-                        Religion = g.Key ?? "Unknown",
-                        Count = g.Count(),
-                        Percentage = Math.Round((double)g.Count() / totalVoters * 100, 2)
-                    })
-                    .OrderByDescending(r => r.Count)
-                    .ToListAsync();
-
-                // Income breakdown (if available)
-                var incomeStats = await _context.Voters
-                    .Where(v => v.Income != null)
-                    .GroupBy(v => v.Income)
-                    .Select(g => new IncomeStat
-                    {
-                        Income = g.Key ?? "Unknown",
-                        Count = g.Count(),
-                        Percentage = Math.Round((double)g.Count() / totalVoters * 100, 2)
-                    })
-                    .OrderByDescending(i => i.Count)
-                    .ToListAsync();
+                // Religion and Income properties are ignored in EF configuration
+                // Creating empty lists to maintain API compatibility
+                var religionStats = new List<ReligionStat>();
+                var incomeStats = new List<IncomeStat>();
 
                 // Geographic breakdown by zip code (top 10)
                 var zipCodeStats = await _context.Voters

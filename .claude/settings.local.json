@@ -9,7 +9,9 @@
       "Bash(grep:*)",
       "Bash(npm run type-check:*)",
       "Bash(git commit:*)",
-      "Bash(doctl apps create-deployment:*)"
+      "Bash(doctl apps create-deployment:*)",
+      "Bash(dotnet run)",
+      "Bash(lsof:*)"
     ],
     "deny": []
   }

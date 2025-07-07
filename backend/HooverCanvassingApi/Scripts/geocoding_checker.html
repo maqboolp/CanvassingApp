@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geocoding Checker - Hoover Canvassing</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .controls {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+        .controls input, .controls button {
+            margin: 5px;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .controls button {
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+            border: none;
+        }
+        .controls button:hover {
+            background: #0056b3;
+        }
+        .results {
+            margin-top: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #007bff;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        .suspicious {
+            background-color: #ffeeee !important;
+        }
+        .water-warning {
+            color: #d73502;
+            font-weight: bold;
+        }
+        .map-link {
+            color: #007bff;
+            text-decoration: none;
+        }
+        .map-link:hover {
+            text-decoration: underline;
+        }
+        .fix-button {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .fix-button:hover {
+            background: #218838;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        .summary {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .coordinate-input {
+            width: 100px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Voter Geocoding Checker</h1>
+        
+        <div class="controls">
+            <h3>Search Parameters</h3>
+            <label>API Base URL: <input type="text" id="apiUrl" value="http://localhost:5157/api" style="width: 300px;"></label><br>
+            <label>Authorization Token: <input type="password" id="authToken" placeholder="Bearer token" style="width: 400px;"></label><br><br>
+            
+            <label>Address Pattern: <input type="text" id="addressPattern" value="1112" placeholder="e.g., 1112"></label>
+            <button onclick="checkGeocoding()">Check Geocoding</button>
+            <button onclick="checkWaterBodies()">Check Water Bodies</button>
+            <button onclick="exportResults()">Export Results</button>
+        </div>
+
+        <div id="status"></div>
+        <div id="summary" class="summary" style="display:none;"></div>
+        <div id="results" class="results"></div>
+    </div>
+
+    <script>
+        let currentResults = [];
+
+        function setStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = `status ${type}`;
+            statusDiv.innerHTML = message;
+            statusDiv.style.display = 'block';
+            
+            if (type === 'success') {
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 5000);
+            }
+        }
+
+        async function makeApiCall(endpoint, method = 'GET', body = null) {
+            const apiUrl = document.getElementById('apiUrl').value;
+            const token = document.getElementById('authToken').value;
+            
+            const options = {
+                method: method,
+                headers: {
+                    'Authorization': token.startsWith('Bearer ') ? token : `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            };
+            
+            if (body) {
+                options.body = JSON.stringify(body);
+            }
+            
+            const response = await fetch(`${apiUrl}${endpoint}`, options);
+            
+            if (!response.ok) {
+                throw new Error(`API call failed: ${response.status} ${response.statusText}`);
+            }
+            
+            return await response.json();
+        }
+
+        async function checkGeocoding() {
+            const pattern = document.getElementById('addressPattern').value;
+            
+            try {
+                setStatus('Checking geocoding...', 'info');
+                const data = await makeApiCall(`/voters/check-geocoding?addressPattern=${encodeURIComponent(pattern)}`);
+                
+                currentResults = data.votersChecked || [];
+                displayGeocodingResults(data);
+                setStatus(`Found ${data.totalVotersWithPattern} voters with pattern "${pattern}"`, 'success');
+            } catch (error) {
+                setStatus(`Error: ${error.message}`, 'error');
+                console.error('Error:', error);
+            }
+        }
+
+        async function checkWaterBodies() {
+            try {
+                setStatus('Checking for water body geocoding...', 'info');
+                const data = await makeApiCall('/voters/water-body-check?limit=500');
+                
+                currentResults = data.voters || [];
+                displayWaterBodyResults(data);
+                setStatus(`Checked ${data.totalChecked} voters, found ${data.potentialWaterVoters} potentially in water`, 'success');
+            } catch (error) {
+                setStatus(`Error: ${error.message}`, 'error');
+                console.error('Error:', error);
+            }
+        }
+
+        function displayGeocodingResults(data) {
+            const resultsDiv = document.getElementById('results');
+            const summaryDiv = document.getElementById('summary');
+            
+            // Display summary
+            summaryDiv.innerHTML = `
+                <h3>Summary</h3>
+                <p>Total voters with pattern "${data.searchPattern}": <strong>${data.totalVotersWithPattern}</strong></p>
+                <p>Suspicious coordinates: <strong>${data.suspiciousCount}</strong></p>
+                <p>Total voters in database: ${data.summary.totalInDatabase}</p>
+                <p>With coordinates: ${data.summary.withCoordinates} | Without coordinates: ${data.summary.withoutCoordinates}</p>
+            `;
+            summaryDiv.style.display = 'block';
+            
+            // Display table
+            if (data.votersChecked && data.votersChecked.length > 0) {
+                let html = `
+                    <h3>Voters Found</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Voter ID</th>
+                                <th>Name</th>
+                                <th>Address</th>
+                                <th>Coordinates</th>
+                                <th>Issues</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                
+                data.votersChecked.forEach((voter, index) => {
+                    const rowClass = voter.isSuspicious ? 'suspicious' : '';
+                    const issues = voter.reasons && voter.reasons.length > 0 ? voter.reasons.join('<br>') : 'None';
+                    
+                    html += `
+                        <tr class="${rowClass}">
+                            <td>${voter.lalVoterId}</td>
+                            <td>${voter.fullName}</td>
+                            <td>${voter.fullAddress}</td>
+                            <td>
+                                <input type="number" id="lat-${index}" class="coordinate-input" value="${voter.latitude}" step="0.000001">
+                                <input type="number" id="lon-${index}" class="coordinate-input" value="${voter.longitude}" step="0.000001">
+                            </td>
+                            <td class="${voter.isSuspicious ? 'water-warning' : ''}">${issues}</td>
+                            <td>
+                                <a href="${voter.googleMapsUrl}" target="_blank" class="map-link">View Map</a>
+                                <button class="fix-button" onclick="updateCoordinates('${voter.lalVoterId}', ${index})">Fix</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                html += '</tbody></table>';
+                resultsDiv.innerHTML = html;
+            } else {
+                resultsDiv.innerHTML = '<p>No voters found with the specified pattern.</p>';
+            }
+        }
+
+        function displayWaterBodyResults(data) {
+            const resultsDiv = document.getElementById('results');
+            const summaryDiv = document.getElementById('summary');
+            
+            // Display summary
+            summaryDiv.innerHTML = `
+                <h3>Water Body Check Summary</h3>
+                <p>Total voters checked: <strong>${data.totalChecked}</strong></p>
+                <p>Potential water body locations: <strong>${data.potentialWaterVoters}</strong></p>
+                <p>Water bodies checked: ${data.waterBodyRangesUsed.join(', ')}</p>
+                <p class="water-warning">${data.note}</p>
+            `;
+            summaryDiv.style.display = 'block';
+            
+            // Display table
+            if (data.voters && data.voters.length > 0) {
+                let html = `
+                    <h3>Potential Water Body Voters</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Voter ID</th>
+                                <th>Name</th>
+                                <th>Address</th>
+                                <th>Coordinates</th>
+                                <th>Water Bodies</th>
+                                <th>Warning</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                
+                data.voters.forEach((voter, index) => {
+                    const waterBodies = voter.potentialWaterBodies.join(', ') || 'None';
+                    const indicators = voter.addressIndicators.join(', ') || 'None';
+                    
+                    html += `
+                        <tr class="suspicious">
+                            <td>${voter.lalVoterId}</td>
+                            <td>${voter.fullName}</td>
+                            <td>${voter.fullAddress}<br><small>Keywords: ${indicators}</small></td>
+                            <td>
+                                <input type="number" id="lat-${index}" class="coordinate-input" value="${voter.latitude}" step="0.000001">
+                                <input type="number" id="lon-${index}" class="coordinate-input" value="${voter.longitude}" step="0.000001">
+                            </td>
+                            <td class="water-warning">${waterBodies}</td>
+                            <td class="water-warning">${voter.warning}</td>
+                            <td>
+                                <a href="${voter.googleMapsUrl}" target="_blank" class="map-link">Map</a>
+                                <a href="${voter.streetViewUrl}" target="_blank" class="map-link">Street</a>
+                                <button class="fix-button" onclick="updateCoordinates('${voter.lalVoterId}', ${index})">Fix</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                html += '</tbody></table>';
+                resultsDiv.innerHTML = html;
+            } else {
+                resultsDiv.innerHTML = '<p>No voters found in potential water body locations.</p>';
+            }
+        }
+
+        async function updateCoordinates(voterId, index) {
+            const newLat = parseFloat(document.getElementById(`lat-${index}`).value);
+            const newLon = parseFloat(document.getElementById(`lon-${index}`).value);
+            
+            if (isNaN(newLat) || isNaN(newLon)) {
+                alert('Please enter valid coordinates');
+                return;
+            }
+            
+            try {
+                const result = await makeApiCall(`/voters/${voterId}/coordinates`, 'PUT', {
+                    latitude: newLat,
+                    longitude: newLon
+                });
+                
+                setStatus(`Successfully updated coordinates for voter ${voterId}`, 'success');
+                
+                // Update the display
+                const row = document.querySelector(`#lat-${index}`).closest('tr');
+                row.style.backgroundColor = '#d4edda';
+                setTimeout(() => {
+                    row.style.backgroundColor = '';
+                }, 2000);
+            } catch (error) {
+                setStatus(`Error updating coordinates: ${error.message}`, 'error');
+                console.error('Error:', error);
+            }
+        }
+
+        function exportResults() {
+            if (currentResults.length === 0) {
+                alert('No results to export. Please run a check first.');
+                return;
+            }
+            
+            // Convert results to CSV
+            const headers = ['Voter ID', 'Name', 'Address', 'City', 'State', 'ZIP', 'Latitude', 'Longitude', 'Google Maps URL', 'Issues'];
+            const csvContent = [
+                headers.join(','),
+                ...currentResults.map(voter => [
+                    voter.lalVoterId,
+                    `"${voter.fullName || ''}"`,
+                    `"${voter.addressLine || ''}"`,
+                    voter.city || '',
+                    voter.state || '',
+                    voter.zip || '',
+                    voter.latitude || '',
+                    voter.longitude || '',
+                    voter.googleMapsUrl || '',
+                    `"${(voter.reasons || voter.warning || []).toString()}"`
+                ].join(','))
+            ].join('\n');
+            
+            // Download CSV
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `geocoding_check_${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            
+            setStatus('Results exported successfully', 'success');
+        }
+    </script>
+</body>
+</html>

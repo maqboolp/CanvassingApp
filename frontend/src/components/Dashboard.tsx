@@ -45,12 +45,14 @@ import {
   HowToReg,
   Phone,
   Help,
-  OpenInNew
+  OpenInNew,
+  DirectionsWalk
 } from '@mui/icons-material';
 import { AuthUser, Voter, ContactStatus, VoterSupport } from '../types';
 import VoterList from './VoterList';
 import ContactModal from './ContactModal';
 import VolunteerResourcesSection from './VolunteerResourcesSection';
+import WalkDashboard from './Walk/WalkDashboard';
 import { API_BASE_URL } from '../config';
 import { customerConfig, campaignConfig } from '../config/customerConfig';
 
@@ -910,6 +912,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
           <Tabs value={currentTab} onChange={(e, newValue) => setCurrentTab(newValue)}>
             <Tab label="Voters" />
+            <Tab label="Walk" icon={<DirectionsWalk />} iconPosition="start" />
             <Tab label="Resources" />
           </Tabs>
         </Box>
@@ -919,8 +922,13 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
           <VoterList onContactVoter={handleContactVoter} user={user} />
         </TabPanel>
 
-        {/* Resources Tab */}
+        {/* Walk Tab */}
         <TabPanel value={currentTab} index={1}>
+          <WalkDashboard user={user} />
+        </TabPanel>
+
+        {/* Resources Tab */}
+        <TabPanel value={currentTab} index={2}>
           <Typography variant="h5" gutterBottom>
             Volunteer Resources
           </Typography>

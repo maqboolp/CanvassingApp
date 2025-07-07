@@ -24,6 +24,11 @@ namespace HooverCanvassingApi.Data
         public DbSet<VoiceRecording> VoiceRecordings { get; set; }
         public DbSet<AdditionalResource> AdditionalResources { get; set; }
         public DbSet<AppSetting> AppSettings { get; set; }
+        
+        // Walk feature tables
+        public DbSet<WalkSession> WalkSessions { get; set; }
+        public DbSet<HouseClaim> HouseClaims { get; set; }
+        public DbSet<WalkActivity> WalkActivities { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -32,19 +37,45 @@ namespace HooverCanvassingApi.Data
             // Configure Voter entity
             builder.Entity<Voter>(entity =>
             {
+                entity.ToTable("Voters"); // Explicitly set table name
                 entity.HasKey(v => v.LalVoterId);
-                entity.Property(v => v.FirstName).IsRequired().HasMaxLength(100);
-                entity.Property(v => v.LastName).IsRequired().HasMaxLength(100);
-                entity.Property(v => v.AddressLine).IsRequired().HasMaxLength(500);
-                entity.Property(v => v.City).IsRequired().HasMaxLength(100);
-                entity.Property(v => v.State).IsRequired().HasMaxLength(50);
-                entity.Property(v => v.Zip).IsRequired().HasMaxLength(10);
-                entity.Property(v => v.Gender).IsRequired().HasMaxLength(20);
-                entity.Property(v => v.VoteFrequency).HasConversion<string>();
-                entity.Property(v => v.LastContactStatus).HasConversion<string>();
-                entity.Property(v => v.VoterSupport).HasConversion<string>();
-                entity.Property(v => v.SmsConsentStatus).HasConversion<string>();
-                entity.Property(v => v.SmsOptInMethod).HasConversion<string>();
+                entity.Property(v => v.LalVoterId).HasColumnName("lalvoterid");
+                entity.Property(v => v.FirstName).HasColumnName("firstname").IsRequired().HasMaxLength(100);
+                entity.Property(v => v.LastName).HasColumnName("lastname").IsRequired().HasMaxLength(100);
+                entity.Property(v => v.MiddleName).HasColumnName("middlename");
+                entity.Property(v => v.AddressLine).HasColumnName("addressline").IsRequired().HasMaxLength(500);
+                entity.Property(v => v.City).HasColumnName("city").IsRequired().HasMaxLength(100);
+                entity.Property(v => v.State).HasColumnName("state").IsRequired().HasMaxLength(50);
+                entity.Property(v => v.Zip).HasColumnName("zip").IsRequired().HasMaxLength(10);
+                entity.Property(v => v.Age).HasColumnName("age");
+                entity.Property(v => v.Ethnicity).HasColumnName("ethnicity");
+                entity.Property(v => v.Gender).HasColumnName("gender").IsRequired().HasMaxLength(20);
+                entity.Property(v => v.VoteFrequency).HasColumnName("votefrequency").HasConversion<string>();
+                entity.Property(v => v.CellPhone).HasColumnName("cellphone");
+                entity.Property(v => v.Email).HasColumnName("email");
+                entity.Property(v => v.Latitude).HasColumnName("latitude");
+                entity.Property(v => v.Longitude).HasColumnName("longitude");
+                entity.Property(v => v.IsContacted).HasColumnName("iscontacted");
+                entity.Property(v => v.LastContactStatus).HasColumnName("lastcontactstatus").HasConversion<string>();
+                entity.Property(v => v.LastCallAt).HasColumnName("lastcallat");
+                entity.Property(v => v.CallCount).HasColumnName("callcount");
+                entity.Property(v => v.LastSmsAt).HasColumnName("lastsmsat");
+                entity.Property(v => v.SmsCount).HasColumnName("smscount");
+                entity.Property(v => v.VoterSupport).HasColumnName("votersupport").HasConversion<string>();
+                entity.Property(v => v.PartyAffiliation).HasColumnName("partyaffiliation");
+                // Religion and Income columns don't exist in the database
+                entity.Ignore(v => v.Religion);
+                entity.Ignore(v => v.Income);
+                entity.Property(v => v.LastCampaignId).HasColumnName("lastcampaignid");
+                entity.Property(v => v.LastCallCampaignId).HasColumnName("lastcallcampaignid");
+                entity.Property(v => v.LastSmsCampaignId).HasColumnName("lastsmscampaignid");
+                entity.Property(v => v.LastCampaignContactAt).HasColumnName("lastcampaigncontactat");
+                entity.Property(v => v.TotalCampaignContacts).HasColumnName("totalcampaigncontacts");
+                entity.Property(v => v.SmsConsentStatus).HasColumnName("smsconsentstatus").HasConversion<string>();
+                entity.Property(v => v.SmsOptInAt).HasColumnName("smsoptinat");
+                entity.Property(v => v.SmsOptOutAt).HasColumnName("smsoptoutat");
+                entity.Property(v => v.SmsOptInSource).HasColumnName("smsoptinsource");
+                entity.Property(v => v.SmsOptInMethod).HasColumnName("smsoptinmethod").HasConversion<string>();
                 entity.HasIndex(v => v.Zip);
                 entity.HasIndex(v => v.VoteFrequency);
                 entity.HasIndex(v => v.IsContacted);
@@ -54,6 +85,7 @@ namespace HooverCanvassingApi.Data
             // Configure Volunteer entity
             builder.Entity<Volunteer>(entity =>
             {
+                // AspNetUsers table has PascalCase columns, no need to map
                 entity.Property(v => v.FirstName).IsRequired().HasMaxLength(100);
                 entity.Property(v => v.LastName).IsRequired().HasMaxLength(100);
                 entity.Property(v => v.Role).HasConversion<string>();
@@ -62,8 +94,10 @@ namespace HooverCanvassingApi.Data
             // Configure Contact entity
             builder.Entity<Contact>(entity =>
             {
+                // Contacts table has PascalCase columns, no need to map
                 entity.HasKey(c => c.Id);
                 entity.Property(c => c.Status).HasConversion<string>();
+                entity.Property(c => c.VoterSupport).HasConversion<string>();
                 entity.HasIndex(c => c.Timestamp);
                 entity.HasIndex(c => c.VoterId);
                 entity.HasIndex(c => c.VolunteerId);
@@ -275,6 +309,63 @@ namespace HooverCanvassingApi.Data
                 entity.HasIndex(app => app.Category);
                 entity.HasIndex(app => app.IsPublic);
             });
+
+            // Configure Walk feature entities
+            builder.Entity<WalkSession>(entity =>
+            {
+                entity.HasKey(ws => ws.Id);
+                entity.Property(ws => ws.Status).HasConversion<string>();
+                entity.HasIndex(ws => ws.VolunteerId);
+                entity.HasIndex(ws => ws.Status);
+                entity.HasIndex(ws => ws.StartedAt);
+            });
+
+            builder.Entity<HouseClaim>(entity =>
+            {
+                entity.HasKey(hc => hc.Id);
+                entity.Property(hc => hc.Address).IsRequired().HasMaxLength(200);
+                entity.Property(hc => hc.Status).HasConversion<string>();
+                entity.HasIndex(hc => hc.WalkSessionId);
+                entity.HasIndex(hc => hc.Status);
+                entity.HasIndex(hc => hc.Address);
+                entity.HasIndex(hc => hc.ExpiresAt);
+                entity.HasIndex(hc => new { hc.Latitude, hc.Longitude });
+            });
+
+            builder.Entity<WalkActivity>(entity =>
+            {
+                entity.HasKey(wa => wa.Id);
+                entity.Property(wa => wa.ActivityType).HasConversion<string>();
+                entity.Property(wa => wa.Description).HasMaxLength(500);
+                entity.HasIndex(wa => wa.WalkSessionId);
+                entity.HasIndex(wa => wa.Timestamp);
+                entity.HasIndex(wa => wa.ActivityType);
+            });
+
+            // Configure Walk feature relationships
+            builder.Entity<WalkSession>()
+                .HasOne(ws => ws.Volunteer)
+                .WithMany()
+                .HasForeignKey(ws => ws.VolunteerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<HouseClaim>()
+                .HasOne(hc => hc.WalkSession)
+                .WithMany(ws => ws.HouseClaims)
+                .HasForeignKey(hc => hc.WalkSessionId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<WalkActivity>()
+                .HasOne(wa => wa.WalkSession)
+                .WithMany(ws => ws.Activities)
+                .HasForeignKey(wa => wa.WalkSessionId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<WalkActivity>()
+                .HasOne(wa => wa.HouseClaim)
+                .WithMany()
+                .HasForeignKey(wa => wa.HouseClaimId)
+                .OnDelete(DeleteBehavior.SetNull);
         }
     }
 }

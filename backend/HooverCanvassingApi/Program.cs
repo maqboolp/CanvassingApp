@@ -12,6 +12,7 @@ using HooverCanvassingApi.Services.EmailTemplates;
 using HooverCanvassingApi.Middleware;
 using HooverCanvassingApi.Configuration;
 using HooverCanvassingApi;
+using HooverCanvassingApi.Hubs;
 using Amazon.S3;
 using Amazon;
 
@@ -19,6 +20,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container
 builder.Services.AddControllers();
+builder.Services.AddSignalR();
 
 // Configure request size limits for file uploads
 builder.Services.Configure<IISServerOptions>(options =>
@@ -220,6 +222,24 @@ builder.Services.AddAuthentication(options =>
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret)),
         ClockSkew = TimeSpan.Zero
     };
+    
+    // Add events for SignalR authentication
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+            
+            // If the request is for our hub path
+            var path = context.HttpContext.Request.Path;
+            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+            {
+                // Read the token out of the query string
+                context.Token = accessToken;
+            }
+            return Task.CompletedTask;
+        }
+    };
 });
 
 builder.Services.AddAuthorization();
@@ -232,6 +252,9 @@ builder.Services.AddScoped<IOptInInvitationService, OptInInvitationService>();
 builder.Services.AddScoped<IAudioConversionService, AudioConversionService>();
 builder.Services.AddScoped<CsvStagingService>();
 builder.Services.AddScoped<VoterMappingService>();
+builder.Services.AddScoped<TspSolver>();
+builder.Services.AddScoped<WalkRoutingService>();
+builder.Services.AddScoped<IWalkHubService, WalkHubService>();
 builder.Services.AddSingleton<IAppSettingsService, AppSettingsService>();
 builder.Services.AddMemoryCache();
 
@@ -338,6 +361,7 @@ app.UseMiddleware<ActivityTrackingMiddleware>();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<WalkHub>("/hubs/walk");
 
 // Health check endpoint (public for monitoring)
 app.MapGet("/api/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));

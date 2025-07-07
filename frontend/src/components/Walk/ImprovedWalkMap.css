@@ -1,0 +1,34 @@
+/* Prevent marker jumping on click */
+.cluster-marker {
+  position: absolute !important;
+  will-change: transform;
+  pointer-events: auto !important;
+}
+
+/* Ensure Mapbox marker container doesn't interfere */
+.mapboxgl-marker {
+  will-change: transform;
+}
+
+/* Stabilize marker positioning during interactions */
+.mapboxgl-canvas-container {
+  position: relative;
+}
+
+/* Prevent z-index issues */
+.mapboxgl-popup {
+  z-index: 10;
+}
+
+/* Fix for cluster marker hover states */
+.cluster-marker:hover {
+  z-index: 5;
+}
+
+/* Ensure proper layering */
+.mapboxgl-ctrl-top-left,
+.mapboxgl-ctrl-top-right,
+.mapboxgl-ctrl-bottom-left,
+.mapboxgl-ctrl-bottom-right {
+  z-index: 20;
+}

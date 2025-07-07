@@ -5,6 +5,8 @@
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
+    "@mapbox/mapbox-gl-geocoder": "^5.0.3",
+    "@microsoft/signalr": "^8.0.7",
     "@mui/icons-material": "^7.1.1",
     "@mui/lab": "^7.0.0-beta.13",
     "@mui/material": "^7.1.1",
@@ -15,13 +17,17 @@
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^13.5.0",
     "@types/jest": "^27.5.2",
-    "@types/leaflet": "^1.9.18",
+    "@types/leaflet": "^1.9.19",
+    "@types/leaflet.markercluster": "^1.5.5",
+    "@types/mapbox-gl": "^3.4.1",
     "@types/node": "^16.18.126",
     "@types/react": "^19.1.6",
     "@types/react-dom": "^19.1.6",
     "axios": "^1.9.0",
     "dayjs": "^1.11.13",
     "leaflet": "^1.9.4",
+    "leaflet.markercluster": "^1.5.3",
+    "mapbox-gl": "^3.13.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-qr-code": "^2.0.15",
@@ -57,5 +63,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "@types/mapbox__mapbox-gl-geocoder": "^5.0.0"
   }
 }

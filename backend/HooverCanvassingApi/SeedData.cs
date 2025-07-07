@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using HooverCanvassingApi.Models;
 using HooverCanvassingApi.Data;
+using HooverCanvassingApi.Seeding;
 using Microsoft.EntityFrameworkCore;
 using HooverCanvassingApi.Services;
 
@@ -315,8 +316,11 @@ public static class SeedData
         }
         else
         {
-            Console.WriteLine("Voters already exist, skipping voter creation.");
+            Console.WriteLine("Voters already exist, skipping generic voter creation.");
         }
+
+        // Add Hoover-specific voters for Walk feature testing
+        await HooverVoters.SeedHooverVotersAsync(context);
 
         Console.WriteLine("Seed data initialization completed.");
     }

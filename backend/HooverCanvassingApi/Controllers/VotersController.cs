@@ -532,6 +532,347 @@ namespace HooverCanvassingApi.Controllers
             }
         }
 
+        [HttpGet("check-geocoding")]
+        [Authorize(Roles = "Admin,SuperAdmin")]
+        public async Task<ActionResult> CheckGeocodingAccuracy([FromQuery] string? addressPattern = null)
+        {
+            try
+            {
+                // Default to checking addresses with "1112" if no pattern provided
+                var searchPattern = addressPattern ?? "1112";
+                
+                // Query voters with addresses containing the pattern
+                var votersQuery = _context.Voters
+                    .Where(v => v.AddressLine.Contains(searchPattern) && 
+                               v.Latitude.HasValue && 
+                               v.Longitude.HasValue);
+
+                var voters = await votersQuery
+                    .Select(v => new
+                    {
+                        v.LalVoterId,
+                        v.FirstName,
+                        v.LastName,
+                        v.AddressLine,
+                        v.City,
+                        v.State,
+                        v.Zip,
+                        v.Latitude,
+                        v.Longitude
+                    })
+                    .ToListAsync();
+
+                // Analyze the coordinates for potential water body locations
+                var suspiciousVoters = new List<object>();
+                
+                foreach (var voter in voters)
+                {
+                    // Check if coordinates might be in water bodies
+                    // This is a simplified check - you might want to integrate with a geocoding API
+                    // to verify if the coordinates are actually on land
+                    
+                    // For Alabama (Hoover area), typical residential coordinates would be:
+                    // Latitude: around 33.3-33.5
+                    // Longitude: around -86.7 to -86.9
+                    
+                    // Flag voters with unusual coordinates or those that might be in water
+                    var isSuspicious = false;
+                    var reasons = new List<string>();
+                    
+                    // Check if latitude/longitude are within expected range for Hoover, AL area
+                    if (voter.Latitude < 33.0 || voter.Latitude > 34.0)
+                    {
+                        isSuspicious = true;
+                        reasons.Add($"Latitude {voter.Latitude} is outside expected range for Hoover area (33.0-34.0)");
+                    }
+                    
+                    if (voter.Longitude < -87.5 || voter.Longitude > -86.0)
+                    {
+                        isSuspicious = true;
+                        reasons.Add($"Longitude {voter.Longitude} is outside expected range for Hoover area (-87.5 to -86.0)");
+                    }
+                    
+                    // Check for coordinates that might be default/error values
+                    if (Math.Abs(voter.Latitude.Value) < 1 || Math.Abs(voter.Longitude.Value) < 1)
+                    {
+                        isSuspicious = true;
+                        reasons.Add("Coordinates appear to be near 0,0 which suggests geocoding error");
+                    }
+                    
+                    // Check if coordinates have too many decimal places (might indicate precision issues)
+                    var latDecimals = BitConverter.GetBytes(decimal.GetBits((decimal)voter.Latitude.Value)[3])[2];
+                    var lonDecimals = BitConverter.GetBytes(decimal.GetBits((decimal)voter.Longitude.Value)[3])[2];
+                    
+                    if (latDecimals < 4 || lonDecimals < 4)
+                    {
+                        isSuspicious = true;
+                        reasons.Add($"Low coordinate precision (lat: {latDecimals} decimals, lon: {lonDecimals} decimals)");
+                    }
+                    
+                    // Add to suspicious list if any issues found
+                    if (isSuspicious || addressPattern != null)
+                    {
+                        suspiciousVoters.Add(new
+                        {
+                            voter.LalVoterId,
+                            FullName = $"{voter.FirstName} {voter.LastName}",
+                            voter.AddressLine,
+                            voter.City,
+                            voter.State,
+                            voter.Zip,
+                            voter.Latitude,
+                            voter.Longitude,
+                            GoogleMapsUrl = $"https://www.google.com/maps/search/?api=1&query={voter.Latitude},{voter.Longitude}",
+                            IsSuspicious = isSuspicious,
+                            Reasons = reasons,
+                            FullAddress = $"{voter.AddressLine}, {voter.City}, {voter.State} {voter.Zip}"
+                        });
+                    }
+                }
+                
+                // Get summary statistics
+                var stats = new
+                {
+                    TotalVotersWithPattern = voters.Count,
+                    SuspiciousCount = suspiciousVoters.Count(v => ((dynamic)v).IsSuspicious),
+                    SearchPattern = searchPattern,
+                    VotersChecked = suspiciousVoters,
+                    Summary = new
+                    {
+                        TotalInDatabase = await _context.Voters.CountAsync(),
+                        WithCoordinates = await _context.Voters.CountAsync(v => v.Latitude.HasValue && v.Longitude.HasValue),
+                        WithoutCoordinates = await _context.Voters.CountAsync(v => !v.Latitude.HasValue || !v.Longitude.HasValue)
+                    }
+                };
+                
+                _logger.LogInformation("Geocoding check completed for pattern '{Pattern}'. Found {Total} voters, {Suspicious} suspicious", 
+                    searchPattern, voters.Count, stats.SuspiciousCount);
+                
+                return Ok(stats);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking geocoding accuracy");
+                return StatusCode(500, new { error = "Failed to check geocoding accuracy" });
+            }
+        }
+
+        [HttpGet("water-body-check")]
+        [Authorize(Roles = "Admin,SuperAdmin")]
+        public async Task<ActionResult> CheckWaterBodyGeocoding([FromQuery] int limit = 100)
+        {
+            try
+            {
+                // Known water body areas in the Hoover/Birmingham area
+                // These are approximate coordinate ranges for lakes and rivers
+                var waterBodyRanges = new[]
+                {
+                    new { Name = "Lake Purdy", MinLat = 33.420, MaxLat = 33.460, MinLon = -86.680, MaxLon = -86.620 },
+                    new { Name = "Cahaba River area", MinLat = 33.300, MaxLat = 33.500, MinLon = -86.850, MaxLon = -86.750 },
+                    new { Name = "Black Creek area", MinLat = 33.350, MaxLat = 33.450, MinLon = -86.820, MaxLon = -86.780 }
+                };
+
+                var potentialWaterVoters = new List<object>();
+
+                // Get all voters with coordinates
+                var votersWithCoords = await _context.Voters
+                    .Where(v => v.Latitude.HasValue && v.Longitude.HasValue)
+                    .Select(v => new
+                    {
+                        v.LalVoterId,
+                        v.FirstName,
+                        v.LastName,
+                        v.AddressLine,
+                        v.City,
+                        v.State,
+                        v.Zip,
+                        v.Latitude,
+                        v.Longitude
+                    })
+                    .Take(limit)
+                    .ToListAsync();
+
+                foreach (var voter in votersWithCoords)
+                {
+                    var waterBodyMatches = new List<string>();
+                    
+                    // Check if voter coordinates fall within any water body range
+                    foreach (var waterBody in waterBodyRanges)
+                    {
+                        if (voter.Latitude >= waterBody.MinLat && voter.Latitude <= waterBody.MaxLat &&
+                            voter.Longitude >= waterBody.MinLon && voter.Longitude <= waterBody.MaxLon)
+                        {
+                            waterBodyMatches.Add(waterBody.Name);
+                        }
+                    }
+
+                    // Also check for addresses that commonly get miscoded
+                    var addressIndicators = new[]
+                    {
+                        "1112", "1111", "1113", "1114", "1110",
+                        "Lake", "River", "Creek", "Pond", "Water",
+                        "Bridge", "Dam", "Shore", "Beach", "Marina"
+                    };
+
+                    var addressMatches = addressIndicators
+                        .Where(indicator => voter.AddressLine.Contains(indicator, StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+
+                    if (waterBodyMatches.Any() || addressMatches.Any())
+                    {
+                        potentialWaterVoters.Add(new
+                        {
+                            voter.LalVoterId,
+                            FullName = $"{voter.FirstName} {voter.LastName}",
+                            voter.AddressLine,
+                            voter.City,
+                            voter.State,
+                            voter.Zip,
+                            voter.Latitude,
+                            voter.Longitude,
+                            GoogleMapsUrl = $"https://www.google.com/maps/search/?api=1&query={voter.Latitude},{voter.Longitude}",
+                            StreetViewUrl = $"https://www.google.com/maps/@{voter.Latitude},{voter.Longitude},3a,75y,90t/data=!3m6!1e1!3m4!1s0x0:0x0!2e0!7i16384!8i8192",
+                            PotentialWaterBodies = waterBodyMatches,
+                            AddressIndicators = addressMatches,
+                            FullAddress = $"{voter.AddressLine}, {voter.City}, {voter.State} {voter.Zip}",
+                            Warning = waterBodyMatches.Any() ? "Coordinates fall within known water body area" : "Address contains water-related keywords"
+                        });
+                    }
+                }
+
+                var result = new
+                {
+                    TotalChecked = votersWithCoords.Count,
+                    PotentialWaterVoters = potentialWaterVoters.Count,
+                    Voters = potentialWaterVoters.OrderByDescending(v => ((dynamic)v).PotentialWaterBodies.Count).ToList(),
+                    WaterBodyRangesUsed = waterBodyRanges.Select(w => w.Name).ToList(),
+                    Note = "Review Google Maps links to verify if addresses are actually in water. Some may be waterfront properties."
+                };
+
+                _logger.LogInformation("Water body geocoding check completed. Checked {Total} voters, found {Suspicious} potentially in water", 
+                    votersWithCoords.Count, potentialWaterVoters.Count);
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking water body geocoding");
+                return StatusCode(500, new { error = "Failed to check water body geocoding" });
+            }
+        }
+
+        [HttpPut("{id}/coordinates")]
+        [Authorize(Roles = "Admin,SuperAdmin")]
+        public async Task<IActionResult> UpdateVoterCoordinates(string id, [FromBody] UpdateCoordinatesRequest request)
+        {
+            try
+            {
+                var voter = await _context.Voters.FindAsync(id);
+                if (voter == null)
+                {
+                    return NotFound(new { error = "Voter not found" });
+                }
+
+                var oldLat = voter.Latitude;
+                var oldLon = voter.Longitude;
+
+                voter.Latitude = request.Latitude;
+                voter.Longitude = request.Longitude;
+
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Updated coordinates for voter {VoterId} from ({OldLat},{OldLon}) to ({NewLat},{NewLon}) by user {UserId}", 
+                    id, oldLat, oldLon, request.Latitude, request.Longitude, User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+
+                return Ok(new 
+                { 
+                    message = "Coordinates updated successfully",
+                    oldCoordinates = new { latitude = oldLat, longitude = oldLon },
+                    newCoordinates = new { latitude = request.Latitude, longitude = request.Longitude }
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating coordinates for voter {VoterId}", id);
+                return StatusCode(500, new { error = "Failed to update coordinates" });
+            }
+        }
+
+        [HttpPost("bulk-fix-coordinates")]
+        [Authorize(Roles = "SuperAdmin")]
+        public async Task<IActionResult> BulkFixCoordinates([FromBody] BulkFixCoordinatesRequest request)
+        {
+            try
+            {
+                var results = new List<object>();
+                var successCount = 0;
+                var failureCount = 0;
+
+                foreach (var fix in request.Fixes)
+                {
+                    try
+                    {
+                        var voter = await _context.Voters.FindAsync(fix.LalVoterId);
+                        if (voter != null)
+                        {
+                            var oldLat = voter.Latitude;
+                            var oldLon = voter.Longitude;
+
+                            voter.Latitude = fix.Latitude;
+                            voter.Longitude = fix.Longitude;
+
+                            await _context.SaveChangesAsync();
+                            successCount++;
+
+                            results.Add(new
+                            {
+                                fix.LalVoterId,
+                                Status = "Success",
+                                OldCoordinates = new { latitude = oldLat, longitude = oldLon },
+                                NewCoordinates = new { latitude = fix.Latitude, longitude = fix.Longitude }
+                            });
+
+                            _logger.LogInformation("Bulk update: Fixed coordinates for voter {VoterId}", fix.LalVoterId);
+                        }
+                        else
+                        {
+                            failureCount++;
+                            results.Add(new
+                            {
+                                fix.LalVoterId,
+                                Status = "Failed",
+                                Error = "Voter not found"
+                            });
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        failureCount++;
+                        results.Add(new
+                        {
+                            fix.LalVoterId,
+                            Status = "Failed",
+                            Error = ex.Message
+                        });
+                        _logger.LogError(ex, "Error updating coordinates for voter {VoterId} in bulk operation", fix.LalVoterId);
+                    }
+                }
+
+                return Ok(new
+                {
+                    TotalProcessed = request.Fixes.Count,
+                    SuccessCount = successCount,
+                    FailureCount = failureCount,
+                    Results = results
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in bulk coordinate fix operation");
+                return StatusCode(500, new { error = "Failed to process bulk coordinate fixes" });
+            }
+        }
+
         [HttpPost]
         public async Task<ActionResult<VoterDto>> CreateVoter(CreateVoterRequest request)
         {
@@ -691,5 +1032,23 @@ namespace HooverCanvassingApi.Controllers
         public string? PartyAffiliation { get; set; }
         public string? CellPhone { get; set; }
         public string? Email { get; set; }
+    }
+
+    public class UpdateCoordinatesRequest
+    {
+        public double Latitude { get; set; }
+        public double Longitude { get; set; }
+    }
+
+    public class BulkFixCoordinatesRequest
+    {
+        public List<CoordinateFix> Fixes { get; set; } = new List<CoordinateFix>();
+    }
+
+    public class CoordinateFix
+    {
+        public string LalVoterId { get; set; } = string.Empty;
+        public double Latitude { get; set; }
+        public double Longitude { get; set; }
     }
 }

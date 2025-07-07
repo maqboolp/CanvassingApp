@@ -72,7 +72,8 @@ import {
   TableChart as TableIcon,
   Close as CloseIcon,
   Link as LinkIcon,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  DirectionsWalk
 } from '@mui/icons-material';
 import { AuthUser, Voter, ContactStatus, VoterSupport, VoterTagDetail } from '../types';
 import VoterList from './VoterList';
@@ -84,6 +85,7 @@ import AnalyticsComponent from './Analytics';
 import VolunteerResourcesSection from './VolunteerResourcesSection';
 import AdditionalResourcesManagement from './AdditionalResourcesManagement';
 import AppSettingsManagement from './AppSettingsManagement';
+import WalkDashboard from './Walk/WalkDashboard';
 import { API_BASE_URL } from '../config';
 import { customerConfig } from '../config/customerConfig';
 import { ApiErrorHandler, ApiError } from '../utils/apiErrorHandler';
@@ -136,6 +138,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
       'resources',
       ...(user.role === 'superadmin' ? ['additionalResources'] : []),
       'engagement',
+      'walk',
       ...(user.role === 'superadmin' ? ['settings'] : []),
       ...(user.role === 'admin' || user.role === 'superadmin' ? ['dataManagement'] : [])
     ];
@@ -1434,6 +1437,7 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
               margin: { xs: '0 2px', sm: 0 }
             }}
           />
+          <Tab label="Walk" icon={<DirectionsWalk />} />
           {user.role === 'superadmin' && (
             <Tab label="Settings" icon={<SettingsIcon />} />
           )}
@@ -2463,6 +2467,11 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
               </Button>
             </Box>
           </Box>
+        </TabPanel>
+
+        {/* Walk Tab */}
+        <TabPanel value={currentTab} index={getTabIndex('walk')}>
+          <WalkDashboard user={user} />
         </TabPanel>
 
         {/* Settings Tab */}
