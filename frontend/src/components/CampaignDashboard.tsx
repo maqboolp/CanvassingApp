@@ -1214,30 +1214,34 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
               }
             </Alert>
             
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={sendDialog.overrideOptIn}
-                  onChange={(e) => setSendDialog({ ...sendDialog, overrideOptIn: e.target.checked })}
-                  color="warning"
+            {campaigns.find(c => c.id === sendDialog.campaignId)?.type === 0 && (
+              <>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={sendDialog.overrideOptIn}
+                      onChange={(e) => setSendDialog({ ...sendDialog, overrideOptIn: e.target.checked })}
+                      color="warning"
+                    />
+                  }
+                  label={
+                    <Box>
+                      <Typography variant="body2">
+                        Override opt-in status (Send to all recipients)
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        By default, SMS messages are only sent to opted-in users. Check this to send to all recipients regardless of opt-in status.
+                      </Typography>
+                    </Box>
+                  }
                 />
-              }
-              label={
-                <Box>
-                  <Typography variant="body2">
-                    Override opt-in status (Send to all recipients)
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    By default, SMS messages are only sent to opted-in users. Check this to send to all recipients regardless of opt-in status.
-                  </Typography>
-                </Box>
-              }
-            />
-            
-            {sendDialog.overrideOptIn && (
-              <Alert severity="error">
-                Warning: Sending messages to users who haven't opted in may violate TCPA regulations and could result in legal penalties.
-              </Alert>
+                
+                {sendDialog.overrideOptIn && (
+                  <Alert severity="error">
+                    Warning: Sending messages to users who haven't opted in may violate TCPA regulations and could result in legal penalties.
+                  </Alert>
+                )}
+              </>
             )}
           </Stack>
         </DialogContent>
