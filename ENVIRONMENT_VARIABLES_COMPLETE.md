@@ -41,6 +41,7 @@ EmailSettings__Provider=SendGrid
 EmailSettings__FromEmail=noreply@yourcampaign.com
 EmailSettings__FromName=Your Campaign Name
 Frontend__BaseUrl=https://your-frontend.ondigitalocean.app  # Required for email links
+Backend__BaseUrl=https://your-backend.ondigitalocean.app    # Required for file uploads/robocalls
 ```
 
 ### SMS/Twilio Settings (Required for SMS)

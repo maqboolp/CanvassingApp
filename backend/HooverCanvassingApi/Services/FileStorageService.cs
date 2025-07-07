@@ -45,13 +45,21 @@ namespace HooverCanvassingApi.Services
                     await audioStream.CopyToAsync(fileStream);
                 }
 
-                // Return relative URL
-                var baseUrl = _configuration["Frontend:BaseUrl"] ?? "http://localhost:5000";
-                var relativeUrl = $"/uploads/audio/{uniqueFileName}";
+                // Return absolute URL for Twilio compatibility
+                var baseUrl = _configuration["Backend:BaseUrl"] ?? 
+                              _configuration["Frontend:BaseUrl"] ?? 
+                              $"{_configuration["JwtSettings:Issuer"]}" ??
+                              "http://localhost:5131";
                 
-                _logger.LogInformation("Audio file uploaded successfully: {FileName}", uniqueFileName);
+                // Ensure baseUrl doesn't have trailing slash
+                baseUrl = baseUrl.TrimEnd('/');
                 
-                return relativeUrl;
+                var absoluteUrl = $"{baseUrl}/uploads/audio/{uniqueFileName}";
+                
+                _logger.LogInformation("Audio file uploaded successfully: {FileName}, URL: {Url}", 
+                    uniqueFileName, absoluteUrl);
+                
+                return absoluteUrl;
             }
             catch (Exception ex)
             {
@@ -67,8 +75,9 @@ namespace HooverCanvassingApi.Services
                 if (string.IsNullOrEmpty(fileUrl))
                     return false;
 
-                // Extract filename from URL
-                var fileName = Path.GetFileName(fileUrl);
+                // Extract filename from URL (handle both relative and absolute URLs)
+                var uri = new Uri(fileUrl, UriKind.RelativeOrAbsolute);
+                var fileName = Path.GetFileName(uri.IsAbsoluteUri ? uri.LocalPath : fileUrl);
                 var filePath = Path.Combine(_uploadPath, fileName);
 
                 if (File.Exists(filePath))
@@ -108,11 +117,21 @@ namespace HooverCanvassingApi.Services
                     await photoStream.CopyToAsync(fileStream);
                 }
 
-                // Return relative URL
-                var relativeUrl = $"/uploads/photos/{uniqueFileName}";
+                // Return absolute URL for consistency
+                var baseUrl = _configuration["Backend:BaseUrl"] ?? 
+                              _configuration["Frontend:BaseUrl"] ?? 
+                              $"{_configuration["JwtSettings:Issuer"]}" ??
+                              "http://localhost:5131";
                 
-                _logger.LogInformation("Photo file uploaded successfully: {FileName}", uniqueFileName);
-                return relativeUrl;
+                // Ensure baseUrl doesn't have trailing slash
+                baseUrl = baseUrl.TrimEnd('/');
+                
+                var absoluteUrl = $"{baseUrl}/uploads/photos/{uniqueFileName}";
+                
+                _logger.LogInformation("Photo file uploaded successfully: {FileName}, URL: {Url}", 
+                    uniqueFileName, absoluteUrl);
+                    
+                return absoluteUrl;
             }
             catch (Exception ex)
             {
@@ -128,9 +147,10 @@ namespace HooverCanvassingApi.Services
                 if (string.IsNullOrEmpty(fileUrl))
                     return false;
 
-                // Extract filename from URL
-                var fileName = Path.GetFileName(fileUrl);
+                // Extract filename from URL (handle both relative and absolute URLs)
                 var photoPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "photos");
+                var uri = new Uri(fileUrl, UriKind.RelativeOrAbsolute);
+                var fileName = Path.GetFileName(uri.IsAbsoluteUri ? uri.LocalPath : fileUrl);
                 var filePath = Path.Combine(photoPath, fileName);
 
                 if (File.Exists(filePath))
