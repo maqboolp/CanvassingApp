@@ -40,6 +40,7 @@ SENDGRID_API_KEY=SG.your-sendgrid-api-key
 EmailSettings__Provider=SendGrid
 EmailSettings__FromEmail=noreply@yourcampaign.com
 EmailSettings__FromName=Your Campaign Name
+Frontend__BaseUrl=https://your-frontend.ondigitalocean.app  # Required for email links
 ```
 
 ### SMS/Twilio Settings (Required for SMS)
