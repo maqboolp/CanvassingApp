@@ -1,6 +1,8 @@
 using System.Net;
 using System.Text.Json;
 using HooverCanvassingApi.Models;
+using Npgsql;
+using Microsoft.EntityFrameworkCore;
 
 namespace HooverCanvassingApi.Middleware
 {
@@ -91,6 +93,32 @@ namespace HooverCanvassingApi.Middleware
                     errorResponse.Message = "The operation was cancelled or timed out.";
                     errorResponse.Type = "TimeoutError";
                     _logger.LogWarning("Operation cancelled. CorrelationId: {CorrelationId}", correlationId);
+                    break;
+
+                case DbUpdateException dbEx when dbEx.InnerException is PostgresException pgEx:
+                    // Handle specific PostgreSQL errors
+                    if (pgEx.SqlState == "53300") // too_many_connections
+                    {
+                        response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
+                        errorResponse.Message = "The database is temporarily unavailable due to high load. Please try again in a few moments.";
+                        errorResponse.Type = "DatabaseConnectionError";
+                        _logger.LogError(pgEx, "Database connection pool exhausted. CorrelationId: {CorrelationId}", correlationId);
+                    }
+                    else
+                    {
+                        response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                        errorResponse.Message = "A database error occurred. Please try again later.";
+                        errorResponse.Type = "DatabaseError";
+                        _logger.LogError(dbEx, "Database error occurred. SqlState: {SqlState}, CorrelationId: {CorrelationId}", 
+                            pgEx.SqlState, correlationId);
+                    }
+                    break;
+
+                case InvalidOperationException invEx when invEx.Message.Contains("transient failure"):
+                    response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
+                    errorResponse.Message = "The service is temporarily unavailable. Please try again in a few moments.";
+                    errorResponse.Type = "TransientError";
+                    _logger.LogError(invEx, "Transient failure occurred. CorrelationId: {CorrelationId}", correlationId);
                     break;
 
                 default:

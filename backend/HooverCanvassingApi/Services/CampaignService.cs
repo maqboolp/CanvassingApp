@@ -11,17 +11,20 @@ namespace HooverCanvassingApi.Services
         private readonly ITwilioService _twilioService;
         private readonly ILogger<CampaignService> _logger;
         private readonly IServiceScopeFactory _serviceScopeFactory;
+        private readonly IBackgroundServiceMonitor _backgroundMonitor;
 
         public CampaignService(
             ApplicationDbContext context,
             ITwilioService twilioService,
             ILogger<CampaignService> logger,
-            IServiceScopeFactory serviceScopeFactory)
+            IServiceScopeFactory serviceScopeFactory,
+            IBackgroundServiceMonitor backgroundMonitor)
         {
             _context = context;
             _twilioService = twilioService;
             _logger = logger;
             _serviceScopeFactory = serviceScopeFactory;
+            _backgroundMonitor = backgroundMonitor;
         }
 
         public async Task<Campaign> CreateCampaignAsync(Campaign campaign)
@@ -494,155 +497,218 @@ namespace HooverCanvassingApi.Services
 
         private async Task ProcessCampaignMessagesWithScopeAsync(int campaignId, bool overrideOptIn = false, int? batchSize = null, int? batchDelayMinutes = null)
         {
+            var operationName = $"Campaign_{campaignId}_Processing";
             _logger.LogInformation($"ProcessCampaignMessagesWithScopeAsync called for campaign {campaignId} with overrideOptIn={overrideOptIn}");
             
             try
             {
-                _logger.LogInformation($"Creating scope for campaign {campaignId}");
-                using var scope = _serviceScopeFactory.CreateScope();
-                _logger.LogInformation($"Scope created, getting services for campaign {campaignId}");
+                _backgroundMonitor.StartOperation(operationName, $"Processing campaign {campaignId}");
                 
-                var scopedContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                var scopedTwilioService = scope.ServiceProvider.GetRequiredService<ITwilioService>();
-                var scopedLogger = scope.ServiceProvider.GetRequiredService<ILogger<CampaignService>>();
-
-                scopedLogger.LogInformation($"Scoped services created for campaign {campaignId}");
-
-                try
+                // Get initial campaign data and pending messages
+                List<int> pendingMessageIds;
+                CampaignType campaignType;
+                string? campaignMessage = null;
+                string? voiceUrl = null;
+                
+                using (var scope = _serviceScopeFactory.CreateScope())
                 {
-                    var campaign = await scopedContext.Campaigns
+                    var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                    var campaign = await context.Campaigns
                         .Include(c => c.Messages)
-                        .ThenInclude(m => m.Voter)
                         .FirstOrDefaultAsync(c => c.Id == campaignId);
 
                     if (campaign == null)
+                    {
+                        _logger.LogWarning($"Campaign {campaignId} not found");
                         return;
+                    }
 
-                    var pendingMessages = campaign.Messages
+                    // Store campaign data to avoid keeping context alive
+                    campaignType = campaign.Type;
+                    campaignMessage = campaign.Message;
+                    voiceUrl = campaign.VoiceUrl;
+                    pendingMessageIds = campaign.Messages
                         .Where(m => m.Status == MessageStatus.Pending)
                         .OrderBy(m => m.Id)
+                        .Select(m => m.Id)
                         .ToList();
+                }
 
-                    var successfulDeliveries = 0;
-                    var failedDeliveries = 0;
+                var totalMessages = pendingMessageIds.Count;
+                var successfulDeliveries = 0;
+                var failedDeliveries = 0;
 
-                    if (campaign.Type == CampaignType.SMS)
+                if (campaignType == CampaignType.SMS)
+                {
+                    await ProcessSmsCampaignAsync(campaignId, pendingMessageIds, campaignMessage!, overrideOptIn);
+                }
+                else
+                {
+                    // Process robo calls with batching
+                    var effectiveBatchSize = batchSize ?? pendingMessageIds.Count;
+                    var effectiveDelayMinutes = batchDelayMinutes ?? 0;
+                    
+                    _logger.LogInformation($"Processing {totalMessages} robocalls in batches of {effectiveBatchSize} with {effectiveDelayMinutes} minute delays");
+                    
+                    for (int batchIndex = 0; batchIndex < pendingMessageIds.Count; batchIndex += effectiveBatchSize)
                     {
-                        // Use bulk SMS for better performance
-                        var smsMessages = pendingMessages
-                            .Select(m => (m.RecipientPhone, campaign.Message, m.Id))
-                            .ToList();
-
-                        var results = await scopedTwilioService.SendBulkSmsAsync(smsMessages, overrideOptIn);
-                        
-                        // Process results and update voter stats
-                        for (int i = 0; i < results.Count; i++)
+                        // If this is not the first batch and we have a delay, wait
+                        if (batchIndex > 0 && effectiveDelayMinutes > 0)
                         {
-                            if (results[i])
-                            {
-                                successfulDeliveries++;
-                                // Update voter campaign tracking statistics
-                                await UpdateVoterCampaignStatsWithContextAsync(scopedContext, pendingMessages[i].VoterId, campaign.Id, campaign.Type);
-                            }
-                            else
-                            {
-                                failedDeliveries++;
-                            }
+                            _logger.LogInformation($"Waiting {effectiveDelayMinutes} minutes before processing next batch...");
+                            await Task.Delay(TimeSpan.FromMinutes(effectiveDelayMinutes));
+                        }
+                        
+                        var batchMessageIds = pendingMessageIds
+                            .Skip(batchIndex)
+                            .Take(effectiveBatchSize)
+                            .ToList();
+                            
+                        var batchNumber = (batchIndex / effectiveBatchSize) + 1;
+                        _logger.LogInformation($"Processing batch {batchNumber} with {batchMessageIds.Count} calls");
+                        
+                        // Process batch with its own database context
+                        var (batchSuccesses, batchFailures) = await ProcessRobocallBatchAsync(
+                            campaignId, batchMessageIds, voiceUrl!, overrideOptIn, campaignType);
+                            
+                        successfulDeliveries += batchSuccesses;
+                        failedDeliveries += batchFailures;
+                        
+                        _logger.LogInformation($"Batch {batchNumber} completed. Total progress: {successfulDeliveries} successful, {failedDeliveries} failed");
+                    }
+                }
+
+                // Final update of campaign status
+                await UpdateCampaignFinalStatusAsync(campaignId, successfulDeliveries, failedDeliveries);
+                
+                _backgroundMonitor.CompleteOperation(operationName);
+                _logger.LogInformation($"Campaign {campaignId} completed: {successfulDeliveries} successful, {failedDeliveries} failed");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error processing campaign {campaignId}");
+                _backgroundMonitor.FailOperation(operationName, ex.Message);
+                
+                // Mark campaign as failed
+                await MarkCampaignAsFailedAsync(campaignId);
+            }
+        }
+        
+        private async Task<(int successes, int failures)> ProcessRobocallBatchAsync(
+            int campaignId, List<int> messageIds, string voiceUrl, bool overrideOptIn, CampaignType campaignType)
+        {
+            var successes = 0;
+            var failures = 0;
+            
+            using var scope = _serviceScopeFactory.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var twilioService = scope.ServiceProvider.GetRequiredService<ITwilioService>();
+            var logger = scope.ServiceProvider.GetRequiredService<ILogger<CampaignService>>();
+            
+            // Load messages for this batch
+            var messages = await context.CampaignMessages
+                .Include(m => m.Voter)
+                .Where(m => messageIds.Contains(m.Id))
+                .ToListAsync();
+                
+            foreach (var message in messages)
+            {
+                try
+                {
+                    // Add small delay to respect rate limits
+                    await Task.Delay(1000);
+
+                    var success = await twilioService.MakeRoboCallAsync(
+                        message.RecipientPhone, 
+                        voiceUrl, 
+                        message.Id);
+
+                    if (success)
+                    {
+                        successes++;
+                        message.Status = MessageStatus.Sent;
+                        message.SentAt = DateTime.UtcNow;
+                        
+                        // Update voter stats
+                        if (message.Voter != null)
+                        {
+                            UpdateVoterCampaignStats(message.Voter, campaignId, campaignType);
                         }
                     }
                     else
                     {
-                        // Process robo calls with optional batching
-                        var effectiveBatchSize = batchSize ?? pendingMessages.Count; // Default to all messages if no batch size
-                        var effectiveDelayMinutes = batchDelayMinutes ?? 0; // Default to no delay if not specified
-                        
-                        scopedLogger.LogInformation($"Processing {pendingMessages.Count} robocalls in batches of {effectiveBatchSize} with {effectiveDelayMinutes} minute delays");
-                        
-                        for (int batchIndex = 0; batchIndex < pendingMessages.Count; batchIndex += effectiveBatchSize)
-                        {
-                            // If this is not the first batch and we have a delay, wait
-                            if (batchIndex > 0 && effectiveDelayMinutes > 0)
-                            {
-                                scopedLogger.LogInformation($"Waiting {effectiveDelayMinutes} minutes before processing next batch...");
-                                await Task.Delay(TimeSpan.FromMinutes(effectiveDelayMinutes));
-                            }
-                            
-                            var batch = pendingMessages.Skip(batchIndex).Take(effectiveBatchSize).ToList();
-                            scopedLogger.LogInformation($"Processing batch {(batchIndex / effectiveBatchSize) + 1} with {batch.Count} calls");
-                            
-                            foreach (var message in batch)
-                            {
-                                try
-                                {
-                                    // Add small delay to respect rate limits
-                                    await Task.Delay(1000);
-
-                                    var success = await scopedTwilioService.MakeRoboCallAsync(
-                                        message.RecipientPhone, 
-                                        campaign.VoiceUrl!, 
-                                        message.Id);
-
-                                    if (success)
-                                    {
-                                        successfulDeliveries++;
-                                        // Update voter campaign tracking statistics
-                                        await UpdateVoterCampaignStatsWithContextAsync(scopedContext, message.VoterId, campaign.Id, campaign.Type);
-                                    }
-                                    else
-                                        failedDeliveries++;
-                                }
-                                catch (Exception ex)
-                                {
-                                    scopedLogger.LogError(ex, $"Error processing message {message.Id}");
-                                    failedDeliveries++;
-                                }
-                            }
-                            
-                            // Update campaign progress after each batch
-                            campaign.SuccessfulDeliveries = successfulDeliveries;
-                            campaign.FailedDeliveries = failedDeliveries;
-                            campaign.PendingDeliveries = pendingMessages.Count - (successfulDeliveries + failedDeliveries);
-                            await scopedContext.SaveChangesAsync();
-                            
-                            scopedLogger.LogInformation($"Batch completed. Total progress: {successfulDeliveries} successful, {failedDeliveries} failed, {campaign.PendingDeliveries} pending");
-                        }
+                        failures++;
+                        message.Status = MessageStatus.Failed;
                     }
-
-                    // Update campaign status
-                    campaign.Status = CampaignStatus.Completed;
-                    campaign.SuccessfulDeliveries = successfulDeliveries;
-                    campaign.FailedDeliveries = failedDeliveries;
-                    campaign.PendingDeliveries = 0;
-
-                    await scopedContext.SaveChangesAsync();
-
-                    scopedLogger.LogInformation($"Campaign {campaignId} completed: {successfulDeliveries} successful, {failedDeliveries} failed");
                 }
                 catch (Exception ex)
                 {
-                    scopedLogger.LogError(ex, $"Error processing campaign {campaignId}");
-                    
-                    // Mark campaign as failed
-                    var campaign = await scopedContext.Campaigns.FindAsync(campaignId);
-                    if (campaign != null)
-                    {
-                        campaign.Status = CampaignStatus.Failed;
-                        await scopedContext.SaveChangesAsync();
-                    }
+                    logger.LogError(ex, $"Error processing message {message.Id}");
+                    failures++;
+                    message.Status = MessageStatus.Failed;
+                    message.ErrorMessage = ex.Message;
                 }
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error creating scope for campaign {campaignId}");
-            }
+            
+            // Save all changes for this batch
+            await context.SaveChangesAsync();
+            
+            // Update campaign progress
+            await UpdateCampaignProgressAsync(campaignId, successes, failures);
+            
+            return (successes, failures);
         }
-
-        private async Task UpdateVoterCampaignStatsWithContextAsync(ApplicationDbContext context, string voterId, int campaignId, CampaignType campaignType)
+        
+        private async Task ProcessSmsCampaignAsync(int campaignId, List<int> messageIds, string campaignMessage, bool overrideOptIn)
         {
-            var voter = await context.Voters.FindAsync(voterId);
-            if (voter == null)
-                return;
+            using var scope = _serviceScopeFactory.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var twilioService = scope.ServiceProvider.GetRequiredService<ITwilioService>();
+            
+            // Load all messages
+            var messages = await context.CampaignMessages
+                .Include(m => m.Voter)
+                .Where(m => messageIds.Contains(m.Id))
+                .ToListAsync();
+                
+            // Prepare SMS batch
+            var smsMessages = messages
+                .Select(m => (m.RecipientPhone, campaignMessage, m.Id))
+                .ToList();
 
+            var results = await twilioService.SendBulkSmsAsync(smsMessages, overrideOptIn);
+            
+            var successes = 0;
+            var failures = 0;
+            
+            // Process results and update voter stats
+            for (int i = 0; i < results.Count; i++)
+            {
+                if (results[i])
+                {
+                    successes++;
+                    messages[i].Status = MessageStatus.Sent;
+                    messages[i].SentAt = DateTime.UtcNow;
+                    
+                    // Update voter stats
+                    if (messages[i].Voter != null)
+                    {
+                        UpdateVoterCampaignStats(messages[i].Voter, campaignId, CampaignType.SMS);
+                    }
+                }
+                else
+                {
+                    failures++;
+                    messages[i].Status = MessageStatus.Failed;
+                }
+            }
+            
+            await context.SaveChangesAsync();
+            await UpdateCampaignFinalStatusAsync(campaignId, successes, failures);
+        }
+        
+        private void UpdateVoterCampaignStats(Voter voter, int campaignId, CampaignType campaignType)
+        {
             var now = DateTime.UtcNow;
             
             // Update general campaign contact tracking
@@ -663,9 +729,55 @@ namespace HooverCanvassingApi.Services
                 voter.LastCallCampaignId = campaignId;
                 voter.CallCount++;
             }
-
-            await context.SaveChangesAsync();
         }
+        
+        private async Task UpdateCampaignProgressAsync(int campaignId, int additionalSuccesses, int additionalFailures)
+        {
+            using var scope = _serviceScopeFactory.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            
+            var campaign = await context.Campaigns.FindAsync(campaignId);
+            if (campaign != null)
+            {
+                campaign.SuccessfulDeliveries += additionalSuccesses;
+                campaign.FailedDeliveries += additionalFailures;
+                campaign.PendingDeliveries = Math.Max(0, campaign.TotalRecipients - campaign.SuccessfulDeliveries - campaign.FailedDeliveries);
+                
+                await context.SaveChangesAsync();
+            }
+        }
+        
+        private async Task UpdateCampaignFinalStatusAsync(int campaignId, int totalSuccesses, int totalFailures)
+        {
+            using var scope = _serviceScopeFactory.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            
+            var campaign = await context.Campaigns.FindAsync(campaignId);
+            if (campaign != null)
+            {
+                campaign.Status = CampaignStatus.Completed;
+                campaign.SuccessfulDeliveries = totalSuccesses;
+                campaign.FailedDeliveries = totalFailures;
+                campaign.PendingDeliveries = 0;
+                campaign.SentAt = DateTime.UtcNow;
+                
+                await context.SaveChangesAsync();
+            }
+        }
+        
+        private async Task MarkCampaignAsFailedAsync(int campaignId)
+        {
+            using var scope = _serviceScopeFactory.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            
+            var campaign = await context.Campaigns.FindAsync(campaignId);
+            if (campaign != null)
+            {
+                campaign.Status = CampaignStatus.Failed;
+                await context.SaveChangesAsync();
+            }
+        }
+
 
         public async Task<bool> RetryFailedMessagesAsync(int campaignId, bool overrideOptIn = false, int? batchSize = null, int? batchDelayMinutes = null)
         {

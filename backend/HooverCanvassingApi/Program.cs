@@ -171,15 +171,50 @@ if (string.IsNullOrEmpty(connectionString))
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
-    options.UseNpgsql(connectionString, npgsqlOptions =>
+    // Add connection pooling parameters to the connection string
+    var enhancedConnectionString = connectionString;
+    if (!string.IsNullOrEmpty(enhancedConnectionString))
+    {
+        // Add pooling parameters if not already present
+        if (!enhancedConnectionString.Contains("Pooling="))
+            enhancedConnectionString += ";Pooling=true";
+        if (!enhancedConnectionString.Contains("Maximum Pool Size="))
+            enhancedConnectionString += ";Maximum Pool Size=20";
+        if (!enhancedConnectionString.Contains("Minimum Pool Size="))
+            enhancedConnectionString += ";Minimum Pool Size=5";
+        if (!enhancedConnectionString.Contains("Connection Lifetime="))
+            enhancedConnectionString += ";Connection Lifetime=300"; // 5 minutes
+        if (!enhancedConnectionString.Contains("Connection Idle Lifetime="))
+            enhancedConnectionString += ";Connection Idle Lifetime=60"; // 1 minute
+        if (!enhancedConnectionString.Contains("Timeout="))
+            enhancedConnectionString += ";Timeout=30"; // 30 seconds command timeout
+    }
+    
+    options.UseNpgsql(enhancedConnectionString, npgsqlOptions =>
     {
         if (builder.Environment.IsProduction())
         {
             // Enforce SSL in production
             npgsqlOptions.RemoteCertificateValidationCallback((sender, certificate, chain, errors) => true);
         }
+        
+        // Add resilience settings
+        npgsqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 3,
+            maxRetryDelay: TimeSpan.FromSeconds(5),
+            errorCodesToAdd: null);
+            
+        // Set command timeout
+        npgsqlOptions.CommandTimeout(30);
     });
-});
+    
+    // Enable service provider validation in development
+    if (builder.Environment.IsDevelopment())
+    {
+        options.EnableSensitiveDataLogging();
+        options.EnableDetailedErrors();
+    }
+}, ServiceLifetime.Scoped);
 
 // Configure Identity
 builder.Services.AddIdentity<Volunteer, IdentityRole>(options =>
@@ -267,11 +302,18 @@ else
     builder.Services.AddScoped<IFileStorageService, FileStorageService>();
 }
 
+// Add background service monitoring
+builder.Services.AddSingleton<IBackgroundServiceMonitor, BackgroundServiceMonitor>();
+
 // Add audio cleanup service (runs in background)
 builder.Services.AddHostedService<AudioCleanupService>();
 
 builder.Services.AddHttpClient();
 builder.Services.AddHttpClient<VoterImportService>();
+
+// Add health checks
+builder.Services.AddHealthChecks()
+    .AddCheck<DatabaseHealthCheckService>("database", tags: new[] { "db", "sql" });
 
 // Configure Email Service
 builder.Services.Configure<EmailSettings>(options =>
@@ -344,8 +386,44 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-// Health check endpoint (public for monitoring)
-app.MapGet("/api/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));
+// Map health check endpoints
+app.MapHealthChecks("/api/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json";
+        var response = new
+        {
+            status = report.Status.ToString(),
+            checks = report.Entries.Select(x => new
+            {
+                name = x.Key,
+                status = x.Value.Status.ToString(),
+                description = x.Value.Description,
+                data = x.Value.Data,
+                duration = x.Value.Duration.TotalMilliseconds
+            }),
+            totalDuration = report.TotalDuration.TotalMilliseconds,
+            timestamp = DateTime.UtcNow
+        };
+        await context.Response.WriteAsync(System.Text.Json.JsonSerializer.Serialize(response));
+    }
+});
+
+// Simple health check endpoint (public for monitoring)
+app.MapGet("/api/health/simple", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));
+
+// Background operations monitoring endpoint (admin only)
+app.MapGet("/api/admin/background-operations", (IBackgroundServiceMonitor monitor) =>
+{
+    var operations = monitor.GetActiveOperations();
+    return Results.Ok(new 
+    { 
+        activeOperations = operations.Values.OrderByDescending(o => o.StartTime),
+        count = operations.Count,
+        timestamp = DateTime.UtcNow
+    });
+}).RequireAuthorization(policy => policy.RequireRole("Admin", "SuperAdmin"));
 
 // Debug endpoint to list all routes (SuperAdmin only)
 app.MapGet("/api/debug/routes", (IServiceProvider services) =>

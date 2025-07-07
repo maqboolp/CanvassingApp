@@ -35,49 +35,74 @@ namespace HooverCanvassingApi.Services
 
         private async Task CleanupOldAudioFiles()
         {
-            using var scope = _serviceProvider.CreateScope();
-            var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            var fileStorageService = scope.ServiceProvider.GetRequiredService<IFileStorageService>();
-
             _logger.LogInformation("Starting audio file cleanup process");
 
-            // Find contacts older than retention period with audio files
+            // First, get the list of contact IDs to clean up
+            List<string> contactIdsToClean;
             var cutoffDate = DateTime.UtcNow.AddDays(-_retentionDays);
-            var oldContactsWithAudio = await dbContext.Contacts
-                .Where(c => c.Timestamp < cutoffDate && c.AudioFileUrl != null)
-                .ToListAsync();
+            
+            using (var scope = _serviceProvider.CreateScope())
+            {
+                var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                
+                contactIdsToClean = await dbContext.Contacts
+                    .Where(c => c.Timestamp < cutoffDate && c.AudioFileUrl != null)
+                    .Select(c => c.Id)
+                    .ToListAsync();
+            }
 
-            _logger.LogInformation("Found {Count} old contacts with audio files to clean up", oldContactsWithAudio.Count);
+            _logger.LogInformation("Found {Count} old contacts with audio files to clean up", contactIdsToClean.Count);
 
             var deletedCount = 0;
-            foreach (var contact in oldContactsWithAudio)
+            var batchSize = 50; // Process in batches to avoid long-lived connections
+            
+            for (int i = 0; i < contactIdsToClean.Count; i += batchSize)
             {
-                try
+                var batchIds = contactIdsToClean.Skip(i).Take(batchSize).ToList();
+                
+                using (var scope = _serviceProvider.CreateScope())
                 {
-                    // Delete the audio file
-                    if (!string.IsNullOrEmpty(contact.AudioFileUrl))
+                    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                    var fileStorageService = scope.ServiceProvider.GetRequiredService<IFileStorageService>();
+                    
+                    var contacts = await dbContext.Contacts
+                        .Where(c => batchIds.Contains(c.Id))
+                        .ToListAsync();
+                    
+                    foreach (var contact in contacts)
                     {
-                        var deleted = await fileStorageService.DeleteAudioAsync(contact.AudioFileUrl);
-                        if (deleted)
+                        try
                         {
-                            // Clear the audio fields from the contact
-                            contact.AudioFileUrl = null;
-                            contact.AudioDurationSeconds = null;
-                            deletedCount++;
+                            // Delete the audio file
+                            if (!string.IsNullOrEmpty(contact.AudioFileUrl))
+                            {
+                                var deleted = await fileStorageService.DeleteAudioAsync(contact.AudioFileUrl);
+                                if (deleted)
+                                {
+                                    // Clear the audio fields from the contact
+                                    contact.AudioFileUrl = null;
+                                    contact.AudioDurationSeconds = null;
+                                    deletedCount++;
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Error deleting audio file for contact {ContactId}", contact.Id);
                         }
                     }
+                    
+                    await dbContext.SaveChangesAsync();
                 }
-                catch (Exception ex)
+                
+                // Small delay between batches to avoid overwhelming the system
+                if (i + batchSize < contactIdsToClean.Count)
                 {
-                    _logger.LogError(ex, "Error deleting audio file for contact {ContactId}", contact.Id);
+                    await Task.Delay(100);
                 }
             }
 
-            if (deletedCount > 0)
-            {
-                await dbContext.SaveChangesAsync();
-                _logger.LogInformation("Cleaned up {Count} old audio files", deletedCount);
-            }
+            _logger.LogInformation("Cleaned up {Count} old audio files", deletedCount);
         }
     }
 }
