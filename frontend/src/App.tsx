@@ -15,6 +15,10 @@ import SelfRegistration from './components/SelfRegistration';
 import OptInForm from './components/OptInForm';
 import PrivacyPolicy from './components/PrivacyPolicy';
 import TermsOfService from './components/TermsOfService';
+import ErrorBoundary from './components/ErrorBoundary';
+import ErrorNotification from './components/ErrorNotification';
+import ErrorDebugPanel from './components/ErrorDebugPanel';
+import { errorLoggingService } from './services/errorLoggingService';
 import { customerConfig } from './config/customerConfig';
 
 // Create Material-UI theme matching tanveer4hoover.com
@@ -120,6 +124,7 @@ function App() {
     const currentUser = authService.getCurrentUser();
     if (currentUser) {
       setUser(currentUser);
+      errorLoggingService.setUserId(currentUser.id);
     }
     setLoading(false);
   }, []);
@@ -131,6 +136,7 @@ function App() {
     try {
       const user = await authService.login(credentials);
       setUser(user);
+      errorLoggingService.setUserId(user.id);
     } catch (error) {
       setLoginError(error instanceof Error ? error.message : 'Login failed');
     } finally {
@@ -141,6 +147,7 @@ function App() {
   const handleLogout = () => {
     authService.logout();
     setUser(null);
+    errorLoggingService.setUserId(undefined);
   };
 
   // Show loading spinner while checking authentication
@@ -167,8 +174,11 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Router>
-        <Routes>
+      <ErrorBoundary>
+        <ErrorNotification />
+        <ErrorDebugPanel />
+        <Router>
+          <Routes>
           {/* Public routes */}
           <Route
             path="/login"
@@ -284,6 +294,7 @@ function App() {
           />
         </Routes>
       </Router>
+      </ErrorBoundary>
     </ThemeProvider>
   );
 }

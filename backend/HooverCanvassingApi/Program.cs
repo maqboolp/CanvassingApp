@@ -12,13 +12,17 @@ using HooverCanvassingApi.Services.EmailTemplates;
 using HooverCanvassingApi.Middleware;
 using HooverCanvassingApi.Configuration;
 using HooverCanvassingApi;
+using HooverCanvassingApi.Filters;
 using Amazon.S3;
 using Amazon;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container
-builder.Services.AddControllers();
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add<ValidationFilter>();
+});
 
 // Configure request size limits for file uploads
 builder.Services.Configure<IISServerOptions>(options =>
@@ -317,6 +321,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// Add global exception handling middleware (must be early in pipeline)
+app.UseMiddleware<GlobalExceptionMiddleware>();
 
 // Serve static files (for uploaded audio)
 app.UseStaticFiles();

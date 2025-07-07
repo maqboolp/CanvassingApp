@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using HooverCanvassingApi.Data;
 using HooverCanvassingApi.Models;
+using HooverCanvassingApi.Middleware;
 using System.Security.Claims;
 using System.Linq;
 
@@ -230,21 +231,24 @@ namespace HooverCanvassingApi.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<VoterDto>> GetVoter(string id)
         {
-            try
+            var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value;
+
+            if (string.IsNullOrEmpty(currentUserId))
             {
-                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                var currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value;
+                throw new UnauthorizedException("User not authenticated");
+            }
 
-                var voter = await _context.Voters
-                    .Include(v => v.Contacts.OrderByDescending(c => c.Timestamp))
-                    .Include(v => v.TagAssignments)
-                        .ThenInclude(ta => ta.Tag)
-                    .FirstOrDefaultAsync(v => v.LalVoterId == id);
+            var voter = await _context.Voters
+                .Include(v => v.Contacts.OrderByDescending(c => c.Timestamp))
+                .Include(v => v.TagAssignments)
+                    .ThenInclude(ta => ta.Tag)
+                .FirstOrDefaultAsync(v => v.LalVoterId == id);
 
-                if (voter == null)
-                {
-                    return NotFound();
-                }
+            if (voter == null)
+            {
+                throw new NotFoundException("Voter", id);
+            }
 
                 var voterDto = new VoterDto
                 {
