@@ -259,6 +259,129 @@ public static class SeedData
             Console.WriteLine("Voters already exist, skipping voter creation.");
         }
 
+        // Create sample resource links if none exist
+        if (!context.ResourceLinks.Any())
+        {
+            Console.WriteLine("Creating sample resource links...");
+            
+            var sampleResourceLinks = new List<ResourceLink>
+            {
+                // Voter Resources
+                new ResourceLink
+                {
+                    Title = "Check Your Voter Registration",
+                    Url = "https://myinfo.alabamavotes.gov/voterview",
+                    Description = "Verify your voter registration status and polling location",
+                    Category = ResourceCategory.VoterResources,
+                    DisplayOrder = 1,
+                    IsActive = true
+                },
+                new ResourceLink
+                {
+                    Title = "Register to Vote",
+                    Url = "https://www.alabamavotes.gov/registertovote",
+                    Description = "Register to vote online in Alabama",
+                    Category = ResourceCategory.VoterResources,
+                    DisplayOrder = 2,
+                    IsActive = true
+                },
+                new ResourceLink
+                {
+                    Title = "Absentee Ballot Application",
+                    Url = "https://www.alabamavotes.gov/absenteevoting",
+                    Description = "Apply for an absentee ballot",
+                    Category = ResourceCategory.VoterResources,
+                    DisplayOrder = 3,
+                    IsActive = true
+                },
+                new ResourceLink
+                {
+                    Title = "Sample Ballot",
+                    Url = "https://myinfo.alabamavotes.gov/voterview",
+                    Description = "View your sample ballot for upcoming elections",
+                    Category = ResourceCategory.VoterResources,
+                    DisplayOrder = 4,
+                    IsActive = true
+                },
+                
+                // Campaign Information
+                new ResourceLink
+                {
+                    Title = "Campaign Website",
+                    Url = "https://tanveer4hoover.com",
+                    Description = "Official campaign website for Tanveer Patel",
+                    Category = ResourceCategory.CampaignInformation,
+                    DisplayOrder = 1,
+                    IsActive = true
+                },
+                new ResourceLink
+                {
+                    Title = "Campaign Facebook",
+                    Url = "https://facebook.com/tanveer4hoover",
+                    Description = "Follow us on Facebook for campaign updates",
+                    Category = ResourceCategory.CampaignInformation,
+                    DisplayOrder = 2,
+                    IsActive = true
+                },
+                new ResourceLink
+                {
+                    Title = "Campaign Twitter",
+                    Url = "https://twitter.com/tanveer4hoover",
+                    Description = "Follow us on Twitter for real-time updates",
+                    Category = ResourceCategory.CampaignInformation,
+                    DisplayOrder = 3,
+                    IsActive = true
+                },
+                new ResourceLink
+                {
+                    Title = "Donate to Campaign",
+                    Url = "https://secure.actblue.com/donate/tanveer4hoover",
+                    Description = "Support our campaign with a donation",
+                    Category = ResourceCategory.CampaignInformation,
+                    DisplayOrder = 4,
+                    IsActive = true
+                },
+                
+                // General Resources
+                new ResourceLink
+                {
+                    Title = "City of Hoover",
+                    Url = "https://www.hooveral.org",
+                    Description = "Official City of Hoover website",
+                    Category = ResourceCategory.GeneralResources,
+                    DisplayOrder = 1,
+                    IsActive = true
+                },
+                new ResourceLink
+                {
+                    Title = "Hoover City Council",
+                    Url = "https://www.hooveral.org/149/City-Council",
+                    Description = "Current City Council information and meeting schedules",
+                    Category = ResourceCategory.GeneralResources,
+                    DisplayOrder = 2,
+                    IsActive = true
+                },
+                new ResourceLink
+                {
+                    Title = "Alabama Secretary of State",
+                    Url = "https://www.sos.alabama.gov",
+                    Description = "Alabama Secretary of State official website",
+                    Category = ResourceCategory.GeneralResources,
+                    DisplayOrder = 3,
+                    IsActive = true
+                }
+            };
+
+            context.ResourceLinks.AddRange(sampleResourceLinks);
+            await context.SaveChangesAsync();
+            
+            Console.WriteLine($"Created {sampleResourceLinks.Count} sample resource links");
+        }
+        else
+        {
+            Console.WriteLine("Resource links already exist, skipping resource link creation.");
+        }
+
         Console.WriteLine("Seed data initialization completed.");
     }
 }

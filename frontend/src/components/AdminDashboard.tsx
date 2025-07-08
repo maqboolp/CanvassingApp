@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import VersionInfo from './VersionInfo';
 import CampaignDashboard from './CampaignDashboard';
+import ResourceLinksSection from './ResourceLinksSection';
 import {
   AppBar,
   Toolbar,
@@ -2453,6 +2454,9 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
           <Typography variant="body2" color="text.secondary" paragraph>
             Campaign information, resources, and support for volunteers.
           </Typography>
+
+          {/* Additional Resource Links - Admins can manage these */}
+          <ResourceLinksSection user={user} isAdmin={user.role === 'admin' || user.role === 'superadmin'} />
 
           {/* Use the shared VolunteerResourcesSection component */}
           <VolunteerResourcesSection showQuickTips={false} showQRCode={true} />

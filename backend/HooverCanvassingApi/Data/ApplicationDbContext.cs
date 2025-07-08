@@ -22,6 +22,7 @@ namespace HooverCanvassingApi.Data
         public DbSet<VoterTagAssignment> VoterTagAssignments { get; set; }
         public DbSet<ConsentRecord> ConsentRecords { get; set; }
         public DbSet<VoiceRecording> VoiceRecordings { get; set; }
+        public DbSet<ResourceLink> ResourceLinks { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -244,6 +245,31 @@ namespace HooverCanvassingApi.Data
                 .WithMany(v => v.ConsentRecords)
                 .HasForeignKey(cr => cr.VoterId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // Configure ResourceLink entity
+            builder.Entity<ResourceLink>(entity =>
+            {
+                entity.HasKey(rl => rl.Id);
+                entity.Property(rl => rl.Title).IsRequired().HasMaxLength(200);
+                entity.Property(rl => rl.Url).IsRequired().HasMaxLength(500);
+                entity.Property(rl => rl.Description).HasMaxLength(500);
+                entity.Property(rl => rl.Category).HasConversion<string>();
+                entity.HasIndex(rl => rl.Category);
+                entity.HasIndex(rl => rl.DisplayOrder);
+            });
+
+            // Configure ResourceLink relationships
+            builder.Entity<ResourceLink>()
+                .HasOne(rl => rl.CreatedBy)
+                .WithMany()
+                .HasForeignKey(rl => rl.CreatedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            builder.Entity<ResourceLink>()
+                .HasOne(rl => rl.UpdatedBy)
+                .WithMany()
+                .HasForeignKey(rl => rl.UpdatedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
         }
     }
 }

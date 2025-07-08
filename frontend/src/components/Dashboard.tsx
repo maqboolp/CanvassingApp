@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import QRCode from 'react-qr-code';
 import VersionInfo from './VersionInfo';
+import ResourceLinksSection from './ResourceLinksSection';
 import {
   AppBar,
   Toolbar,
@@ -927,6 +928,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
             Campaign information, resources, and support for volunteers.
           </Typography>
+          
+          {/* Additional Resource Links */}
+          <ResourceLinksSection user={user} isAdmin={false} />
           
           {/* Use the shared VolunteerResourcesSection component */}
           <VolunteerResourcesSection showQuickTips={false} showQRCode={true} />
