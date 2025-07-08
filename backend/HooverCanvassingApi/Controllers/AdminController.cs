@@ -1265,6 +1265,42 @@ This is an automated message from the campaign management system.
             }
         }
 
+        [HttpGet("approved-volunteers")]
+        [Authorize(Roles = "Admin,SuperAdmin")]
+        public async Task<ActionResult> GetApprovedVolunteers()
+        {
+            try
+            {
+                var approvedVolunteers = await _context.PendingVolunteers
+                    .Include(p => p.ReviewedBy)
+                    .Where(p => p.Status == PendingVolunteerStatus.Approved)
+                    .OrderByDescending(p => p.ReviewedAt)
+                    .Select(p => new
+                    {
+                        id = p.Id,
+                        firstName = p.FirstName,
+                        lastName = p.LastName,
+                        email = p.Email,
+                        phoneNumber = p.PhoneNumber,
+                        requestedRole = p.RequestedRole.ToString(),
+                        createdAt = p.CreatedAt,
+                        approvedAt = p.ReviewedAt,
+                        approvedBy = p.ReviewedBy != null ? $"{p.ReviewedBy.FirstName} {p.ReviewedBy.LastName}" : "Unknown",
+                        approvedByEmail = p.ReviewedBy != null ? p.ReviewedBy.Email : null,
+                        reviewNotes = p.ReviewNotes,
+                        status = p.Status.ToString()
+                    })
+                    .ToListAsync();
+
+                return Ok(approvedVolunteers);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching approved volunteers");
+                return StatusCode(500, new { error = "Failed to fetch approved volunteers" });
+            }
+        }
+
         [HttpPost("approve-volunteer/{pendingVolunteerId}")]
         [Authorize(Roles = "Admin,SuperAdmin")]
         public async Task<ActionResult> ApproveVolunteer(string pendingVolunteerId, [FromBody] ApproveVolunteerRequest? request = null)

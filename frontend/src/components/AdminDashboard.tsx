@@ -38,7 +38,8 @@ import {
   InputAdornment,
   Fab,
   useMediaQuery,
-  useTheme
+  useTheme,
+  Tooltip
 } from '@mui/material';
 import {
   ExitToApp,
@@ -224,6 +225,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
   const [approvalLoading, setApprovalLoading] = useState(false);
   const [approvalResult, setApprovalResult] = useState<any>(null);
 
+  // Approved volunteers state
+  const [approvedVolunteers, setApprovedVolunteers] = useState<any[]>([]);
+  const [approvedLoading, setApprovedLoading] = useState(false);
+
   // Delete user state
   const [deleteDialog, setDeleteDialog] = useState(false);
   const [selectedUserForDelete, setSelectedUserForDelete] = useState<any>(null);
@@ -252,6 +257,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
       fetchVolunteers();
     } else if (currentTab === getTabIndex('pending')) {
       fetchPendingVolunteers();
+      fetchApprovedVolunteers();
     } else if (currentTab === getTabIndex('engagement')) {
       // Engagement tab - fetch volunteers for recipient selection
       fetchVolunteers();
@@ -469,6 +475,26 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
     }
   };
 
+  const fetchApprovedVolunteers = async () => {
+    setApprovedLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/admin/approved-volunteers`, {
+        headers: {
+          'Authorization': `Bearer ${user.token}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setApprovedVolunteers(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch approved volunteers:', error);
+    } finally {
+      setApprovedLoading(false);
+    }
+  };
+
   const handleApproveVolunteer = async (volunteer: any, notes?: string) => {
     setApprovalLoading(true);
     setApprovalResult(null);
@@ -486,8 +512,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
       if (response.ok) {
         const result = await response.json();
         setApprovalResult({ success: result.message });
-        // Refresh pending volunteers list
+        // Refresh both pending and approved volunteers lists
         fetchPendingVolunteers();
+        fetchApprovedVolunteers();
         setApproveDialog(false);
         setAdminNotes('');
       } else {
@@ -2033,6 +2060,103 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
               </Table>
             </TableContainer>
           )}
+
+          {/* Approved Volunteers Section */}
+          <Box mt={4}>
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+              <Typography variant="h5">
+                Approved Volunteers
+              </Typography>
+              <Button
+                startIcon={<Refresh />}
+                variant="outlined"
+                onClick={fetchApprovedVolunteers}
+                disabled={approvedLoading}
+              >
+                {approvedLoading ? 'Loading...' : 'Refresh'}
+              </Button>
+            </Box>
+
+            {approvedLoading ? (
+              <Box display="flex" justifyContent="center" py={4}>
+                <CircularProgress />
+              </Box>
+            ) : approvedVolunteers.length === 0 ? (
+              <Alert severity="info">
+                <Typography variant="body1">
+                  No approved volunteers to display.
+                </Typography>
+              </Alert>
+            ) : (
+              <TableContainer component={Paper}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Name</TableCell>
+                      <TableCell>Email</TableCell>
+                      <TableCell>Phone</TableCell>
+                      <TableCell>Role</TableCell>
+                      <TableCell>Requested Date</TableCell>
+                      <TableCell>Approved Date</TableCell>
+                      <TableCell>Approved By</TableCell>
+                      <TableCell>Review Notes</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {approvedVolunteers.map((volunteer) => (
+                      <TableRow key={volunteer.id}>
+                        <TableCell>
+                          {volunteer.firstName} {volunteer.lastName}
+                        </TableCell>
+                        <TableCell>{volunteer.email}</TableCell>
+                        <TableCell>{volunteer.phoneNumber}</TableCell>
+                        <TableCell>
+                          <Chip 
+                            label={volunteer.requestedRole} 
+                            color="success" 
+                            size="small" 
+                            variant="outlined"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          {new Date(volunteer.createdAt).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>
+                          {volunteer.approvedAt ? new Date(volunteer.approvedAt).toLocaleDateString() : '-'}
+                        </TableCell>
+                        <TableCell>
+                          <Box>
+                            <Typography variant="body2">{volunteer.approvedBy}</Typography>
+                            {volunteer.approvedByEmail && (
+                              <Typography variant="caption" color="text.secondary">
+                                {volunteer.approvedByEmail}
+                              </Typography>
+                            )}
+                          </Box>
+                        </TableCell>
+                        <TableCell>
+                          {volunteer.reviewNotes ? (
+                            <Tooltip title={volunteer.reviewNotes}>
+                              <Typography variant="body2" sx={{ 
+                                maxWidth: 200, 
+                                overflow: 'hidden', 
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap'
+                              }}>
+                                {volunteer.reviewNotes}
+                              </Typography>
+                            </Tooltip>
+                          ) : (
+                            '-'
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+          </Box>
         </TabPanel>
 
         {/* Voters Tab */}
