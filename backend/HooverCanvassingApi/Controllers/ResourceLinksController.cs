@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using HooverCanvassingApi.Data;
 using HooverCanvassingApi.Models;
 using System.Security.Claims;
+using System.ComponentModel.DataAnnotations;
 
 namespace HooverCanvassingApi.Controllers
 {
@@ -108,12 +109,17 @@ namespace HooverCanvassingApi.Controllers
                     return BadRequest(ModelState);
                 }
 
+                if (!Enum.TryParse<ResourceCategory>(request.Category, out var category))
+                {
+                    return BadRequest(new { error = "Invalid category value" });
+                }
+
                 var resourceLink = new ResourceLink
                 {
                     Title = request.Title,
                     Url = request.Url,
                     Description = request.Description,
-                    Category = request.Category,
+                    Category = category,
                     DisplayOrder = request.DisplayOrder ?? 0,
                     IsActive = request.IsActive ?? true,
                     CreatedByUserId = currentUserId
@@ -157,10 +163,15 @@ namespace HooverCanvassingApi.Controllers
                     return NotFound();
                 }
 
+                if (!Enum.TryParse<ResourceCategory>(request.Category, out var category))
+                {
+                    return BadRequest(new { error = "Invalid category value" });
+                }
+
                 resourceLink.Title = request.Title;
                 resourceLink.Url = request.Url;
                 resourceLink.Description = request.Description;
-                resourceLink.Category = request.Category;
+                resourceLink.Category = category;
                 resourceLink.DisplayOrder = request.DisplayOrder ?? resourceLink.DisplayOrder;
                 resourceLink.IsActive = request.IsActive ?? resourceLink.IsActive;
                 resourceLink.UpdatedAt = DateTime.UtcNow;
@@ -251,20 +262,36 @@ namespace HooverCanvassingApi.Controllers
 
     public class CreateResourceLinkRequest
     {
+        [Required]
         public string Title { get; set; } = string.Empty;
+        
+        [Required]
+        [Url]
         public string Url { get; set; } = string.Empty;
+        
         public string? Description { get; set; }
-        public ResourceCategory Category { get; set; }
+        
+        [Required]
+        public string Category { get; set; } = "VoterResources";
+        
         public int? DisplayOrder { get; set; }
         public bool? IsActive { get; set; }
     }
 
     public class UpdateResourceLinkRequest
     {
+        [Required]
         public string Title { get; set; } = string.Empty;
+        
+        [Required]
+        [Url]
         public string Url { get; set; } = string.Empty;
+        
         public string? Description { get; set; }
-        public ResourceCategory Category { get; set; }
+        
+        [Required]
+        public string Category { get; set; } = "VoterResources";
+        
         public int? DisplayOrder { get; set; }
         public bool? IsActive { get; set; }
     }
