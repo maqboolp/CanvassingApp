@@ -74,7 +74,7 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
   const [contactModalOpen, setContactModalOpen] = useState(false);
   const [filters, setFilters] = useState<VoterFilter>({
     contactStatus: 'not-contacted',
-    travelMode: 'walking',
+    travelMode: 'driving', // Default to driving
     radiusKm: 3.2, // Default to 2 miles (3.2 km)
     useTravelDistance: false // Default to straight-line distance
   });
@@ -216,6 +216,8 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
   const fetchVoters = async () => {
     setLoading(true);
     setError(null);
+    
+    console.log('Fetching voters with radius:', filters.radiusKm, 'km (', (filters.radiusKm || 3.2) / 1.60934, 'miles)');
     
     try {
       const queryParams = new URLSearchParams({
@@ -820,7 +822,7 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
                 <>
                   <FormControl size="small" sx={{ minWidth: 100 }}>
                     <Select
-                      value={filters.travelMode || 'walking'}
+                      value={filters.travelMode || 'driving'}
                       onChange={(e) => setFilters({...filters, travelMode: e.target.value as 'driving' | 'walking'})}
                       size="small"
                     >

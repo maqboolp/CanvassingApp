@@ -40,7 +40,7 @@ namespace HooverCanvassingApi.Controllers
             [FromQuery] string? sortOrder = "asc",
             [FromQuery] double? latitude = null,
             [FromQuery] double? longitude = null,
-            [FromQuery] double radiusKm = 1.0,
+            [FromQuery] double radiusKm = 3.2, // Default 2 miles
             [FromQuery] string? partyAffiliation = null,
             [FromQuery] List<int>? tagIds = null,
             [FromQuery] bool useTravelDistance = false,
@@ -48,8 +48,8 @@ namespace HooverCanvassingApi.Controllers
         {
             try
             {
-                _logger.LogInformation("GetVoters called with parameters: page={Page}, limit={Limit}, contactStatus={ContactStatus}, sortBy={SortBy}, sortOrder={SortOrder}, zipCode={ZipCode}, searchName={SearchName}", 
-                    page, limit, contactStatus, sortBy, sortOrder, zipCode, searchName);
+                _logger.LogInformation("GetVoters called with parameters: page={Page}, limit={Limit}, contactStatus={ContactStatus}, sortBy={SortBy}, sortOrder={SortOrder}, zipCode={ZipCode}, searchName={SearchName}, radiusKm={RadiusKm}, useTravelDistance={UseTravelDistance}, travelMode={TravelMode}", 
+                    page, limit, contactStatus, sortBy, sortOrder, zipCode, searchName, radiusKm, useTravelDistance, travelMode);
                 var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(currentUserId))
                 {
@@ -239,13 +239,26 @@ namespace HooverCanvassingApi.Controllers
                                     var straightLineDist = preFilteredVoters[i].StraightLineDistance;
                                     var travelDistRatio = distResult.DistanceInKm / straightLineDist;
                                     
-                                    if (travelDistRatio > 5.0 && travelMode == "walking")
+                                    // Check for unrealistic walking distances or distances over 2 miles
+                                    var maxWalkingDistanceKm = 3.2; // 2 miles
+                                    if ((travelDistRatio > 5.0 && travelMode == "walking") || 
+                                        (travelMode == "walking" && distResult.DistanceInKm > maxWalkingDistanceKm))
                                     {
-                                        _logger.LogWarning("Unrealistic walking distance detected for voter {VoterId}: travel {TravelKm}km is {Ratio}x straight-line {StraightKm}km", 
-                                            preFilteredVoters[i].Voter.LalVoterId, 
-                                            distResult.DistanceInKm.ToString("F2"), 
-                                            travelDistRatio.ToString("F1"),
-                                            straightLineDist.ToString("F2"));
+                                        if (distResult.DistanceInKm > maxWalkingDistanceKm)
+                                        {
+                                            _logger.LogWarning("Walking distance exceeds 2 mile limit for voter {VoterId}: travel {TravelKm}km > {MaxKm}km", 
+                                                preFilteredVoters[i].Voter.LalVoterId, 
+                                                distResult.DistanceInKm.ToString("F2"), 
+                                                maxWalkingDistanceKm);
+                                        }
+                                        else
+                                        {
+                                            _logger.LogWarning("Unrealistic walking distance detected for voter {VoterId}: travel {TravelKm}km is {Ratio}x straight-line {StraightKm}km", 
+                                                preFilteredVoters[i].Voter.LalVoterId, 
+                                                distResult.DistanceInKm.ToString("F2"), 
+                                                travelDistRatio.ToString("F1"),
+                                                straightLineDist.ToString("F2"));
+                                        }
                                         
                                         // Use straight-line distance as fallback for unrealistic travel distances
                                         if (straightLineDist <= radiusKm)
