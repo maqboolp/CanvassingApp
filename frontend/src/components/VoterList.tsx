@@ -688,11 +688,12 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
                     />
                     {filters.useTravelDistance && (
                       <Chip 
-                        label={`Travel distance (max 100 voters)`} 
+                        label={`Travel distance (some may use straight-line)`} 
                         color="info" 
                         size="small" 
                         variant="outlined"
                         sx={{ ml: 1 }} 
+                        title="When Google Maps can't calculate routes, we fall back to straight-line distance"
                       />
                     )}
                   </>

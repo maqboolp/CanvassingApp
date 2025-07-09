@@ -236,10 +236,26 @@ namespace HooverCanvassingApi.Controllers
                             _logger.LogInformation("Travel distance results: {WithinRange} within {RadiusKm}km, {OutOfRange} beyond range", 
                                 withinRange, radiusKm, outOfRange);
                             
+                            // If travel distance returned very few results, fall back to straight-line distance
+                            if (votersWithDistance.Count < 5 && preFilteredVoters.Count > votersWithDistance.Count)
+                            {
+                                _logger.LogWarning("Travel distance returned only {TravelCount} voters out of {TotalCount} candidates. Falling back to straight-line distance for better coverage.", 
+                                    votersWithDistance.Count, preFilteredVoters.Count);
+                                
+                                // Include voters where travel distance failed but straight-line distance is reasonable
+                                foreach (var candidate in preFilteredVoters.Where(p => p.StraightLineDistance <= radiusKm))
+                                {
+                                    if (!votersWithDistance.Any(vd => vd.Voter.LalVoterId == candidate.Voter.LalVoterId))
+                                    {
+                                        votersWithDistance.Add((candidate.Voter, candidate.StraightLineDistance));
+                                    }
+                                }
+                            }
+                            
                             votersWithDistance = votersWithDistance.OrderBy(vd => vd.Item2).ToList();
                             voters = votersWithDistance.Select(vd => vd.Voter).ToList();
                             
-                            _logger.LogInformation("Final count after travel distance filtering: {Count} voters", voters.Count);
+                            _logger.LogInformation("Final count after travel distance filtering (with fallback): {Count} voters", voters.Count);
                         }
                         else
                         {

@@ -183,6 +183,7 @@ namespace HooverCanvassingApi.Services
                     }
                     else
                     {
+                        _logger.LogWarning("Distance Matrix API returned non-OK status: {Status} for batch", result?.Status ?? "null result");
                         // Add null results for this batch
                         apiResults.AddRange(Enumerable.Repeat<DistanceResult?>(null, batch.Count));
                     }
