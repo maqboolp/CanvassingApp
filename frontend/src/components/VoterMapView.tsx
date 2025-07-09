@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { GoogleMap, LoadScript, Marker, InfoWindow, MarkerClusterer } from '@react-google-maps/api';
+import React, { useState, useEffect, useMemo } from 'react';
+import { GoogleMap, useJsApiLoader, Marker, InfoWindow, MarkerClusterer } from '@react-google-maps/api';
 import {
   Box,
   Card,
@@ -37,6 +37,7 @@ interface VoterMapViewProps {
   onRefresh: () => void;
   currentLocation: { latitude: number; longitude: number } | null;
   onContactComplete?: () => void;
+  googleMapsApiKey: string;
 }
 
 interface HouseData {
@@ -64,43 +65,20 @@ const VoterMapView: React.FC<VoterMapViewProps> = ({
   loading,
   onRefresh,
   currentLocation,
-  onContactComplete
+  onContactComplete,
+  googleMapsApiKey
 }) => {
   const [selectedHouse, setSelectedHouse] = useState<HouseData | null>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [contactModalOpen, setContactModalOpen] = useState(false);
   const [selectedVoter, setSelectedVoter] = useState<Voter | null>(null);
-  const [googleMapsError, setGoogleMapsError] = useState<string | null>(null);
-  const [googleMapsApiKey, setGoogleMapsApiKey] = useState<string>('');
-  const [apiKeyLoading, setApiKeyLoading] = useState(true);
 
-  // Fetch Google Maps API key from backend
-  useEffect(() => {
-    const fetchApiKey = async () => {
-      try {
-        const token = localStorage.getItem('auth_token');
-        const response = await fetch(`${API_BASE_URL}/api/configuration/google-maps-key`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          setGoogleMapsApiKey(data.apiKey);
-        } else {
-          setGoogleMapsError('Failed to load Google Maps configuration');
-        }
-      } catch (error) {
-        console.error('Error fetching Google Maps API key:', error);
-        setGoogleMapsError('Failed to load Google Maps configuration');
-      } finally {
-        setApiKeyLoading(false);
-      }
-    };
-    
-    fetchApiKey();
-  }, []);
+  // Use the Google Maps loader hook
+  const { isLoaded, loadError } = useJsApiLoader({
+    googleMapsApiKey: googleMapsApiKey,
+    id: 'google-map-script',
+    libraries: ['places']
+  });
 
   // Group voters by address
   const houseData = useMemo((): HouseData[] => {
@@ -237,19 +215,19 @@ const VoterMapView: React.FC<VoterMapViewProps> = ({
     );
   };
 
-  if (apiKeyLoading) {
+  if (loadError) {
+    return (
+      <Alert severity="error">
+        Error loading Google Maps
+      </Alert>
+    );
+  }
+
+  if (!isLoaded) {
     return (
       <Box display="flex" justifyContent="center" p={4}>
         <CircularProgress />
       </Box>
-    );
-  }
-
-  if (!googleMapsApiKey) {
-    return (
-      <Alert severity="error">
-        Google Maps API key is not configured on the server. Please contact your administrator.
-      </Alert>
     );
   }
 
@@ -299,11 +277,7 @@ const VoterMapView: React.FC<VoterMapViewProps> = ({
         </CardContent>
       </Card>
 
-      <LoadScript 
-        googleMapsApiKey={googleMapsApiKey}
-        onError={() => setGoogleMapsError('Failed to load Google Maps')}
-      >
-        <GoogleMap
+      <GoogleMap
           mapContainerStyle={mapContainerStyle}
           center={currentLocation ? {
             lat: currentLocation.latitude,
@@ -423,7 +397,6 @@ const VoterMapView: React.FC<VoterMapViewProps> = ({
             </InfoWindow>
           )}
         </GoogleMap>
-      </LoadScript>
 
       {/* Contact Modal */}
       {selectedVoter && (
@@ -435,12 +408,6 @@ const VoterMapView: React.FC<VoterMapViewProps> = ({
         />
       )}
 
-      {/* Error Alert */}
-      {googleMapsError && (
-        <Alert severity="error" sx={{ position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)' }}>
-          {googleMapsError}
-        </Alert>
-      )}
     </Box>
   );
 };

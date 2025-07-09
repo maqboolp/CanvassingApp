@@ -51,7 +51,7 @@ import {
 } from '@mui/icons-material';
 import { Voter, VoterFilter, VoterListResponse, ContactStatus, VoterSupport, AuthUser, VoterTag } from '../types';
 import ContactModal from './ContactModal';
-import VoterMapView from './VoterMapView';
+import VoterMapViewWrapper from './VoterMapViewWrapper';
 import { API_BASE_URL } from '../config';
 
 interface VoterListProps {
@@ -651,7 +651,7 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
       {/* Show Map View */}
       {currentView === 'map' ? (
         <Box sx={{ height: 'calc(100vh - 200px)' }}>
-          <VoterMapView
+          <VoterMapViewWrapper
             voters={voters}
             loading={loading}
             onRefresh={fetchVoters}
