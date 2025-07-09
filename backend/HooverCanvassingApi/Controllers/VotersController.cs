@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using HooverCanvassingApi.Data;
 using HooverCanvassingApi.Models;
 using HooverCanvassingApi.Middleware;
+using HooverCanvassingApi.Services;
 using System.Security.Claims;
 using System.Linq;
 
@@ -16,11 +17,13 @@ namespace HooverCanvassingApi.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<VotersController> _logger;
+        private readonly IGoogleMapsService _googleMapsService;
 
-        public VotersController(ApplicationDbContext context, ILogger<VotersController> logger)
+        public VotersController(ApplicationDbContext context, ILogger<VotersController> logger, IGoogleMapsService googleMapsService)
         {
             _context = context;
             _logger = logger;
+            _googleMapsService = googleMapsService;
         }
 
         [HttpGet]
@@ -39,7 +42,9 @@ namespace HooverCanvassingApi.Controllers
             [FromQuery] double? longitude = null,
             [FromQuery] double radiusKm = 1.0,
             [FromQuery] string? partyAffiliation = null,
-            [FromQuery] List<int>? tagIds = null)
+            [FromQuery] List<int>? tagIds = null,
+            [FromQuery] bool useTravelDistance = false,
+            [FromQuery] string travelMode = "driving")
         {
             try
             {
@@ -164,17 +169,75 @@ namespace HooverCanvassingApi.Controllers
                 List<(Voter Voter, double Distance)> votersWithDistance = null;
                 if (latitude.HasValue && longitude.HasValue)
                 {
-                    votersWithDistance = voters
-                        .Where(v => v.Latitude.HasValue && v.Longitude.HasValue)
-                        .Select(v => (
-                            Voter: v,
-                            Distance: CalculateDistance(latitude.Value, longitude.Value, v.Latitude!.Value, v.Longitude!.Value)
-                        ))
-                        .Where(vd => vd.Distance <= radiusKm)
-                        .OrderBy(vd => vd.Distance) // Sort by distance from closest to farthest
-                        .ToList();
-                    
-                    voters = votersWithDistance.Select(vd => vd.Voter).ToList();
+                    if (useTravelDistance)
+                    {
+                        // Use Google Maps for travel distance
+                        _logger.LogInformation("Using Google Maps API for travel distance calculation");
+                        
+                        // First, pre-filter using straight-line distance with a buffer
+                        // Travel distance is typically 1.3-1.5x straight-line distance
+                        var preFilterRadiusKm = radiusKm * 1.5;
+                        var preFilteredVoters = voters
+                            .Where(v => v.Latitude.HasValue && v.Longitude.HasValue)
+                            .Select(v => new {
+                                Voter = v,
+                                StraightLineDistance = CalculateDistance(latitude.Value, longitude.Value, v.Latitude!.Value, v.Longitude!.Value)
+                            })
+                            .Where(v => v.StraightLineDistance <= preFilterRadiusKm)
+                            .OrderBy(v => v.StraightLineDistance)
+                            .Take(100) // Limit to 100 nearest voters to reduce API calls
+                            .ToList();
+                        
+                        _logger.LogInformation("Pre-filtered from {TotalCount} to {FilteredCount} voters using straight-line distance", 
+                            voters.Count(v => v.Latitude.HasValue && v.Longitude.HasValue), 
+                            preFilteredVoters.Count);
+                        
+                        if (preFilteredVoters.Any())
+                        {
+                            // Get travel distances in batches for pre-filtered voters
+                            var destinations = preFilteredVoters.Select(v => (v.Voter.Latitude!.Value, v.Voter.Longitude!.Value)).ToList();
+                            var distanceResults = await _googleMapsService.GetBatchTravelDistancesAsync(
+                                latitude.Value, 
+                                longitude.Value, 
+                                destinations,
+                                travelMode
+                            );
+                            
+                            votersWithDistance = new List<(Voter, double)>();
+                            for (int i = 0; i < preFilteredVoters.Count && i < distanceResults.Count; i++)
+                            {
+                                var distResult = distanceResults[i];
+                                if (distResult != null && distResult.DistanceInKm <= radiusKm)
+                                {
+                                    votersWithDistance.Add((preFilteredVoters[i].Voter, distResult.DistanceInKm));
+                                }
+                            }
+                            
+                            votersWithDistance = votersWithDistance.OrderBy(vd => vd.Item2).ToList();
+                            voters = votersWithDistance.Select(vd => vd.Voter).ToList();
+                            
+                            _logger.LogInformation("Final count after travel distance filtering: {Count} voters", voters.Count);
+                        }
+                        else
+                        {
+                            voters = new List<Voter>();
+                        }
+                    }
+                    else
+                    {
+                        // Use straight-line distance (existing code)
+                        votersWithDistance = voters
+                            .Where(v => v.Latitude.HasValue && v.Longitude.HasValue)
+                            .Select(v => (
+                                Voter: v,
+                                Distance: CalculateDistance(latitude.Value, longitude.Value, v.Latitude!.Value, v.Longitude!.Value)
+                            ))
+                            .Where(vd => vd.Distance <= radiusKm)
+                            .OrderBy(vd => vd.Distance) // Sort by distance from closest to farthest
+                            .ToList();
+                        
+                        voters = votersWithDistance.Select(vd => vd.Voter).ToList();
+                    }
                 }
 
                 var total = voters.Count;
@@ -194,7 +257,7 @@ namespace HooverCanvassingApi.Controllers
                         if (votersWithDistance != null && latitude.HasValue && longitude.HasValue)
                         {
                             var voterWithDist = votersWithDistance.FirstOrDefault(vd => vd.Voter.LalVoterId == v.LalVoterId);
-                            distance = voterWithDist.Distance;
+                            distance = voterWithDist.Voter != null ? voterWithDist.Item2 : (double?)null;
                         }
                         
                         return new VoterDto

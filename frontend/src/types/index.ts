@@ -100,6 +100,8 @@ export interface VoterFilter {
   partyAffiliation?: string;
   tagIds?: number[];
   sortBy?: string;
+  useTravelDistance?: boolean;
+  travelMode?: 'driving' | 'walking';
 }
 
 export interface PaginationParams {

@@ -24,6 +24,9 @@ builder.Services.AddControllers(options =>
     options.Filters.Add<ValidationFilter>();
 });
 
+// Add memory cache
+builder.Services.AddMemoryCache();
+
 // Configure request size limits for file uploads
 builder.Services.Configure<IISServerOptions>(options =>
 {
@@ -310,6 +313,8 @@ builder.Services.AddHostedService<AudioCleanupService>();
 
 builder.Services.AddHttpClient();
 builder.Services.AddHttpClient<VoterImportService>();
+builder.Services.AddHttpClient<GoogleMapsService>();
+builder.Services.AddScoped<IGoogleMapsService, GoogleMapsService>();
 
 // Add health checks
 builder.Services.AddHealthChecks()

@@ -30,7 +30,9 @@ import {
   Alert,
   useMediaQuery,
   Tabs,
-  Tab
+  Tab,
+  Switch,
+  FormControlLabel
 } from '@mui/material';
 import {
   ContactPhone,
@@ -215,7 +217,11 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
         ...(useLocation && location && !filters.zipCode && { 
           latitude: location.latitude.toString(),
           longitude: location.longitude.toString(),
-          radiusKm: '5' // 5km radius
+          radiusKm: '5', // 5km radius
+          ...(filters.useTravelDistance && { 
+            useTravelDistance: 'true',
+            travelMode: filters.travelMode || 'driving'
+          })
         })
       });
       
@@ -667,13 +673,24 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
               <Typography variant="h6" sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
                 Voter List ({total} voters)
                 {useLocation && (
-                  <Chip 
-                    icon={<LocationOn />} 
-                    label="Within 5km" 
-                    color="success" 
-                    size="small" 
-                    sx={{ ml: { xs: 1, sm: 2 } }} 
-                  />
+                  <>
+                    <Chip 
+                      icon={<LocationOn />} 
+                      label="Within 5km" 
+                      color="success" 
+                      size="small" 
+                      sx={{ ml: { xs: 1, sm: 2 } }} 
+                    />
+                    {filters.useTravelDistance && (
+                      <Chip 
+                        label={`Travel distance (max 100 voters)`} 
+                        color="info" 
+                        size="small" 
+                        variant="outlined"
+                        sx={{ ml: 1 }} 
+                      />
+                    )}
+                  </>
                 )}
               </Typography>
               
@@ -764,6 +781,35 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
               : (useLocation ? "Turn Off Location" : "Find Nearby")
             }
           </Button>
+          
+          {useLocation && (
+            <>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={filters.useTravelDistance || false}
+                    onChange={(e) => setFilters({...filters, useTravelDistance: e.target.checked})}
+                    size="small"
+                  />
+                }
+                label={isMobile ? "Travel" : "Travel Distance"}
+                sx={{ ml: 1 }}
+              />
+              
+              {filters.useTravelDistance && (
+                <FormControl size="small" sx={{ minWidth: 100 }}>
+                  <Select
+                    value={filters.travelMode || 'driving'}
+                    onChange={(e) => setFilters({...filters, travelMode: e.target.value as 'driving' | 'walking'})}
+                    size="small"
+                  >
+                    <MenuItem value="driving">Driving</MenuItem>
+                    <MenuItem value="walking">Walking</MenuItem>
+                  </Select>
+                </FormControl>
+              )}
+            </>
+          )}
           
           <Button
             variant="outlined"
