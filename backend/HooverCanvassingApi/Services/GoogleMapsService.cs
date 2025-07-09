@@ -124,6 +124,10 @@ namespace HooverCanvassingApi.Services
                         (i / batchSize) + 1, 
                         (int)Math.Ceiling((double)uncachedDestinations.Count / batchSize));
                     
+                    // Log origin coordinates for debugging
+                    _logger.LogInformation("Origin coordinates: {OriginLat}, {OriginLng} (mode: {Mode})", 
+                        originLat.ToString("F6"), originLng.ToString("F6"), mode);
+                    
                     var response = await _httpClient.GetAsync(url);
                     
                     if (!response.IsSuccessStatusCode)
@@ -146,6 +150,10 @@ namespace HooverCanvassingApi.Services
 
                     if (result?.Status == "OK" && result.Rows?.FirstOrDefault()?.Elements != null)
                     {
+                        // Log API response status for debugging
+                        _logger.LogDebug("Distance Matrix API response status: {Status}, Rows: {RowCount}", 
+                            result.Status, result.Rows?.Count ?? 0);
+                        
                         for (int j = 0; j < batch.Count && j < result.Rows[0].Elements.Count; j++)
                         {
                             var element = result.Rows[0].Elements[j];
@@ -159,14 +167,17 @@ namespace HooverCanvassingApi.Services
                                     DurationText = element.Duration.Text
                                 };
                                 
-                                // Log all results for debugging
-                                _logger.LogInformation("Distance result {Index}: {DistanceKm}km ({DistanceText}), Duration: {DurationText}, To: {DestLat},{DestLng}", 
+                                // Log all results for debugging with more detail
+                                _logger.LogInformation("Distance result {Index}: {DistanceKm}km ({DistanceText}), Duration: {DurationText}, From: {OriginLat},{OriginLng} To: {DestLat},{DestLng}, Mode: {Mode}", 
                                     apiResults.Count + 1, 
                                     distanceResult.DistanceInKm.ToString("F2"), 
                                     distanceResult.DistanceText,
                                     distanceResult.DurationText,
+                                    originLat.ToString("F6"),
+                                    originLng.ToString("F6"),
                                     batch[j].lat.ToString("F6"),
-                                    batch[j].lng.ToString("F6"));
+                                    batch[j].lng.ToString("F6"),
+                                    mode);
                                 
                                 apiResults.Add(distanceResult);
                                 

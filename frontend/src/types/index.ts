@@ -20,6 +20,7 @@ export interface Voter {
   lastContactStatus?: ContactStatus;
   voterSupport?: VoterSupport;
   distanceKm?: number;
+  distanceIsStraightLine?: boolean;
   tags?: VoterTag[];
 }
 

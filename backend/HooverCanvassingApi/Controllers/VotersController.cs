@@ -166,7 +166,7 @@ namespace HooverCanvassingApi.Controllers
                 _logger.LogInformation("Query executed successfully. Found {VoterCount} voters", voters.Count);
 
                 // Apply distance filtering and sorting in memory if location is provided
-                List<(Voter Voter, double Distance)> votersWithDistance = null;
+                List<(Voter Voter, double Distance, bool IsStraightLine)> votersWithDistance = null;
                 if (latitude.HasValue && longitude.HasValue)
                 {
                     if (useTravelDistance)
@@ -196,6 +196,24 @@ namespace HooverCanvassingApi.Controllers
                             voters.Count(v => v.Latitude.HasValue && v.Longitude.HasValue), 
                             preFilteredVoters.Count);
                         
+                        // Log the user's location for debugging
+                        _logger.LogInformation("User location for distance calculation: {Lat}, {Lng} (Mode: {Mode})", 
+                            latitude.Value.ToString("F6"), longitude.Value.ToString("F6"), travelMode);
+                        
+                        // Log a few sample destinations for debugging
+                        if (preFilteredVoters.Count > 0)
+                        {
+                            var sampleVoters = preFilteredVoters.Take(3);
+                            foreach (var sample in sampleVoters)
+                            {
+                                _logger.LogInformation("Sample destination: {Name} at {Lat}, {Lng} (straight-line: {Distance}km)", 
+                                    $"{sample.Voter.FirstName} {sample.Voter.LastName}",
+                                    sample.Voter.Latitude!.Value.ToString("F6"), 
+                                    sample.Voter.Longitude!.Value.ToString("F6"),
+                                    sample.StraightLineDistance.ToString("F2"));
+                            }
+                        }
+                        
                         if (preFilteredVoters.Any())
                         {
                             // Get travel distances in batches for pre-filtered voters
@@ -207,7 +225,7 @@ namespace HooverCanvassingApi.Controllers
                                 travelMode
                             );
                             
-                            votersWithDistance = new List<(Voter, double)>();
+                            votersWithDistance = new List<(Voter, double, bool)>();
                             int withinRange = 0;
                             int outOfRange = 0;
                             
@@ -216,9 +234,29 @@ namespace HooverCanvassingApi.Controllers
                                 var distResult = distanceResults[i];
                                 if (distResult != null)
                                 {
-                                    if (distResult.DistanceInKm <= radiusKm)
+                                    // Check if the travel distance is unrealistic compared to straight-line
+                                    // Walking should rarely be more than 2x straight-line distance in urban areas
+                                    var straightLineDist = preFilteredVoters[i].StraightLineDistance;
+                                    var travelDistRatio = distResult.DistanceInKm / straightLineDist;
+                                    
+                                    if (travelDistRatio > 5.0 && travelMode == "walking")
                                     {
-                                        votersWithDistance.Add((preFilteredVoters[i].Voter, distResult.DistanceInKm));
+                                        _logger.LogWarning("Unrealistic walking distance detected for voter {VoterId}: travel {TravelKm}km is {Ratio}x straight-line {StraightKm}km", 
+                                            preFilteredVoters[i].Voter.LalVoterId, 
+                                            distResult.DistanceInKm.ToString("F2"), 
+                                            travelDistRatio.ToString("F1"),
+                                            straightLineDist.ToString("F2"));
+                                        
+                                        // Use straight-line distance as fallback for unrealistic travel distances
+                                        if (straightLineDist <= radiusKm)
+                                        {
+                                            votersWithDistance.Add((preFilteredVoters[i].Voter, straightLineDist, true));
+                                            withinRange++;
+                                        }
+                                    }
+                                    else if (distResult.DistanceInKm <= radiusKm)
+                                    {
+                                        votersWithDistance.Add((preFilteredVoters[i].Voter, distResult.DistanceInKm, false));
                                         withinRange++;
                                     }
                                     else
@@ -247,12 +285,12 @@ namespace HooverCanvassingApi.Controllers
                                 {
                                     if (!votersWithDistance.Any(vd => vd.Voter.LalVoterId == candidate.Voter.LalVoterId))
                                     {
-                                        votersWithDistance.Add((candidate.Voter, candidate.StraightLineDistance));
+                                        votersWithDistance.Add((candidate.Voter, candidate.StraightLineDistance, true));
                                     }
                                 }
                             }
                             
-                            votersWithDistance = votersWithDistance.OrderBy(vd => vd.Item2).ToList();
+                            votersWithDistance = votersWithDistance.OrderBy(vd => vd.Distance).ToList();
                             voters = votersWithDistance.Select(vd => vd.Voter).ToList();
                             
                             _logger.LogInformation("Final count after travel distance filtering (with fallback): {Count} voters", voters.Count);
@@ -269,7 +307,8 @@ namespace HooverCanvassingApi.Controllers
                             .Where(v => v.Latitude.HasValue && v.Longitude.HasValue)
                             .Select(v => (
                                 Voter: v,
-                                Distance: CalculateDistance(latitude.Value, longitude.Value, v.Latitude!.Value, v.Longitude!.Value)
+                                Distance: CalculateDistance(latitude.Value, longitude.Value, v.Latitude!.Value, v.Longitude!.Value),
+                                IsStraightLine: true
                             ))
                             .Where(vd => vd.Distance <= radiusKm)
                             .OrderBy(vd => vd.Distance) // Sort by distance from closest to farthest
@@ -293,10 +332,15 @@ namespace HooverCanvassingApi.Controllers
                     {
                         // Find distance for this voter if location search was used
                         double? distance = null;
+                        bool? isStraightLine = null;
                         if (votersWithDistance != null && latitude.HasValue && longitude.HasValue)
                         {
                             var voterWithDist = votersWithDistance.FirstOrDefault(vd => vd.Voter.LalVoterId == v.LalVoterId);
-                            distance = voterWithDist.Voter != null ? voterWithDist.Item2 : (double?)null;
+                            if (voterWithDist.Voter != null)
+                            {
+                                distance = voterWithDist.Distance;
+                                isStraightLine = voterWithDist.IsStraightLine;
+                            }
                         }
                         
                         return new VoterDto
@@ -327,7 +371,8 @@ namespace HooverCanvassingApi.Controllers
                                 Color = ta.Tag.Color
                             }).ToList(),
                             VoterSupport = v.VoterSupport?.ToString().ToLower(),
-                            DistanceKm = distance
+                            DistanceKm = distance,
+                            DistanceIsStraightLine = isStraightLine
                         };
                     }).ToList(),
                     Total = total,
@@ -739,6 +784,54 @@ namespace HooverCanvassingApi.Controllers
                 return StatusCode(500, new { error = "Failed to create voter" });
             }
         }
+
+        [HttpGet("test-distance")]
+        public async Task<ActionResult> TestDistance(
+            [FromQuery] double fromLat,
+            [FromQuery] double fromLng,
+            [FromQuery] double toLat,
+            [FromQuery] double toLng,
+            [FromQuery] string mode = "walking")
+        {
+            try
+            {
+                _logger.LogInformation("Testing distance from {FromLat},{FromLng} to {ToLat},{ToLng} via {Mode}", 
+                    fromLat, fromLng, toLat, toLng, mode);
+                
+                // Calculate straight-line distance
+                var straightLineKm = CalculateDistance(fromLat, fromLng, toLat, toLng);
+                
+                // Get travel distance
+                var travelResult = await _googleMapsService.GetTravelDistanceAsync(fromLat, fromLng, toLat, toLng, mode);
+                
+                return Ok(new 
+                {
+                    straightLineDistance = new 
+                    {
+                        km = straightLineKm,
+                        miles = straightLineKm * 0.621371
+                    },
+                    travelDistance = travelResult != null ? new 
+                    {
+                        km = travelResult.DistanceInKm,
+                        miles = travelResult.DistanceInMiles,
+                        text = travelResult.DistanceText,
+                        duration = travelResult.DurationText
+                    } : null,
+                    coordinates = new 
+                    {
+                        from = $"{fromLat},{fromLng}",
+                        to = $"{toLat},{toLng}"
+                    },
+                    mode
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error testing distance");
+                return StatusCode(500, new { error = "Failed to test distance", details = ex.Message });
+            }
+        }
     }
 
     public class VoterDto
@@ -765,6 +858,7 @@ namespace HooverCanvassingApi.Controllers
         public List<TagDto> Tags { get; set; } = new List<TagDto>();
         public string? VoterSupport { get; set; }
         public double? DistanceKm { get; set; }
+        public bool? DistanceIsStraightLine { get; set; } // Indicates if distance is straight-line fallback
     }
 
     public class TagDto

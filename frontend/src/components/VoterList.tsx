@@ -1146,7 +1146,7 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
                         </Typography>
                         {isMobile && voter.distanceKm && (
                           <Typography variant="caption" color="primary" sx={{ display: 'block', fontWeight: 'medium' }}>
-                            📍 {(voter.distanceKm * 0.621371).toFixed(2)} mi
+                            📍 {(voter.distanceKm * 0.621371).toFixed(2)} mi{voter.distanceIsStraightLine ? ' (approx)' : ''}
                           </Typography>
                         )}
                       </Box>
@@ -1157,7 +1157,7 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
                     <TableCell>
                       {voter.distanceKm ? (
                         <Typography variant="body2" color="primary" sx={{ fontWeight: 'medium' }}>
-                          📍 {(voter.distanceKm * 0.621371).toFixed(2)} mi
+                          📍 {(voter.distanceKm * 0.621371).toFixed(2)} mi{voter.distanceIsStraightLine ? ' (approx)' : ''}
                         </Typography>
                       ) : (
                         <Typography variant="caption" color="text.secondary">
