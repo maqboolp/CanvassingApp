@@ -149,10 +149,20 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
     window.open(mapUrl, '_blank');
   };
 
-  // Set default sorting to ZIP on mount
+  // Set default sorting to ZIP on mount and try to get location
   useEffect(() => {
     setFilters(prev => ({ ...prev, sortBy: 'zip' }));
+    // Automatically try to get user location on mount
+    getCurrentLocation();
   }, []); // Only run once on mount
+
+  // When switching to map view, ensure we have loaded voters
+  useEffect(() => {
+    if (currentView === 'map' && voters.length === 0 && location && !loading) {
+      // If switching to map view with no voters but we have location, fetch voters
+      fetchVoters();
+    }
+  }, [currentView, location]);
 
   const getCurrentLocation = () => {
     if (navigator.geolocation) {

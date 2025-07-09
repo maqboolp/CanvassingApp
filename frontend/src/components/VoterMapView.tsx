@@ -261,6 +261,29 @@ const VoterMapView: React.FC<VoterMapViewProps> = ({
     );
   }
 
+  if (voters.length === 0) {
+    return (
+      <Box 
+        display="flex" 
+        flexDirection="column" 
+        alignItems="center" 
+        justifyContent="center" 
+        height="100%" 
+        p={4}
+      >
+        <LocationOn sx={{ fontSize: 60, color: 'text.secondary', mb: 2 }} />
+        <Typography variant="h6" color="text.secondary" gutterBottom>
+          No Voters to Display
+        </Typography>
+        <Typography variant="body2" color="text.secondary" align="center">
+          {currentLocation 
+            ? "No voters found in your area. Try adjusting the search radius in List View."
+            : "Enable location access to see voters near you, or search by ZIP code in List View."}
+        </Typography>
+      </Box>
+    );
+  }
+
   return (
     <Box sx={{ height: '100%', position: 'relative' }}>
       {/* Map Legend */}
