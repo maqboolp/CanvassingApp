@@ -393,7 +393,7 @@ const VoterMapView: React.FC<VoterMapViewProps> = ({
             lat: currentLocation.latitude,
             lng: currentLocation.longitude
           } : defaultCenter}
-          zoom={15}
+          zoom={18}
           onLoad={setMap}
           options={{
             streetViewControl: false,
