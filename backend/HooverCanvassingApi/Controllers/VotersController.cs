@@ -175,8 +175,8 @@ namespace HooverCanvassingApi.Controllers
                         _logger.LogInformation("Using Google Maps API for travel distance calculation");
                         
                         // First, pre-filter using straight-line distance with a buffer
-                        // Travel distance is typically 1.3-1.5x straight-line distance
-                        var preFilterRadiusKm = radiusKm * 1.5;
+                        // Travel distance can be 1.3-2x straight-line distance depending on road layout
+                        var preFilterRadiusKm = radiusKm * 2.0;
                         var preFilteredVoters = voters
                             .Where(v => v.Latitude.HasValue && v.Longitude.HasValue)
                             .Select(v => new {
@@ -204,14 +204,33 @@ namespace HooverCanvassingApi.Controllers
                             );
                             
                             votersWithDistance = new List<(Voter, double)>();
+                            int withinRange = 0;
+                            int outOfRange = 0;
+                            
                             for (int i = 0; i < preFilteredVoters.Count && i < distanceResults.Count; i++)
                             {
                                 var distResult = distanceResults[i];
-                                if (distResult != null && distResult.DistanceInKm <= radiusKm)
+                                if (distResult != null)
                                 {
-                                    votersWithDistance.Add((preFilteredVoters[i].Voter, distResult.DistanceInKm));
+                                    if (distResult.DistanceInKm <= radiusKm)
+                                    {
+                                        votersWithDistance.Add((preFilteredVoters[i].Voter, distResult.DistanceInKm));
+                                        withinRange++;
+                                    }
+                                    else
+                                    {
+                                        outOfRange++;
+                                        _logger.LogDebug("Voter {VoterId} excluded: travel distance {TravelKm}km > {RadiusKm}km (straight-line was {StraightKm}km)", 
+                                            preFilteredVoters[i].Voter.LalVoterId, 
+                                            distResult.DistanceInKm.ToString("F2"), 
+                                            radiusKm,
+                                            preFilteredVoters[i].StraightLineDistance.ToString("F2"));
+                                    }
                                 }
                             }
+                            
+                            _logger.LogInformation("Travel distance results: {WithinRange} within {RadiusKm}km, {OutOfRange} beyond range", 
+                                withinRange, radiusKm, outOfRange);
                             
                             votersWithDistance = votersWithDistance.OrderBy(vd => vd.Item2).ToList();
                             voters = votersWithDistance.Select(vd => vd.Voter).ToList();

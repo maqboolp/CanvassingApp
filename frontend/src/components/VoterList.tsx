@@ -217,7 +217,7 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
         ...(useLocation && location && !filters.zipCode && { 
           latitude: location.latitude.toString(),
           longitude: location.longitude.toString(),
-          radiusKm: '5', // 5km radius
+          radiusKm: '10', // 10km radius for more reasonable driving distances
           ...(filters.useTravelDistance && { 
             useTravelDistance: 'true',
             travelMode: filters.travelMode || 'driving'
@@ -676,7 +676,7 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
                   <>
                     <Chip 
                       icon={<LocationOn />} 
-                      label="Within 5km" 
+                      label="Within 10km" 
                       color="success" 
                       size="small" 
                       sx={{ ml: { xs: 1, sm: 2 } }} 
