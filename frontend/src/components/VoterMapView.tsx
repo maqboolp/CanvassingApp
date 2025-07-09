@@ -66,6 +66,8 @@ const defaultCenter = {
   lng: -86.8025
 };
 
+const libraries = ['places'] as any[];
+
 const VoterMapView: React.FC<VoterMapViewProps> = ({
   voters,
   loading,
@@ -84,8 +86,8 @@ const VoterMapView: React.FC<VoterMapViewProps> = ({
   // Use the Google Maps loader hook
   const { isLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: googleMapsApiKey,
-    id: 'google-map-script'
-    // Note: If you need libraries like 'places', define them as a constant outside the component
+    id: 'google-map-script',
+    libraries
   });
 
   // Group voters by address

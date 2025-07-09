@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -12,9 +12,12 @@ import {
   Select,
   MenuItem,
   CircularProgress,
-  Alert
+  Alert,
+  Autocomplete,
+  Paper,
+  Typography
 } from '@mui/material';
-import { PersonAdd, Add } from '@mui/icons-material';
+import { PersonAdd, Add, LocationOn } from '@mui/icons-material';
 import { API_BASE_URL } from '../config';
 
 interface AddVoterDialogProps {
@@ -24,9 +27,26 @@ interface AddVoterDialogProps {
   googleMapsApiKey?: string;
 }
 
+interface PlacePrediction {
+  description: string;
+  place_id: string;
+  structured_formatting: {
+    main_text: string;
+    secondary_text: string;
+  };
+}
+
 const AddVoterDialog: React.FC<AddVoterDialogProps> = ({ open, onClose, onSuccess, googleMapsApiKey }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [addressSuggestions, setAddressSuggestions] = useState<PlacePrediction[]>([]);
+  const [addressInputValue, setAddressInputValue] = useState('');
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const autocompleteService = useRef<google.maps.places.AutocompleteService | null>(null);
+  const placesService = useRef<google.maps.places.PlacesService | null>(null);
+  const mapDiv = useRef<HTMLDivElement | null>(null);
+  const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null);
+  
   const [newVoter, setNewVoter] = useState({
     firstName: '',
     lastName: '',
@@ -41,6 +61,147 @@ const AddVoterDialog: React.FC<AddVoterDialogProps> = ({ open, onClose, onSucces
     voteFrequency: 'NonVoter',
     partyAffiliation: ''
   });
+
+  // Initialize Google Places services
+  useEffect(() => {
+    if (open && googleMapsApiKey) {
+      // Check if Google Maps is already loaded
+      if (window.google && window.google.maps && window.google.maps.places) {
+        autocompleteService.current = new google.maps.places.AutocompleteService();
+        
+        // Create a hidden map div for PlacesService
+        if (!mapDiv.current) {
+          mapDiv.current = document.createElement('div');
+          const map = new google.maps.Map(mapDiv.current);
+          placesService.current = new google.maps.places.PlacesService(map);
+        }
+      } else {
+        // Load Google Maps API if not already loaded
+        const loadGoogleMapsScript = () => {
+          const script = document.createElement('script');
+          script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}&libraries=places`;
+          script.async = true;
+          script.defer = true;
+          script.onload = () => {
+            // Initialize services after script loads
+            autocompleteService.current = new google.maps.places.AutocompleteService();
+            
+            if (!mapDiv.current) {
+              mapDiv.current = document.createElement('div');
+              const map = new google.maps.Map(mapDiv.current);
+              placesService.current = new google.maps.places.PlacesService(map);
+            }
+          };
+          document.head.appendChild(script);
+        };
+        
+        // Check if a script is already being loaded
+        const existingScript = document.querySelector('script[src*="maps.googleapis.com"]');
+        if (!existingScript) {
+          loadGoogleMapsScript();
+        }
+      }
+      
+      // Get user's current location for better suggestions
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            setCurrentLocation({
+              lat: position.coords.latitude,
+              lng: position.coords.longitude
+            });
+          },
+          (error) => console.log('Could not get location:', error)
+        );
+      }
+    }
+  }, [open, googleMapsApiKey]);
+
+  // Fetch address suggestions
+  const fetchAddressSuggestions = async (input: string) => {
+    if (!autocompleteService.current || input.length < 3) {
+      setAddressSuggestions([]);
+      return;
+    }
+
+    setLoadingSuggestions(true);
+    
+    const request: google.maps.places.AutocompletionRequest = {
+      input,
+      types: ['geocode'], // Changed from 'address' to 'geocode' for better compatibility
+      componentRestrictions: { country: 'us' }
+    };
+    
+    // Add location bias if we have user's location
+    if (currentLocation) {
+      // Use locationBias instead of deprecated location/radius
+      request.locationBias = {
+        center: { lat: currentLocation.lat, lng: currentLocation.lng },
+        radius: 50000
+      } as any;
+    }
+
+    autocompleteService.current.getPlacePredictions(request, (predictions, status) => {
+      setLoadingSuggestions(false);
+      if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
+        setAddressSuggestions(predictions);
+      } else {
+        setAddressSuggestions([]);
+      }
+    });
+  };
+
+  // Handle address selection
+  const handleAddressSelect = async (prediction: PlacePrediction | null) => {
+    if (!prediction || !placesService.current) return;
+    
+    // Get place details to extract address components
+    placesService.current.getDetails(
+      { placeId: prediction.place_id },
+      (place, status) => {
+        if (status === google.maps.places.PlacesServiceStatus.OK && place) {
+          // Extract address components
+          let streetNumber = '';
+          let route = '';
+          let city = '';
+          let state = '';
+          let zip = '';
+          
+          place.address_components?.forEach(component => {
+            const types = component.types;
+            
+            if (types.includes('street_number')) {
+              streetNumber = component.long_name;
+            } else if (types.includes('route')) {
+              route = component.long_name;
+            } else if (types.includes('locality')) {
+              city = component.long_name;
+            } else if (types.includes('administrative_area_level_1')) {
+              state = component.short_name;
+            } else if (types.includes('postal_code')) {
+              zip = component.long_name;
+            }
+          });
+          
+          // Update form fields
+          const fullStreetAddress = `${streetNumber} ${route}`.trim();
+          setNewVoter(prev => ({
+            ...prev,
+            addressLine: fullStreetAddress,
+            city,
+            state,
+            zip
+          }));
+          
+          // Update the input value to show the selected address
+          setAddressInputValue(fullStreetAddress);
+          
+          // Clear suggestions
+          setAddressSuggestions([]);
+        }
+      }
+    );
+  };
 
   const geocodeAddress = async (address: string): Promise<{ lat: number; lng: number } | null> => {
     if (!googleMapsApiKey) return null;
@@ -128,6 +289,8 @@ const AddVoterDialog: React.FC<AddVoterDialogProps> = ({ open, onClose, onSucces
         voteFrequency: 'NonVoter',
         partyAffiliation: ''
       });
+      setAddressInputValue('');
+      setAddressSuggestions([]);
 
       onSuccess();
       onClose();
@@ -138,12 +301,17 @@ const AddVoterDialog: React.FC<AddVoterDialogProps> = ({ open, onClose, onSucces
     }
   };
 
+  const handleClose = () => {
+    if (!loading) {
+      setAddressInputValue('');
+      setAddressSuggestions([]);
+      setError(null);
+      onClose();
+    }
+  };
+
   return (
-    <Dialog open={open} onClose={() => {
-      if (!loading) {
-        onClose();
-      }
-    }} maxWidth="md" fullWidth>
+    <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         <PersonAdd color="success" />
         Add New Voter
@@ -172,12 +340,80 @@ const AddVoterDialog: React.FC<AddVoterDialogProps> = ({ open, onClose, onSucces
               required
               disabled={loading}
             />
-            <TextField
-              label="Street Address"
-              value={newVoter.addressLine}
-              onChange={(e) => setNewVoter({ ...newVoter, addressLine: e.target.value })}
-              fullWidth
-              required
+            <Autocomplete
+              sx={{ gridColumn: 'span 2' }}
+              options={addressSuggestions}
+              getOptionLabel={(option) => option.description}
+              loading={loadingSuggestions}
+              inputValue={addressInputValue}
+              value={null}
+              onInputChange={(event, newInputValue) => {
+                setAddressInputValue(newInputValue);
+                // Also update the street address field if user is typing manually
+                if (!event || event.type !== 'click') {
+                  setNewVoter(prev => ({ ...prev, addressLine: newInputValue }));
+                }
+                if (newInputValue.length >= 3) {
+                  fetchAddressSuggestions(newInputValue);
+                } else {
+                  setAddressSuggestions([]);
+                }
+              }}
+              onChange={(event, newValue) => {
+                handleAddressSelect(newValue);
+              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Street Address"
+                  required
+                  fullWidth
+                  disabled={loading}
+                  placeholder="Start typing an address..."
+                  helperText={addressInputValue.length > 0 && addressInputValue.length < 3 ? "Type at least 3 characters to search" : ""}
+                  InputProps={{
+                    ...params.InputProps,
+                    startAdornment: <LocationOn color="action" sx={{ mr: 1 }} />,
+                    endAdornment: (
+                      <>
+                        {loadingSuggestions ? <CircularProgress color="inherit" size={20} /> : null}
+                        {params.InputProps.endAdornment}
+                      </>
+                    ),
+                  }}
+                />
+              )}
+              renderOption={(props, option) => (
+                <li {...props}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <LocationOn color="action" />
+                    <Box>
+                      <Typography variant="body2">
+                        {option.structured_formatting.main_text}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {option.structured_formatting.secondary_text}
+                      </Typography>
+                    </Box>
+                  </Box>
+                </li>
+              )}
+              PaperComponent={(props) => (
+                <Paper 
+                  {...props} 
+                  elevation={8} 
+                  sx={{ 
+                    mt: 1,
+                    '& .MuiAutocomplete-listbox': {
+                      maxHeight: '300px',
+                      '& .MuiAutocomplete-option': {
+                        minHeight: '48px'
+                      }
+                    }
+                  }}
+                />
+              )}
+              noOptionsText="Type at least 3 characters to search"
               disabled={loading}
             />
             <TextField

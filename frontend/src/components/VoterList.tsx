@@ -47,13 +47,13 @@ import {
   LabelOff,
   DeleteForever,
   PersonAdd,
-  Add,
   List as ListIcon,
   Map as MapIcon
 } from '@mui/icons-material';
 import { Voter, VoterFilter, VoterListResponse, ContactStatus, VoterSupport, AuthUser, VoterTag } from '../types';
 import ContactModal from './ContactModal';
 import VoterMapViewWrapper from './VoterMapViewWrapper';
+import AddVoterDialogWrapper from './AddVoterDialogWrapper';
 import { API_BASE_URL } from '../config';
 
 interface VoterListProps {
@@ -93,22 +93,7 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
   const [voterToUncontact, setVoterToUncontact] = useState<Voter | null>(null);
   const [uncontactLoading, setUncontactLoading] = useState(false);
   const [addVoterDialogOpen, setAddVoterDialogOpen] = useState(false);
-  const [addVoterLoading, setAddVoterLoading] = useState(false);
   const [currentView, setCurrentView] = useState<'list' | 'map'>('list');
-  const [newVoter, setNewVoter] = useState({
-    firstName: '',
-    lastName: '',
-    addressLine: '',
-    city: '',
-    state: 'AL',
-    zip: '',
-    age: '',
-    gender: 'Unknown',
-    cellPhone: '',
-    email: '',
-    voteFrequency: 'NonVoter',
-    partyAffiliation: ''
-  });
 
   const [filterInputs, setFilterInputs] = useState({
     voteFrequency: '',
@@ -562,87 +547,6 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
     fetchVoters();
   };
 
-  const handleAddVoter = async () => {
-    setAddVoterLoading(true);
-    setError(null);
-
-    try {
-      const token = user?.token || localStorage.getItem('auth_token');
-      if (!token) {
-        throw new Error('Not authenticated');
-      }
-
-      // Validate required fields
-      if (!newVoter.firstName.trim() || !newVoter.lastName.trim() || 
-          !newVoter.addressLine.trim() || !newVoter.city.trim() || 
-          !newVoter.zip.trim() || !newVoter.age.trim()) {
-        throw new Error('Please fill in all required fields');
-      }
-
-      const voterData = {
-        firstName: newVoter.firstName,
-        lastName: newVoter.lastName,
-        addressLine: newVoter.addressLine,
-        city: newVoter.city,
-        state: newVoter.state,
-        zip: newVoter.zip,
-        age: parseInt(newVoter.age),
-        gender: newVoter.gender,
-        cellPhone: newVoter.cellPhone,
-        email: newVoter.email,
-        voteFrequency: newVoter.voteFrequency === 'NonVoter' ? 0 : 
-                       newVoter.voteFrequency === 'Infrequent' ? 1 : 2,
-        partyAffiliation: newVoter.partyAffiliation
-      };
-
-      const response = await fetch(`${API_BASE_URL}/api/voters`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(voterData)
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to add voter');
-      }
-
-      const result = await response.json();
-      
-      // Success
-      setSuccessMessage(`Successfully added ${newVoter.firstName} ${newVoter.lastName}`);
-      setAddVoterDialogOpen(false);
-      
-      // Reset form
-      setNewVoter({
-        firstName: '',
-        lastName: '',
-        addressLine: '',
-        city: '',
-        state: 'AL',
-        zip: '',
-        age: '',
-        gender: 'Unknown',
-        cellPhone: '',
-        email: '',
-        voteFrequency: 'NonVoter',
-        partyAffiliation: ''
-      });
-      
-      // Refresh the voter list
-      fetchVoters();
-      
-      // Clear success message after 5 seconds
-      setTimeout(() => setSuccessMessage(null), 5000);
-
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add voter');
-    } finally {
-      setAddVoterLoading(false);
-    }
-  };
 
   return (
     <Paper sx={{ 
@@ -1534,211 +1438,14 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
       )}
 
       {/* Add Voter Dialog - Available to all users */}
-      <Dialog open={addVoterDialogOpen} onClose={() => {
-        if (!addVoterLoading) {
+      <AddVoterDialogWrapper
+        open={addVoterDialogOpen}
+        onClose={() => setAddVoterDialogOpen(false)}
+        onSuccess={() => {
+          fetchVoters();
           setAddVoterDialogOpen(false);
-        }
-      }} maxWidth="md" fullWidth>
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <PersonAdd color="success" />
-          Add New Voter
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ pt: 2 }}>
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' }, gap: 2 }}>
-              <TextField
-                label="First Name"
-                value={newVoter.firstName}
-                onChange={(e) => setNewVoter({ ...newVoter, firstName: e.target.value })}
-                fullWidth
-                required
-                disabled={addVoterLoading}
-              />
-              <TextField
-                label="Last Name"
-                value={newVoter.lastName}
-                onChange={(e) => setNewVoter({ ...newVoter, lastName: e.target.value })}
-                fullWidth
-                required
-                disabled={addVoterLoading}
-              />
-              <TextField
-                label="Street Address"
-                value={newVoter.addressLine}
-                onChange={(e) => setNewVoter({ ...newVoter, addressLine: e.target.value })}
-                fullWidth
-                required
-                disabled={addVoterLoading}
-              />
-              <TextField
-                label="City"
-                value={newVoter.city}
-                onChange={(e) => setNewVoter({ ...newVoter, city: e.target.value })}
-                fullWidth
-                required
-                disabled={addVoterLoading}
-              />
-              <FormControl fullWidth required>
-                <InputLabel>State</InputLabel>
-                <Select
-                  value={newVoter.state}
-                  onChange={(e) => setNewVoter({ ...newVoter, state: e.target.value })}
-                  label="State"
-                  disabled={addVoterLoading}
-                >
-                  <MenuItem value="AL">Alabama</MenuItem>
-                  <MenuItem value="AK">Alaska</MenuItem>
-                  <MenuItem value="AZ">Arizona</MenuItem>
-                  <MenuItem value="AR">Arkansas</MenuItem>
-                  <MenuItem value="CA">California</MenuItem>
-                  <MenuItem value="CO">Colorado</MenuItem>
-                  <MenuItem value="CT">Connecticut</MenuItem>
-                  <MenuItem value="DE">Delaware</MenuItem>
-                  <MenuItem value="FL">Florida</MenuItem>
-                  <MenuItem value="GA">Georgia</MenuItem>
-                  <MenuItem value="HI">Hawaii</MenuItem>
-                  <MenuItem value="ID">Idaho</MenuItem>
-                  <MenuItem value="IL">Illinois</MenuItem>
-                  <MenuItem value="IN">Indiana</MenuItem>
-                  <MenuItem value="IA">Iowa</MenuItem>
-                  <MenuItem value="KS">Kansas</MenuItem>
-                  <MenuItem value="KY">Kentucky</MenuItem>
-                  <MenuItem value="LA">Louisiana</MenuItem>
-                  <MenuItem value="ME">Maine</MenuItem>
-                  <MenuItem value="MD">Maryland</MenuItem>
-                  <MenuItem value="MA">Massachusetts</MenuItem>
-                  <MenuItem value="MI">Michigan</MenuItem>
-                  <MenuItem value="MN">Minnesota</MenuItem>
-                  <MenuItem value="MS">Mississippi</MenuItem>
-                  <MenuItem value="MO">Missouri</MenuItem>
-                  <MenuItem value="MT">Montana</MenuItem>
-                  <MenuItem value="NE">Nebraska</MenuItem>
-                  <MenuItem value="NV">Nevada</MenuItem>
-                  <MenuItem value="NH">New Hampshire</MenuItem>
-                  <MenuItem value="NJ">New Jersey</MenuItem>
-                  <MenuItem value="NM">New Mexico</MenuItem>
-                  <MenuItem value="NY">New York</MenuItem>
-                  <MenuItem value="NC">North Carolina</MenuItem>
-                  <MenuItem value="ND">North Dakota</MenuItem>
-                  <MenuItem value="OH">Ohio</MenuItem>
-                  <MenuItem value="OK">Oklahoma</MenuItem>
-                  <MenuItem value="OR">Oregon</MenuItem>
-                  <MenuItem value="PA">Pennsylvania</MenuItem>
-                  <MenuItem value="RI">Rhode Island</MenuItem>
-                  <MenuItem value="SC">South Carolina</MenuItem>
-                  <MenuItem value="SD">South Dakota</MenuItem>
-                  <MenuItem value="TN">Tennessee</MenuItem>
-                  <MenuItem value="TX">Texas</MenuItem>
-                  <MenuItem value="UT">Utah</MenuItem>
-                  <MenuItem value="VT">Vermont</MenuItem>
-                  <MenuItem value="VA">Virginia</MenuItem>
-                  <MenuItem value="WA">Washington</MenuItem>
-                  <MenuItem value="WV">West Virginia</MenuItem>
-                  <MenuItem value="WI">Wisconsin</MenuItem>
-                  <MenuItem value="WY">Wyoming</MenuItem>
-                </Select>
-              </FormControl>
-              <TextField
-                label="ZIP Code"
-                value={newVoter.zip}
-                onChange={(e) => setNewVoter({ ...newVoter, zip: e.target.value })}
-                fullWidth
-                required
-                disabled={addVoterLoading}
-              />
-              <TextField
-                label="Age"
-                type="number"
-                value={newVoter.age}
-                onChange={(e) => setNewVoter({ ...newVoter, age: e.target.value })}
-                fullWidth
-                required
-                disabled={addVoterLoading}
-                InputProps={{ inputProps: { min: 18, max: 120 } }}
-              />
-              <FormControl fullWidth>
-                <InputLabel>Gender</InputLabel>
-                <Select
-                  value={newVoter.gender}
-                  onChange={(e) => setNewVoter({ ...newVoter, gender: e.target.value })}
-                  label="Gender"
-                  disabled={addVoterLoading}
-                >
-                  <MenuItem value="Male">Male</MenuItem>
-                  <MenuItem value="Female">Female</MenuItem>
-                  <MenuItem value="Unknown">Unknown</MenuItem>
-                </Select>
-              </FormControl>
-              <TextField
-                label="Cell Phone"
-                value={newVoter.cellPhone}
-                onChange={(e) => setNewVoter({ ...newVoter, cellPhone: e.target.value })}
-                fullWidth
-                disabled={addVoterLoading}
-                placeholder="+1234567890"
-              />
-              <TextField
-                label="Email"
-                type="email"
-                value={newVoter.email}
-                onChange={(e) => setNewVoter({ ...newVoter, email: e.target.value })}
-                fullWidth
-                disabled={addVoterLoading}
-              />
-              <FormControl fullWidth>
-                <InputLabel>Vote Frequency</InputLabel>
-                <Select
-                  value={newVoter.voteFrequency}
-                  onChange={(e) => setNewVoter({ ...newVoter, voteFrequency: e.target.value })}
-                  label="Vote Frequency"
-                  disabled={addVoterLoading}
-                >
-                  <MenuItem value="NonVoter">Non-voter</MenuItem>
-                  <MenuItem value="Infrequent">Infrequent (1-2)</MenuItem>
-                  <MenuItem value="Frequent">Frequent (3+)</MenuItem>
-                </Select>
-              </FormControl>
-              <FormControl fullWidth>
-                <InputLabel>Party Affiliation</InputLabel>
-                <Select
-                  value={newVoter.partyAffiliation}
-                  onChange={(e) => setNewVoter({ ...newVoter, partyAffiliation: e.target.value })}
-                  label="Party Affiliation"
-                  disabled={addVoterLoading}
-                >
-                  <MenuItem value="">None</MenuItem>
-                  <MenuItem value="Democrat">Democrat</MenuItem>
-                  <MenuItem value="Republican">Republican</MenuItem>
-                  <MenuItem value="Non-Partisan">Non-Partisan</MenuItem>
-                </Select>
-              </FormControl>
-            </Box>
-          </Box>
-
-          {error && (
-            <Alert severity="error" sx={{ mt: 2 }}>
-              {error}
-            </Alert>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => {
-            setAddVoterDialogOpen(false);
-            setError(null);
-          }} disabled={addVoterLoading}>
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleAddVoter}
-            variant="contained" 
-            color="success"
-            disabled={addVoterLoading}
-            startIcon={addVoterLoading ? <CircularProgress size={20} /> : <Add />}
-          >
-            {addVoterLoading ? 'Adding...' : 'Add Voter'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        }}
+      />
       </>
       )}
     </Paper>
