@@ -71,9 +71,36 @@ const VoterMapView: React.FC<VoterMapViewProps> = ({
   const [contactModalOpen, setContactModalOpen] = useState(false);
   const [selectedVoter, setSelectedVoter] = useState<Voter | null>(null);
   const [googleMapsError, setGoogleMapsError] = useState<string | null>(null);
+  const [googleMapsApiKey, setGoogleMapsApiKey] = useState<string>('');
+  const [apiKeyLoading, setApiKeyLoading] = useState(true);
 
-  // Get Google Maps API key from environment
-  const googleMapsApiKey = process.env.REACT_APP_GOOGLE_MAPS_API_KEY || '';
+  // Fetch Google Maps API key from backend
+  useEffect(() => {
+    const fetchApiKey = async () => {
+      try {
+        const token = localStorage.getItem('auth_token');
+        const response = await fetch(`${API_BASE_URL}/api/configuration/google-maps-key`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setGoogleMapsApiKey(data.apiKey);
+        } else {
+          setGoogleMapsError('Failed to load Google Maps configuration');
+        }
+      } catch (error) {
+        console.error('Error fetching Google Maps API key:', error);
+        setGoogleMapsError('Failed to load Google Maps configuration');
+      } finally {
+        setApiKeyLoading(false);
+      }
+    };
+    
+    fetchApiKey();
+  }, []);
 
   // Group voters by address
   const houseData = useMemo((): HouseData[] => {
@@ -210,10 +237,18 @@ const VoterMapView: React.FC<VoterMapViewProps> = ({
     );
   };
 
+  if (apiKeyLoading) {
+    return (
+      <Box display="flex" justifyContent="center" p={4}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
   if (!googleMapsApiKey) {
     return (
       <Alert severity="error">
-        Google Maps API key is not configured. Please add REACT_APP_GOOGLE_MAPS_API_KEY to your environment variables.
+        Google Maps API key is not configured on the server. Please contact your administrator.
       </Alert>
     );
   }
