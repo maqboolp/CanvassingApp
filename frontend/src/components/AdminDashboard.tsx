@@ -1265,6 +1265,28 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
     }
   };
 
+  const handleDeleteInvitation = async (invitationId: string, email: string) => {
+    if (!window.confirm(`Are you sure you want to delete the invitation for ${email}? This will allow you to send a new invitation to this email.`)) {
+      return;
+    }
+    
+    try {
+      await ApiErrorHandler.makeAuthenticatedRequest(
+        `${API_BASE_URL}/api/registration/invitation/${invitationId}`,
+        { method: 'DELETE' }
+      );
+      // Refresh the invitations list
+      fetchInvitations();
+      setVolunteerCreateResult({ success: `Invitation for ${email} deleted successfully. You can now send a new invitation.` });
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setVolunteerCreateResult({ error: error.getDetailedMessage() });
+      } else {
+        setVolunteerCreateResult({ error: 'Failed to delete invitation' });
+      }
+    }
+  };
+
   const handleSendEngagementEmail = async () => {
     if (!emailSubject.trim() || !emailContent.trim()) {
       setEmailResult({ error: 'Subject and content are required' });
@@ -3059,17 +3081,30 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
                       <TableCell>{new Date(invitation.expiresAt).toLocaleDateString()}</TableCell>
                       <TableCell>{invitation.createdBy || '-'}</TableCell>
                       <TableCell>
-                        {!invitation.isUsed && !invitation.isExpired && (
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            startIcon={resendingInvitation === invitation.id ? <CircularProgress size={16} /> : <Refresh />}
-                            onClick={() => handleResendInvitation(invitation.id)}
-                            disabled={resendingInvitation === invitation.id}
-                          >
-                            Resend
-                          </Button>
-                        )}
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          {!invitation.isUsed && !invitation.isExpired && (
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              startIcon={resendingInvitation === invitation.id ? <CircularProgress size={16} /> : <Refresh />}
+                              onClick={() => handleResendInvitation(invitation.id)}
+                              disabled={resendingInvitation === invitation.id}
+                            >
+                              Resend
+                            </Button>
+                          )}
+                          {(invitation.isUsed || invitation.isExpired) && (
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              color="error"
+                              startIcon={<Delete />}
+                              onClick={() => handleDeleteInvitation(invitation.id, invitation.email)}
+                            >
+                              Delete
+                            </Button>
+                          )}
+                        </Box>
                       </TableCell>
                     </TableRow>
                   ))}

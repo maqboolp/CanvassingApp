@@ -450,6 +450,41 @@ namespace HooverCanvassingApi.Controllers
             }
         }
 
+        // Delete invitation (Admin/SuperAdmin only)
+        [HttpDelete("invitation/{invitationId}")]
+        [Authorize(Roles = "Admin,SuperAdmin")]
+        public async Task<ActionResult> DeleteInvitation(string invitationId)
+        {
+            try
+            {
+                var invitation = await _context.InvitationTokens
+                    .FirstOrDefaultAsync(i => i.Id == invitationId);
+
+                if (invitation == null)
+                {
+                    return NotFound(new { error = "Invitation not found" });
+                }
+
+                // Log the deletion
+                _logger.LogInformation("Deleting invitation for {Email} (InvitationId: {InvitationId}), Status: {Status}", 
+                    invitation.Email, invitationId, invitation.IsUsed ? "Used" : (invitation.ExpiresAt < DateTime.UtcNow ? "Expired" : "Pending"));
+
+                _context.InvitationTokens.Remove(invitation);
+                await _context.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    message = "Invitation deleted successfully",
+                    email = invitation.Email
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting invitation {InvitationId}", invitationId);
+                return StatusCode(500, new { error = "Failed to delete invitation" });
+            }
+        }
+
         private async Task NotifyAdminsOfPendingRegistration(PendingVolunteer pendingVolunteer)
         {
             try
