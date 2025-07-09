@@ -31,6 +31,7 @@ import {
 } from '@mui/icons-material';
 import { API_BASE_URL } from '../config';
 import { customerConfig } from '../config/customerConfig';
+import { validatePassword, getPasswordHelperText, PASSWORD_REQUIREMENTS } from '../utils/passwordValidation';
 
 // Get customer-specific campaign info
 const campaignSlogan = process.env.REACT_APP_CAMPAIGN_SLOGAN || "Join our campaign!";
@@ -85,8 +86,11 @@ const SelfRegistration: React.FC = () => {
 
     if (!formData.password) {
       errors.password = 'Password is required';
-    } else if (formData.password.length < 6) {
-      errors.password = 'Password must be at least 6 characters';
+    } else {
+      const passwordValidation = validatePassword(formData.password);
+      if (!passwordValidation.isValid) {
+        errors.password = passwordValidation.errors[0];
+      }
     }
 
     if (!formData.confirmPassword) {
@@ -348,7 +352,7 @@ const SelfRegistration: React.FC = () => {
               value={formData.password}
               onChange={(e) => handleInputChange('password', e.target.value)}
               error={!!validationErrors.password}
-              helperText={validationErrors.password || 'Minimum 6 characters'}
+              helperText={validationErrors.password || getPasswordHelperText(formData.password)}
               disabled={submitting}
               required
               InputProps={{

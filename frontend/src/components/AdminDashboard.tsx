@@ -84,6 +84,7 @@ import VolunteerResourcesSection from './VolunteerResourcesSection';
 import { API_BASE_URL } from '../config';
 import { customerConfig } from '../config/customerConfig';
 import { ApiErrorHandler, ApiError } from '../utils/apiErrorHandler';
+import { validatePassword, getPasswordHelperText, PASSWORD_REQUIREMENTS } from '../utils/passwordValidation';
 
 
 interface AdminDashboardProps {
@@ -771,8 +772,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
       return;
     }
 
-    if (passwordForm.newPassword.length < 6) {
-      setImportResult({ error: 'New password must be at least 6 characters long' });
+    const passwordValidation = validatePassword(passwordForm.newPassword);
+    if (!passwordValidation.isValid) {
+      setImportResult({ error: passwordValidation.errors[0] });
       return;
     }
 
@@ -3085,7 +3087,8 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
             onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
             disabled={passwordChangeLoading}
             required
-            helperText="Minimum 6 characters"
+            error={passwordForm.newPassword.length > 0 && !validatePassword(passwordForm.newPassword).isValid}
+            helperText={getPasswordHelperText(passwordForm.newPassword)}
             InputProps={{
               endAdornment: (
                 <InputAdornment position="end">
@@ -3186,8 +3189,8 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
                       onChange={(e) => setCustomPassword(e.target.value)}
                       disabled={resetPasswordLoading}
                       required
-                      error={customPassword.length > 0 && customPassword.length < 6}
-                      helperText="Minimum 6 characters"
+                      error={customPassword.length > 0 && !validatePassword(customPassword).isValid}
+                      helperText={getPasswordHelperText(customPassword)}
                       sx={{ mb: 2 }}
                       InputProps={{
                         endAdornment: (

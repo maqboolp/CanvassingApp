@@ -21,6 +21,7 @@ import {
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { authService } from '../services/authService';
 import { customerConfig } from '../config/customerConfig';
+import { validatePassword, getPasswordHelperText, PASSWORD_REQUIREMENTS } from '../utils/passwordValidation';
 
 const ResetPassword: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -63,8 +64,9 @@ const ResetPassword: React.FC = () => {
       return;
     }
     
-    if (newPassword.length < 6) {
-      setError('Password must be at least 6 characters long');
+    const passwordValidation = validatePassword(newPassword);
+    if (!passwordValidation.isValid) {
+      setError(passwordValidation.errors[0]);
       return;
     }
     
@@ -189,7 +191,7 @@ const ResetPassword: React.FC = () => {
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 disabled={isLoading}
-                helperText="Minimum 6 characters"
+                helperText={getPasswordHelperText(newPassword)}
                 InputProps={{
                   endAdornment: (
                     <InputAdornment position="end">

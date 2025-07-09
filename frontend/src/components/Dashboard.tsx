@@ -54,6 +54,7 @@ import ContactModal from './ContactModal';
 import VolunteerResourcesSection from './VolunteerResourcesSection';
 import { API_BASE_URL } from '../config';
 import { customerConfig, campaignConfig } from '../config/customerConfig';
+import { validatePassword, getPasswordHelperText, PASSWORD_REQUIREMENTS } from '../utils/passwordValidation';
 
 // Get customer-specific campaign info
 const campaignWebsite = process.env.REACT_APP_CAMPAIGN_WEBSITE;
@@ -386,8 +387,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       return;
     }
 
-    if (passwordForm.newPassword.length < 6) {
-      setPasswordResult({ error: 'New password must be at least 6 characters long' });
+    const passwordValidation = validatePassword(passwordForm.newPassword);
+    if (!passwordValidation.isValid) {
+      setPasswordResult({ error: passwordValidation.errors[0] });
       return;
     }
 
@@ -1086,7 +1088,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
             disabled={passwordChangeLoading}
             required
-            helperText="Minimum 6 characters"
+            helperText={getPasswordHelperText(passwordForm.newPassword)}
             InputProps={{
               endAdornment: (
                 <InputAdornment position="end">
