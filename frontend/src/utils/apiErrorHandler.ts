@@ -73,24 +73,25 @@ export class ApiErrorHandler {
   }
 
   static getUserFriendlyMessage(status: number, type: string, defaultMessage: string): string {
+    // For client errors (4xx), use the actual error message from the server
+    if (status >= 400 && status < 500 && defaultMessage) {
+      return defaultMessage;
+    }
+    
+    // For server errors or when no specific message is available, use generic messages
     switch (status) {
-      case 400:
-        if (type === 'ValidationError') {
-          return 'Please check your input and try again.';
-        }
-        return 'The request could not be processed. Please check your input.';
       case 403:
-        return 'You do not have permission to perform this action.';
+        return defaultMessage || 'You do not have permission to perform this action.';
       case 404:
-        return 'The requested resource was not found.';
+        return defaultMessage || 'The requested resource was not found.';
       case 409:
-        return 'This action conflicts with existing data. Please try again.';
+        return defaultMessage || 'This action conflicts with existing data. Please try again.';
       case 500:
         return 'An unexpected error occurred. Please try again later.';
       case 503:
         return 'The service is temporarily unavailable. Please try again later.';
       default:
-        return defaultMessage;
+        return defaultMessage || 'An error occurred. Please try again.';
     }
   }
 
