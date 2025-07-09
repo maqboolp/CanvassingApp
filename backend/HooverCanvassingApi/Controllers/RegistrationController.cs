@@ -8,6 +8,7 @@ using HooverCanvassingApi.Services;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using System.ComponentModel.DataAnnotations;
 
 namespace HooverCanvassingApi.Controllers
 {
@@ -42,6 +43,11 @@ namespace HooverCanvassingApi.Controllers
         {
             try
             {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
+
                 var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 var currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value;
                 
@@ -381,7 +387,11 @@ namespace HooverCanvassingApi.Controllers
 
     public class SendInvitationRequest
     {
+        [Required(ErrorMessage = "Email is required")]
+        [EmailAddress(ErrorMessage = "Invalid email address")]
         public string Email { get; set; } = string.Empty;
+        
+        [Required(ErrorMessage = "Role is required")]
         public string Role { get; set; } = "Volunteer"; // Volunteer, Admin, SuperAdmin
     }
 
