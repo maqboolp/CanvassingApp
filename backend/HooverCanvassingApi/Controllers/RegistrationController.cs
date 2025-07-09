@@ -342,6 +342,105 @@ namespace HooverCanvassingApi.Controllers
             }
         }
 
+        // Get all invitations (Admin/SuperAdmin only)
+        [HttpGet("invitations")]
+        [Authorize(Roles = "Admin,SuperAdmin")]
+        public async Task<ActionResult> GetInvitations()
+        {
+            try
+            {
+                var invitations = await _context.InvitationTokens
+                    .Include(i => i.CreatedBy)
+                    .Include(i => i.CompletedBy)
+                    .OrderByDescending(i => i.CreatedAt)
+                    .Select(i => new
+                    {
+                        id = i.Id,
+                        email = i.Email,
+                        role = i.Role.ToString(),
+                        createdAt = i.CreatedAt,
+                        expiresAt = i.ExpiresAt,
+                        isUsed = i.IsUsed,
+                        usedAt = i.UsedAt,
+                        createdBy = i.CreatedBy != null ? $"{i.CreatedBy.FirstName} {i.CreatedBy.LastName}" : null,
+                        completedBy = i.CompletedBy != null ? $"{i.CompletedBy.FirstName} {i.CompletedBy.LastName}" : null,
+                        isExpired = i.ExpiresAt < DateTime.UtcNow
+                    })
+                    .ToListAsync();
+
+                return Ok(invitations);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching invitations");
+                return StatusCode(500, new { error = "Failed to fetch invitations" });
+            }
+        }
+
+        // Resend invitation email (Admin/SuperAdmin only)
+        [HttpPost("resend-invitation/{invitationId}")]
+        [Authorize(Roles = "Admin,SuperAdmin")]
+        public async Task<ActionResult> ResendInvitation(string invitationId)
+        {
+            try
+            {
+                var invitation = await _context.InvitationTokens
+                    .Include(i => i.CreatedBy)
+                    .FirstOrDefaultAsync(i => i.Id == invitationId);
+
+                if (invitation == null)
+                {
+                    return NotFound(new { error = "Invitation not found" });
+                }
+
+                if (invitation.IsUsed)
+                {
+                    return BadRequest(new { error = "Cannot resend invitation that has already been used" });
+                }
+
+                // Check if user already exists
+                var existingUser = await _userManager.FindByEmailAsync(invitation.Email);
+                if (existingUser != null)
+                {
+                    return BadRequest(new { error = "User with this email already exists" });
+                }
+
+                // Get the original inviter name
+                var inviterName = invitation.CreatedBy != null 
+                    ? $"{invitation.CreatedBy.FirstName} {invitation.CreatedBy.LastName}"
+                    : "System Administrator";
+
+                // Generate registration URL
+                var registrationUrl = $"https://t4h-canvas-2uwxt.ondigitalocean.app/complete-registration?token={invitation.Token}";
+
+                // Resend invitation email
+                var emailSent = await _emailService.SendInvitationEmailAsync(
+                    invitation.Email, inviterName, registrationUrl, invitation.Role.ToString());
+
+                if (!emailSent)
+                {
+                    _logger.LogError("Failed to resend invitation email to {Email}", invitation.Email);
+                    return StatusCode(500, new { error = "Failed to send invitation email" });
+                }
+
+                _logger.LogInformation("Invitation resent successfully to {Email} (InvitationId: {InvitationId})", 
+                    invitation.Email, invitationId);
+
+                return Ok(new
+                {
+                    message = "Invitation resent successfully",
+                    email = invitation.Email,
+                    role = invitation.Role.ToString(),
+                    expiresAt = invitation.ExpiresAt
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error resending invitation {InvitationId}", invitationId);
+                return StatusCode(500, new { error = "Failed to resend invitation" });
+            }
+        }
+
         private async Task NotifyAdminsOfPendingRegistration(PendingVolunteer pendingVolunteer)
         {
             try

@@ -255,6 +255,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
   const [editResourceContent, setEditResourceContent] = useState('');
   const [resourceSaving, setResourceSaving] = useState(false);
 
+  // Invitations state
+  const [invitations, setInvitations] = useState<any[]>([]);
+  const [invitationsLoading, setInvitationsLoading] = useState(false);
+  const [invitationsDialog, setInvitationsDialog] = useState(false);
+  const [resendingInvitation, setResendingInvitation] = useState<string | null>(null);
+
   useEffect(() => {
     if (currentTab === getTabIndex('analytics')) {
       fetchAnalytics();
@@ -1225,6 +1231,40 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
     }
   };
 
+  const fetchInvitations = async () => {
+    setInvitationsLoading(true);
+    try {
+      const response = await ApiErrorHandler.makeAuthenticatedRequest(
+        `${API_BASE_URL}/api/registration/invitations`
+      );
+      setInvitations(response);
+    } catch (error) {
+      console.error('Failed to fetch invitations:', error);
+    } finally {
+      setInvitationsLoading(false);
+    }
+  };
+
+  const handleResendInvitation = async (invitationId: string) => {
+    setResendingInvitation(invitationId);
+    try {
+      await ApiErrorHandler.makeAuthenticatedRequest(
+        `${API_BASE_URL}/api/registration/resend-invitation/${invitationId}`,
+        { method: 'POST' }
+      );
+      // Show success message
+      setVolunteerCreateResult({ success: 'Invitation resent successfully!' });
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setVolunteerCreateResult({ error: error.getDetailedMessage() });
+      } else {
+        setVolunteerCreateResult({ error: 'Failed to resend invitation' });
+      }
+    } finally {
+      setResendingInvitation(null);
+    }
+  };
+
   const handleSendEngagementEmail = async () => {
     if (!emailSubject.trim() || !emailContent.trim()) {
       setEmailResult({ error: 'Subject and content are required' });
@@ -1652,6 +1692,16 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
                 }}
               >
                 Invite Team Member
+              </Button>
+              <Button
+                variant="outlined"
+                startIcon={<Email />}
+                onClick={() => {
+                  fetchInvitations();
+                  setInvitationsDialog(true);
+                }}
+              >
+                View Invitations
               </Button>
             </Box>
           </Box>
@@ -2947,6 +2997,100 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
             startIcon={volunteerCreateLoading ? <CircularProgress size={20} /> : <Email />}
           >
             {volunteerCreateLoading ? 'Sending...' : 'Send Invitation'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Invitations Dialog */}
+      <Dialog open={invitationsDialog} onClose={() => setInvitationsDialog(false)} maxWidth="md" fullWidth>
+        <DialogTitle>
+          <Box display="flex" alignItems="center" justifyContent="space-between">
+            <Box display="flex" alignItems="center" gap={1}>
+              <Email />
+              Invitations
+            </Box>
+            <IconButton onClick={() => setInvitationsDialog(false)} size="small">
+              <CloseIcon />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          {invitationsLoading ? (
+            <Box display="flex" justifyContent="center" py={4}>
+              <CircularProgress />
+            </Box>
+          ) : invitations.length === 0 ? (
+            <Alert severity="info">No invitations found.</Alert>
+          ) : (
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Email</TableCell>
+                    <TableCell>Role</TableCell>
+                    <TableCell>Status</TableCell>
+                    <TableCell>Created</TableCell>
+                    <TableCell>Expires</TableCell>
+                    <TableCell>Created By</TableCell>
+                    <TableCell>Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {invitations.map((invitation) => (
+                    <TableRow key={invitation.id}>
+                      <TableCell>{invitation.email}</TableCell>
+                      <TableCell>
+                        <Chip 
+                          label={invitation.role} 
+                          size="small" 
+                          color={invitation.role === 'Admin' ? 'secondary' : 'default'}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        {invitation.isUsed ? (
+                          <Chip label="Used" color="success" size="small" />
+                        ) : invitation.isExpired ? (
+                          <Chip label="Expired" color="error" size="small" />
+                        ) : (
+                          <Chip label="Pending" color="warning" size="small" />
+                        )}
+                      </TableCell>
+                      <TableCell>{new Date(invitation.createdAt).toLocaleDateString()}</TableCell>
+                      <TableCell>{new Date(invitation.expiresAt).toLocaleDateString()}</TableCell>
+                      <TableCell>{invitation.createdBy || '-'}</TableCell>
+                      <TableCell>
+                        {!invitation.isUsed && !invitation.isExpired && (
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            startIcon={resendingInvitation === invitation.id ? <CircularProgress size={16} /> : <Refresh />}
+                            onClick={() => handleResendInvitation(invitation.id)}
+                            disabled={resendingInvitation === invitation.id}
+                          >
+                            Resend
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+          {volunteerCreateResult && volunteerCreateResult.success && (
+            <Alert severity="success" sx={{ mt: 2 }}>
+              {volunteerCreateResult.success}
+            </Alert>
+          )}
+          {volunteerCreateResult && volunteerCreateResult.error && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {volunteerCreateResult.error}
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setInvitationsDialog(false)}>
+            Close
           </Button>
         </DialogActions>
       </Dialog>
