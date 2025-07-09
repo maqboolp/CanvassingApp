@@ -17,7 +17,8 @@ import {
   ListItemSecondaryAction,
   IconButton,
   Divider,
-  Collapse
+  Collapse,
+  Fab
 } from '@mui/material';
 import {
   LocationOn,
@@ -28,10 +29,12 @@ import {
   RadioButtonUnchecked,
   ContactPhone,
   ExpandMore,
-  ExpandLess
+  ExpandLess,
+  PersonAdd
 } from '@mui/icons-material';
 import { Voter, ContactStatus, VoterSupport } from '../types';
 import ContactModal from './ContactModal';
+import AddVoterDialog from './AddVoterDialog';
 import { API_BASE_URL } from '../config';
 
 interface VoterMapViewProps {
@@ -76,6 +79,7 @@ const VoterMapView: React.FC<VoterMapViewProps> = ({
   const [contactModalOpen, setContactModalOpen] = useState(false);
   const [selectedVoter, setSelectedVoter] = useState<Voter | null>(null);
   const [legendOpen, setLegendOpen] = useState(false); // Default to collapsed
+  const [addVoterDialogOpen, setAddVoterDialogOpen] = useState(false);
 
   // Use the Google Maps loader hook
   const { isLoaded, loadError } = useJsApiLoader({
@@ -509,6 +513,21 @@ const VoterMapView: React.FC<VoterMapViewProps> = ({
           )}
         </GoogleMap>
 
+      {/* Floating Action Button for Add Voter */}
+      <Fab
+        color="success"
+        aria-label="add voter"
+        sx={{
+          position: 'absolute',
+          bottom: 16,
+          right: 16,
+          zIndex: 1
+        }}
+        onClick={() => setAddVoterDialogOpen(true)}
+      >
+        <PersonAdd />
+      </Fab>
+
       {/* Contact Modal */}
       {selectedVoter && (
         <ContactModal
@@ -518,6 +537,17 @@ const VoterMapView: React.FC<VoterMapViewProps> = ({
           onSubmit={handleContactSubmit}
         />
       )}
+
+      {/* Add Voter Dialog */}
+      <AddVoterDialog
+        open={addVoterDialogOpen}
+        onClose={() => setAddVoterDialogOpen(false)}
+        onSuccess={() => {
+          onRefresh();
+          setAddVoterDialogOpen(false);
+        }}
+        googleMapsApiKey={googleMapsApiKey}
+      />
 
     </Box>
   );

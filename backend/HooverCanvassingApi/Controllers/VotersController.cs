@@ -747,6 +747,8 @@ namespace HooverCanvassingApi.Controllers
                     PartyAffiliation = request.PartyAffiliation,
                     CellPhone = formattedPhone,
                     Email = request.Email,
+                    Latitude = request.Latitude,
+                    Longitude = request.Longitude,
                     IsContacted = false,
                     SmsConsentStatus = SmsConsentStatus.Unknown,
                     TotalCampaignContacts = 0,
@@ -913,5 +915,7 @@ namespace HooverCanvassingApi.Controllers
         public string? PartyAffiliation { get; set; }
         public string? CellPhone { get; set; }
         public string? Email { get; set; }
+        public double? Latitude { get; set; }
+        public double? Longitude { get; set; }
     }
 }
