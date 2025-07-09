@@ -28,7 +28,9 @@ import {
   Box,
   CircularProgress,
   Alert,
-  useMediaQuery
+  useMediaQuery,
+  Tabs,
+  Tab
 } from '@mui/material';
 import {
   ContactPhone,
@@ -43,10 +45,13 @@ import {
   LabelOff,
   DeleteForever,
   PersonAdd,
-  Add
+  Add,
+  List as ListIcon,
+  Map as MapIcon
 } from '@mui/icons-material';
-import { Voter, VoterFilter, VoterListResponse, ContactStatus, VoterSupport, AuthUser, VoterTag, ContactDto, ContactListResponse } from '../types';
+import { Voter, VoterFilter, VoterListResponse, ContactStatus, VoterSupport, AuthUser, VoterTag } from '../types';
 import ContactModal from './ContactModal';
+import VoterMapView from './VoterMapView';
 import { API_BASE_URL } from '../config';
 
 interface VoterListProps {
@@ -84,6 +89,7 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
   const [uncontactLoading, setUncontactLoading] = useState(false);
   const [addVoterDialogOpen, setAddVoterDialogOpen] = useState(false);
   const [addVoterLoading, setAddVoterLoading] = useState(false);
+  const [currentView, setCurrentView] = useState<'list' | 'map'>('list');
   const [newVoter, setNewVoter] = useState({
     firstName: '',
     lastName: '',
@@ -465,7 +471,7 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
         throw new Error(`Failed to fetch contacts: ${contactsResponse.status}`);
       }
 
-      const contactsData: ContactListResponse = await contactsResponse.json();
+      const contactsData = await contactsResponse.json();
       
       // The contacts are already filtered by voter ID on the backend
       const voterContacts = contactsData.contacts;
@@ -475,7 +481,7 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
       }
 
       // Sort by timestamp descending and get the most recent
-      voterContacts.sort((a: ContactDto, b: ContactDto) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      voterContacts.sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       const latestContact = voterContacts[0];
 
       // Delete the contact
@@ -526,6 +532,11 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
       case 'non-voter': return 'Non-voter';
       default: return frequency;
     }
+  };
+
+  const handleContactComplete = () => {
+    setContactModalOpen(false);
+    fetchVoters();
   };
 
   const handleAddVoter = async () => {
@@ -617,31 +628,64 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
       mx: { xs: 0, sm: 'auto' }, // No margin on mobile, auto on larger screens
       borderRadius: { xs: 0, sm: 1 } // No border radius on mobile for full edge-to-edge
     }}>
-      {/* Filter Controls */}
-      <Box sx={{ p: { xs: 1, sm: 2 }, borderBottom: 1, borderColor: 'divider' }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6" sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
-            Voter List ({total} voters)
-            {useLocation && (
-              <Chip 
-                icon={<LocationOn />} 
-                label="Within 5km" 
-                color="success" 
-                size="small" 
-                sx={{ ml: { xs: 1, sm: 2 } }} 
-              />
-            )}
-          </Typography>
-          
-          {selectedVoters.length > 0 && (
-            <Chip
-              label={`${selectedVoters.length} selected`}
-              color="primary"
-              size="small"
-              variant="filled"
-            />
-          )}
+      {/* View Tabs */}
+      <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+        <Tabs value={currentView} onChange={(e, newValue) => setCurrentView(newValue)} aria-label="voter view tabs">
+          <Tab 
+            icon={<ListIcon />} 
+            iconPosition="start" 
+            label="List View" 
+            value="list"
+            sx={{ minHeight: { xs: 48, sm: 64 } }}
+          />
+          <Tab 
+            icon={<MapIcon />} 
+            iconPosition="start" 
+            label="Map View" 
+            value="map"
+            sx={{ minHeight: { xs: 48, sm: 64 } }}
+          />
+        </Tabs>
+      </Box>
+
+      {/* Show Map View */}
+      {currentView === 'map' ? (
+        <Box sx={{ height: 'calc(100vh - 200px)' }}>
+          <VoterMapView
+            voters={voters}
+            loading={loading}
+            onRefresh={fetchVoters}
+            currentLocation={location}
+            onContactComplete={handleContactComplete}
+          />
         </Box>
+      ) : (
+        <>
+          {/* Filter Controls */}
+          <Box sx={{ p: { xs: 1, sm: 2 }, borderBottom: 1, borderColor: 'divider' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h6" sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
+                Voter List ({total} voters)
+                {useLocation && (
+                  <Chip 
+                    icon={<LocationOn />} 
+                    label="Within 5km" 
+                    color="success" 
+                    size="small" 
+                    sx={{ ml: { xs: 1, sm: 2 } }} 
+                  />
+                )}
+              </Typography>
+              
+              {selectedVoters.length > 0 && (
+                <Chip
+                  label={`${selectedVoters.length} selected`}
+                  color="primary"
+                  size="small"
+                  variant="filled"
+                />
+              )}
+            </Box>
         
         <Box sx={{ display: 'flex', gap: { xs: 1, sm: 2 }, flexWrap: 'wrap', alignItems: 'center', mb: 2 }}>
           <TextField
@@ -1610,6 +1654,8 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
           </Button>
         </DialogActions>
       </Dialog>
+      </>
+      )}
     </Paper>
   );
 };
