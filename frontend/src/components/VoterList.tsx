@@ -76,7 +76,8 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
     contactStatus: 'not-contacted',
     travelMode: 'driving', // Default to driving
     radiusKm: 3.2, // Default to 2 miles (3.2 km)
-    useTravelDistance: false // Default to straight-line distance
+    useTravelDistance: false, // Default to straight-line distance
+    sortBy: 'distance' // Default to distance sorting (will fall back to zip if no location)
   });
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [useLocation, setUseLocation] = useState(false);
@@ -134,10 +135,10 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
     window.open(mapUrl, '_blank');
   };
 
-  // Set default sorting to ZIP on mount and try to get location
+  // Set default sorting and try to get location on mount
   useEffect(() => {
-    setFilters(prev => ({ ...prev, sortBy: 'zip' }));
     // Automatically try to get user location on mount
+    // This will set useLocation=true and sortBy='distance' when location is obtained
     getCurrentLocation();
   }, []); // Only run once on mount
 
@@ -214,7 +215,10 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
         ...(filters.contactStatus && { contactStatus: filters.contactStatus }),
         ...(filters.searchName && { searchName: filters.searchName }),
         ...(filters.partyAffiliation && { partyAffiliation: filters.partyAffiliation }),
-        ...(filters.sortBy && { sortBy: filters.sortBy }),
+        // Only use distance sorting if we have a location, otherwise fallback to zip
+        ...(filters.sortBy && { 
+          sortBy: (filters.sortBy === 'distance' && (!useLocation || !location)) ? 'zip' : filters.sortBy 
+        }),
         sortOrder: 'asc',
         ...(useLocation && location && !filters.zipCode && { 
           latitude: location.latitude.toString(),
