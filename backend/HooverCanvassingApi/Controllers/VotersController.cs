@@ -43,6 +43,8 @@ namespace HooverCanvassingApi.Controllers
         {
             try
             {
+                _logger.LogInformation("GetVoters called with parameters: page={Page}, limit={Limit}, contactStatus={ContactStatus}, sortBy={SortBy}, sortOrder={SortOrder}, zipCode={ZipCode}, searchName={SearchName}", 
+                    page, limit, contactStatus, sortBy, sortOrder, zipCode, searchName);
                 var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(currentUserId))
                 {
@@ -92,6 +94,7 @@ namespace HooverCanvassingApi.Controllers
 
                 if (!string.IsNullOrEmpty(contactStatus))
                 {
+                    _logger.LogInformation("Applying contact status filter: {ContactStatus}", contactStatus);
                     switch (contactStatus.ToLower())
                     {
                         case "contacted":
@@ -99,6 +102,13 @@ namespace HooverCanvassingApi.Controllers
                             break;
                         case "not-contacted":
                             query = query.Where(v => !v.IsContacted);
+                            break;
+                        case "all":
+                            // No filter needed for "all"
+                            _logger.LogInformation("Contact status 'all' - no filter applied");
+                            break;
+                        default:
+                            _logger.LogWarning("Unknown contact status: {ContactStatus}", contactStatus);
                             break;
                     }
                 }
@@ -141,10 +151,14 @@ namespace HooverCanvassingApi.Controllers
                         : query.OrderBy(v => v.LastName)
                 };
 
+                _logger.LogInformation("Executing query to fetch voters...");
+                
                 var voters = await query
                     .Include(v => v.TagAssignments)
                         .ThenInclude(ta => ta.Tag)
                     .ToListAsync();
+                
+                _logger.LogInformation("Query executed successfully. Found {VoterCount} voters", voters.Count);
 
                 // Apply distance filtering and sorting in memory if location is provided
                 List<(Voter Voter, double Distance)> votersWithDistance = null;
@@ -223,8 +237,9 @@ namespace HooverCanvassingApi.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving voters");
-                return StatusCode(500, new { error = "Failed to retrieve voters" });
+                _logger.LogError(ex, "Error retrieving voters with parameters: page={Page}, limit={Limit}, contactStatus={ContactStatus}, sortBy={SortBy}, sortOrder={SortOrder}. Error: {ErrorMessage}", 
+                    page, limit, contactStatus, sortBy, sortOrder, ex.Message);
+                return StatusCode(500, new { error = "Failed to retrieve voters", details = ex.Message });
             }
         }
 

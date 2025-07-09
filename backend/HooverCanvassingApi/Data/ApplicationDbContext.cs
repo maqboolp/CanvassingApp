@@ -31,7 +31,11 @@ namespace HooverCanvassingApi.Data
             // Configure Voter entity
             builder.Entity<Voter>(entity =>
             {
+                entity.ToTable("Voters");
                 entity.HasKey(v => v.LalVoterId);
+                
+                // Use PascalCase column names for all environments (matching production)
+                // Only set constraints and conversions without renaming columns
                 entity.Property(v => v.FirstName).IsRequired().HasMaxLength(100);
                 entity.Property(v => v.LastName).IsRequired().HasMaxLength(100);
                 entity.Property(v => v.AddressLine).IsRequired().HasMaxLength(500);
@@ -44,6 +48,8 @@ namespace HooverCanvassingApi.Data
                 entity.Property(v => v.VoterSupport).HasConversion<string>();
                 entity.Property(v => v.SmsConsentStatus).HasConversion<string>();
                 entity.Property(v => v.SmsOptInMethod).HasConversion<string>();
+                
+                // Indexes
                 entity.HasIndex(v => v.Zip);
                 entity.HasIndex(v => v.VoteFrequency);
                 entity.HasIndex(v => v.IsContacted);

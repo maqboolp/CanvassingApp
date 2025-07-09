@@ -20,8 +20,18 @@ namespace HooverCanvassingApi.Controllers
         {
             var apiKey = Environment.GetEnvironmentVariable("GOOGLE_GEOCODING_API_KEY");
             
+            // Also check configuration as fallback
             if (string.IsNullOrEmpty(apiKey))
             {
+                apiKey = _configuration["GoogleGeocodingApiKey"];
+            }
+            
+            if (string.IsNullOrEmpty(apiKey))
+            {
+                // Log for debugging
+                Console.WriteLine("GOOGLE_GEOCODING_API_KEY environment variable not found");
+                Console.WriteLine($"Current environment variables: {Environment.GetEnvironmentVariables().Count} total");
+                
                 return BadRequest(new { error = "Google Maps API key not configured" });
             }
             
