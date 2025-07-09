@@ -135,6 +135,13 @@ namespace HooverCanvassingApi.Services
                     }
 
                     var json = await response.Content.ReadAsStringAsync();
+                    
+                    // Log raw response for first batch to debug
+                    if (i == 0)
+                    {
+                        _logger.LogDebug("Google Maps API raw response (first batch): {Response}", json.Length > 500 ? json.Substring(0, 500) + "..." : json);
+                    }
+                    
                     var result = JsonSerializer.Deserialize<DistanceMatrixResponse>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
                     if (result?.Status == "OK" && result.Rows?.FirstOrDefault()?.Elements != null)
@@ -152,17 +159,14 @@ namespace HooverCanvassingApi.Services
                                     DurationText = element.Duration.Text
                                 };
                                 
-                                // Log first few results for debugging
-                                if (apiResults.Count < 5)
-                                {
-                                    _logger.LogInformation("Distance result {Index}: {DistanceKm}km ({DistanceText}), Duration: {DurationText}, To: {DestLat},{DestLng}", 
-                                        apiResults.Count + 1, 
-                                        distanceResult.DistanceInKm.ToString("F2"), 
-                                        distanceResult.DistanceText,
-                                        distanceResult.DurationText,
-                                        batch[j].lat.ToString("F6"),
-                                        batch[j].lng.ToString("F6"));
-                                }
+                                // Log all results for debugging
+                                _logger.LogInformation("Distance result {Index}: {DistanceKm}km ({DistanceText}), Duration: {DurationText}, To: {DestLat},{DestLng}", 
+                                    apiResults.Count + 1, 
+                                    distanceResult.DistanceInKm.ToString("F2"), 
+                                    distanceResult.DistanceText,
+                                    distanceResult.DurationText,
+                                    batch[j].lat.ToString("F6"),
+                                    batch[j].lng.ToString("F6"));
                                 
                                 apiResults.Add(distanceResult);
                                 
@@ -200,6 +204,12 @@ namespace HooverCanvassingApi.Services
                 {
                     results[uncachedIndices[i]] = apiResults[i];
                 }
+                
+                // Log summary
+                var successCount = results.Count(r => r != null);
+                var failureCount = results.Count(r => r == null);
+                _logger.LogInformation("Google Maps Distance Matrix Summary: {SuccessCount} successful, {FailureCount} failed out of {TotalCount} total requests", 
+                    successCount, failureCount, results.Count);
             }
             catch (Exception ex)
             {
