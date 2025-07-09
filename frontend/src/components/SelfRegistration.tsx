@@ -131,11 +131,16 @@ const SelfRegistration: React.FC = () => {
       if (response.ok) {
         setSuccess(true);
       } else {
-        const errorData = await response.json();
-        setError(errorData.error || 'Failed to submit registration');
+        try {
+          const errorData = await response.json();
+          setError(errorData.error || 'Failed to submit registration');
+        } catch {
+          setError('Failed to submit registration. Please check your information and try again.');
+        }
       }
     } catch (err) {
-      setError('Failed to submit registration. Please try again.');
+      console.error('Registration error:', err);
+      setError('Unable to connect to the server. Please check your internet connection and try again.');
     } finally {
       setSubmitting(false);
     }
@@ -262,7 +267,14 @@ const SelfRegistration: React.FC = () => {
 
           {error && (
             <Alert severity="error" sx={{ mb: 3 }}>
-              {error}
+              <Typography variant="body2" component="div">
+                {error}
+              </Typography>
+              {error.includes('administrator') && (
+                <Typography variant="caption" component="div" sx={{ mt: 1 }}>
+                  Need help? Contact your team administrator or campaign coordinator.
+                </Typography>
+              )}
             </Alert>
           )}
 

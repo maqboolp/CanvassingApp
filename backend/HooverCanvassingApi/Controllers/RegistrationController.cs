@@ -246,7 +246,7 @@ namespace HooverCanvassingApi.Controllers
                 var existingUser = await _userManager.FindByEmailAsync(request.Email);
                 if (existingUser != null)
                 {
-                    return BadRequest(new { error = "User with this email already exists" });
+                    return BadRequest(new { error = "An account with this email already exists. If you forgot your password, please use the 'Forgot Password' link on the login page." });
                 }
 
                 // Check if there's already a pending registration
@@ -259,18 +259,27 @@ namespace HooverCanvassingApi.Controllers
                     switch (existingPending.Status)
                     {
                         case PendingVolunteerStatus.Pending:
-                            return BadRequest(new { error = "A registration with this email is already pending approval. You will receive an email once it's reviewed." });
+                            return BadRequest(new { error = "A registration with this email is already pending approval. You will receive an email once it's reviewed. If you need immediate assistance, please contact your team administrator." });
                         
                         case PendingVolunteerStatus.Approved:
-                            return BadRequest(new { error = "Your registration was already approved! Please check your email for login instructions. If you didn't receive it, try resetting your password." });
+                            return BadRequest(new { error = "Your registration was already approved! Please check your email for login instructions. If you didn't receive it, try resetting your password on the login page." });
                         
                         case PendingVolunteerStatus.Rejected:
                             // For rejected, we could allow re-registration or provide a different message
-                            return BadRequest(new { error = "Your previous registration was not approved. Please contact support if you have questions." });
+                            return BadRequest(new { error = "Your previous registration was not approved. Please contact your team administrator for more information or to reapply." });
                         
                         default:
-                            return BadRequest(new { error = "A registration with this email already exists. Please contact support for assistance." });
+                            return BadRequest(new { error = "A registration with this email already exists. Please contact your team administrator for assistance." });
                     }
+                }
+
+                // Check if there's an active invitation
+                var existingInvitation = await _context.InvitationTokens
+                    .FirstOrDefaultAsync(t => t.Email == request.Email && !t.IsUsed && t.ExpiresAt > DateTime.UtcNow);
+                
+                if (existingInvitation != null)
+                {
+                    return BadRequest(new { error = "You have already been invited to join the team! Please check your email for an invitation link. If you didn't receive it or if it has expired, please contact your team administrator to resend the invitation." });
                 }
 
                 // Create pending volunteer record
