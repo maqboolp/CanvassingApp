@@ -39,6 +39,7 @@ const CompleteRegistration: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
   const [formData, setFormData] = useState({
     firstName: '',
@@ -348,7 +349,7 @@ const CompleteRegistration: React.FC = () => {
 
             <TextField
               label="Confirm Password"
-              type={showPassword ? 'text' : 'password'}
+              type={showConfirmPassword ? 'text' : 'password'}
               fullWidth
               margin="normal"
               value={formData.confirmPassword}
@@ -361,6 +362,18 @@ const CompleteRegistration: React.FC = () => {
                 startAdornment: (
                   <InputAdornment position="start">
                     <Lock fontSize="small" />
+                  </InputAdornment>
+                ),
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label="toggle password visibility"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      edge="end"
+                      disabled={submitting}
+                    >
+                      {showConfirmPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                    </IconButton>
                   </InputAdornment>
                 )
               }}

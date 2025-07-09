@@ -197,6 +197,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
     confirmPassword: ''
   });
   const [passwordChangeLoading, setPasswordChangeLoading] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showCustomPassword, setShowCustomPassword] = useState(false);
   const [nearestVoter, setNearestVoter] = useState<{ voter: Voter; distance: number } | null>(null);
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [contactModalOpen, setContactModalOpen] = useState(false);
@@ -3050,17 +3054,31 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
           </Typography>
           <TextField
             label="Current Password"
-            type="password"
+            type={showCurrentPassword ? 'text' : 'password'}
             fullWidth
             margin="normal"
             value={passwordForm.currentPassword}
             onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
             disabled={passwordChangeLoading}
             required
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    aria-label="toggle password visibility"
+                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                    edge="end"
+                    disabled={passwordChangeLoading}
+                  >
+                    {showCurrentPassword ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
           />
           <TextField
             label="New Password"
-            type="password"
+            type={showNewPassword ? 'text' : 'password'}
             fullWidth
             margin="normal"
             value={passwordForm.newPassword}
@@ -3068,10 +3086,24 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
             disabled={passwordChangeLoading}
             required
             helperText="Minimum 6 characters"
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    aria-label="toggle password visibility"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    edge="end"
+                    disabled={passwordChangeLoading}
+                  >
+                    {showNewPassword ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
           />
           <TextField
             label="Confirm New Password"
-            type="password"
+            type={showConfirmPassword ? 'text' : 'password'}
             fullWidth
             margin="normal"
             value={passwordForm.confirmPassword}
@@ -3080,6 +3112,20 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
             required
             error={passwordForm.confirmPassword !== '' && passwordForm.newPassword !== passwordForm.confirmPassword}
             helperText={passwordForm.confirmPassword !== '' && passwordForm.newPassword !== passwordForm.confirmPassword ? "Passwords do not match" : ""}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    aria-label="toggle password visibility"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    edge="end"
+                    disabled={passwordChangeLoading}
+                  >
+                    {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
           />
         </DialogContent>
         <DialogActions>
@@ -3133,23 +3179,30 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
                   {useCustomPassword ? (
                     <TextField
                       label="New Password"
-                      type="password"
+                      type={showCustomPassword ? 'text' : 'password'}
                       fullWidth
                       margin="normal"
                       value={customPassword}
                       onChange={(e) => setCustomPassword(e.target.value)}
                       disabled={resetPasswordLoading}
                       required
-                      error={customPassword.length > 0 && (customPassword.length < 6 || !/\d/.test(customPassword) || !/[a-z]/.test(customPassword))}
-                      helperText={
-                        customPassword.length > 0 
-                          ? (customPassword.length < 6 ? "Password must be at least 6 characters" :
-                             !/\d/.test(customPassword) ? "Password must contain at least one digit" :
-                             !/[a-z]/.test(customPassword) ? "Password must contain at least one lowercase letter" :
-                             "Password meets all requirements ✓")
-                          : "Minimum 6 characters with at least one digit and lowercase letter"
-                      }
+                      error={customPassword.length > 0 && customPassword.length < 6}
+                      helperText="Minimum 6 characters"
                       sx={{ mb: 2 }}
+                      InputProps={{
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <IconButton
+                              aria-label="toggle password visibility"
+                              onClick={() => setShowCustomPassword(!showCustomPassword)}
+                              edge="end"
+                              disabled={resetPasswordLoading}
+                            >
+                              {showCustomPassword ? <VisibilityOff /> : <Visibility />}
+                            </IconButton>
+                          </InputAdornment>
+                        ),
+                      }}
                     />
                   ) : (
                     <Alert severity="warning" sx={{ mb: 2 }}>

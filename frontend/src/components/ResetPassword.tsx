@@ -189,7 +189,7 @@ const ResetPassword: React.FC = () => {
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 disabled={isLoading}
-                helperText="Minimum 6 characters with at least one digit and lowercase letter"
+                helperText="Minimum 6 characters"
                 InputProps={{
                   endAdornment: (
                     <InputAdornment position="end">
