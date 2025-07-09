@@ -699,7 +699,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
               <strong>{nearestVoter.voter.firstName} {nearestVoter.voter.lastName}</strong>
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              📍 {nearestVoter.distance.toFixed(2)} km away
+              📍 {(nearestVoter.distance * 0.621371).toFixed(2)} miles away
             </Typography>
             <Box 
               sx={{ 

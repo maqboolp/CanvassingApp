@@ -102,6 +102,7 @@ export interface VoterFilter {
   sortBy?: string;
   useTravelDistance?: boolean;
   travelMode?: 'driving' | 'walking';
+  radiusKm?: number;
 }
 
 export interface PaginationParams {

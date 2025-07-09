@@ -152,6 +152,18 @@ namespace HooverCanvassingApi.Services
                                     DurationText = element.Duration.Text
                                 };
                                 
+                                // Log first few results for debugging
+                                if (apiResults.Count < 5)
+                                {
+                                    _logger.LogInformation("Distance result {Index}: {DistanceKm}km ({DistanceText}), Duration: {DurationText}, To: {DestLat},{DestLng}", 
+                                        apiResults.Count + 1, 
+                                        distanceResult.DistanceInKm.ToString("F2"), 
+                                        distanceResult.DistanceText,
+                                        distanceResult.DurationText,
+                                        batch[j].lat.ToString("F6"),
+                                        batch[j].lng.ToString("F6"));
+                                }
+                                
                                 apiResults.Add(distanceResult);
                                 
                                 // Cache the result for 24 hours
@@ -160,6 +172,11 @@ namespace HooverCanvassingApi.Services
                             }
                             else
                             {
+                                _logger.LogWarning("Distance Matrix element {Index} returned status: {Status} for destination {DestLat},{DestLng}", 
+                                    j + 1, 
+                                    element.Status,
+                                    batch[j].lat.ToString("F6"),
+                                    batch[j].lng.ToString("F6"));
                                 apiResults.Add(null);
                             }
                         }

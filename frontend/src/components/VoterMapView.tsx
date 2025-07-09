@@ -124,17 +124,35 @@ const VoterMapView: React.FC<VoterMapViewProps> = ({
     }
   }, [map, currentLocation]);
 
-  const getMarkerIcon = (house: HouseData): string => {
+  const getMarkerIcon = (house: HouseData) => {
+    let color: string;
     if (house.allContacted) {
-      // Green house - all contacted
-      return 'https://maps.google.com/mapfiles/ms/icons/green-dot.png';
+      color = '#0F9D58'; // Green
     } else if (house.contactedCount > 0) {
-      // Yellow house - partially contacted
-      return 'https://maps.google.com/mapfiles/ms/icons/yellow-dot.png';
+      color = '#F4B400'; // Yellow/Orange
     } else {
-      // Red house - not contacted
-      return 'https://maps.google.com/mapfiles/ms/icons/red-dot.png';
+      color = '#DB4437'; // Red
     }
+
+    // Return a custom marker with the voter count
+    return {
+      path: google.maps.SymbolPath.CIRCLE,
+      scale: 20,
+      fillColor: color,
+      fillOpacity: 0.9,
+      strokeColor: '#ffffff',
+      strokeWeight: 2,
+      labelOrigin: new google.maps.Point(0, 0)
+    };
+  };
+
+  const getMarkerLabel = (house: HouseData) => {
+    return {
+      text: house.totalCount.toString(),
+      color: '#ffffff',
+      fontSize: '12px',
+      fontWeight: 'bold'
+    };
   };
 
   const handleMarkerClick = (house: HouseData) => {
@@ -247,20 +265,70 @@ const VoterMapView: React.FC<VoterMapViewProps> = ({
           <Typography variant="subtitle2" gutterBottom>Map Legend</Typography>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <img src="https://maps.google.com/mapfiles/ms/icons/green-dot.png" alt="Green" width={20} />
+              <Box sx={{ 
+                width: 24, 
+                height: 24, 
+                borderRadius: '50%', 
+                backgroundColor: '#0F9D58',
+                border: '2px solid white',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'white',
+                fontSize: '10px',
+                fontWeight: 'bold'
+              }}>
+                #
+              </Box>
               <Typography variant="caption">All Contacted</Typography>
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <img src="https://maps.google.com/mapfiles/ms/icons/yellow-dot.png" alt="Yellow" width={20} />
+              <Box sx={{ 
+                width: 24, 
+                height: 24, 
+                borderRadius: '50%', 
+                backgroundColor: '#F4B400',
+                border: '2px solid white',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'white',
+                fontSize: '10px',
+                fontWeight: 'bold'
+              }}>
+                #
+              </Box>
               <Typography variant="caption">Partially Contacted</Typography>
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <img src="https://maps.google.com/mapfiles/ms/icons/red-dot.png" alt="Red" width={20} />
+              <Box sx={{ 
+                width: 24, 
+                height: 24, 
+                borderRadius: '50%', 
+                backgroundColor: '#DB4437',
+                border: '2px solid white',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'white',
+                fontSize: '10px',
+                fontWeight: 'bold'
+              }}>
+                #
+              </Box>
               <Typography variant="caption">Not Contacted</Typography>
             </Box>
             {currentLocation && (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <MyLocation color="primary" fontSize="small" />
+                <Box sx={{ 
+                  width: 24, 
+                  height: 24, 
+                  borderRadius: '50%', 
+                  backgroundColor: '#4285F4',
+                  border: '2px solid white',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                }}>
+                </Box>
                 <Typography variant="caption">Your Location</Typography>
               </Box>
             )}
@@ -322,6 +390,7 @@ const VoterMapView: React.FC<VoterMapViewProps> = ({
                       lng: house.longitude
                     }}
                     icon={getMarkerIcon(house)}
+                    label={getMarkerLabel(house)}
                     title={`${house.address} (${house.contactedCount}/${house.totalCount} contacted)`}
                     onClick={() => handleMarkerClick(house)}
                     clusterer={clusterer}

@@ -73,7 +73,9 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
   const [selectedVoter, setSelectedVoter] = useState<Voter | null>(null);
   const [contactModalOpen, setContactModalOpen] = useState(false);
   const [filters, setFilters] = useState<VoterFilter>({
-    contactStatus: 'not-contacted'
+    contactStatus: 'not-contacted',
+    travelMode: 'walking',
+    radiusKm: 3.2 // Default to 2 miles (3.2 km)
   });
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [useLocation, setUseLocation] = useState(false);
@@ -161,6 +163,8 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
           });
           setUseLocation(true);
           setError(null); // Clear any previous errors
+          // When using location, sort by distance
+          setFilters(prev => ({ ...prev, sortBy: 'distance' }))
         },
         (error) => {
           console.warn('Geolocation error:', error);
@@ -217,10 +221,10 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
         ...(useLocation && location && !filters.zipCode && { 
           latitude: location.latitude.toString(),
           longitude: location.longitude.toString(),
-          radiusKm: '10', // 10km radius for more reasonable driving distances
+          radiusKm: (filters.radiusKm || 3.2).toString(), // Default 2 miles = 3.2 km
           ...(filters.useTravelDistance && { 
             useTravelDistance: 'true',
-            travelMode: filters.travelMode || 'driving'
+            travelMode: filters.travelMode || 'walking'
           })
         })
       });
@@ -676,7 +680,7 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
                   <>
                     <Chip 
                       icon={<LocationOn />} 
-                      label="Within 10km" 
+                      label={`Within ${Math.round((filters.radiusKm || 3.2) / 1.60934)} mi`} 
                       color="success" 
                       size="small" 
                       sx={{ ml: { xs: 1, sm: 2 } }} 
@@ -771,7 +775,11 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
           <Button
             variant={useLocation ? "contained" : "outlined"}
             startIcon={<LocationOn />}
-            onClick={useLocation ? () => { setUseLocation(false); setLocation(null); } : getCurrentLocation}
+            onClick={useLocation ? () => { 
+              setUseLocation(false); 
+              setLocation(null); 
+              setFilters(prev => ({ ...prev, sortBy: 'lastName' }));
+            } : getCurrentLocation}
             color={useLocation ? "success" : "primary"}
             size={isMobile ? "small" : "medium"}
             sx={{ minWidth: { xs: 'auto', sm: 'auto' } }}
@@ -797,16 +805,33 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
               />
               
               {filters.useTravelDistance && (
-                <FormControl size="small" sx={{ minWidth: 100 }}>
-                  <Select
-                    value={filters.travelMode || 'driving'}
-                    onChange={(e) => setFilters({...filters, travelMode: e.target.value as 'driving' | 'walking'})}
-                    size="small"
-                  >
-                    <MenuItem value="driving">Driving</MenuItem>
-                    <MenuItem value="walking">Walking</MenuItem>
-                  </Select>
-                </FormControl>
+                <>
+                  <FormControl size="small" sx={{ minWidth: 100 }}>
+                    <Select
+                      value={filters.travelMode || 'walking'}
+                      onChange={(e) => setFilters({...filters, travelMode: e.target.value as 'driving' | 'walking'})}
+                      size="small"
+                    >
+                      <MenuItem value="walking">Walking</MenuItem>
+                      <MenuItem value="driving">Driving</MenuItem>
+                    </Select>
+                  </FormControl>
+                  
+                  <FormControl size="small" sx={{ minWidth: 80 }}>
+                    <Select
+                      value={filters.radiusKm || 3.2}
+                      onChange={(e) => setFilters({...filters, radiusKm: Number(e.target.value)})}
+                      size="small"
+                    >
+                      <MenuItem value={1.6}>1 mi</MenuItem>
+                      <MenuItem value={3.2}>2 mi</MenuItem>
+                      <MenuItem value={4.8}>3 mi</MenuItem>
+                      <MenuItem value={8}>5 mi</MenuItem>
+                      <MenuItem value={16}>10 mi</MenuItem>
+                      <MenuItem value={24}>15 mi</MenuItem>
+                    </Select>
+                  </FormControl>
+                </>
               )}
             </>
           )}
@@ -1119,7 +1144,7 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
                         </Typography>
                         {isMobile && voter.distanceKm && (
                           <Typography variant="caption" color="primary" sx={{ display: 'block', fontWeight: 'medium' }}>
-                            📍 {voter.distanceKm.toFixed(2)} km
+                            📍 {(voter.distanceKm * 0.621371).toFixed(2)} mi
                           </Typography>
                         )}
                       </Box>
@@ -1130,7 +1155,7 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
                     <TableCell>
                       {voter.distanceKm ? (
                         <Typography variant="body2" color="primary" sx={{ fontWeight: 'medium' }}>
-                          📍 {voter.distanceKm.toFixed(2)} km
+                          📍 {(voter.distanceKm * 0.621371).toFixed(2)} mi
                         </Typography>
                       ) : (
                         <Typography variant="caption" color="text.secondary">

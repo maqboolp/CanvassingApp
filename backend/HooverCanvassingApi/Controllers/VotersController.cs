@@ -176,7 +176,11 @@ namespace HooverCanvassingApi.Controllers
                         
                         // First, pre-filter using straight-line distance with a buffer
                         // Travel distance can be 1.3-2x straight-line distance depending on road layout
-                        var preFilterRadiusKm = radiusKm * 2.0;
+                        // For very short distances, use a larger multiplier as roads can add significant detours
+                        var preFilterRadiusKm = radiusKm < 5 ? radiusKm * 5.0 : radiusKm * 2.0;
+                        
+                        _logger.LogInformation("Pre-filtering voters with radius {RadiusKm}km, using buffer of {PreFilterRadiusKm}km", 
+                            radiusKm, preFilterRadiusKm);
                         var preFilteredVoters = voters
                             .Where(v => v.Latitude.HasValue && v.Longitude.HasValue)
                             .Select(v => new {
@@ -185,7 +189,7 @@ namespace HooverCanvassingApi.Controllers
                             })
                             .Where(v => v.StraightLineDistance <= preFilterRadiusKm)
                             .OrderBy(v => v.StraightLineDistance)
-                            .Take(100) // Limit to 100 nearest voters to reduce API calls
+                            .Take(150) // Limit to 150 nearest voters to reduce API calls (increased to ensure we find walkable routes)
                             .ToList();
                         
                         _logger.LogInformation("Pre-filtered from {TotalCount} to {FilteredCount} voters using straight-line distance", 
