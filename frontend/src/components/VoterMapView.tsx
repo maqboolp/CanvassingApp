@@ -16,7 +16,8 @@ import {
   ListItemText,
   ListItemSecondaryAction,
   IconButton,
-  Divider
+  Divider,
+  Collapse
 } from '@mui/material';
 import {
   LocationOn,
@@ -25,7 +26,9 @@ import {
   Home,
   CheckCircle,
   RadioButtonUnchecked,
-  ContactPhone
+  ContactPhone,
+  ExpandMore,
+  ExpandLess
 } from '@mui/icons-material';
 import { Voter, ContactStatus, VoterSupport } from '../types';
 import ContactModal from './ContactModal';
@@ -72,6 +75,7 @@ const VoterMapView: React.FC<VoterMapViewProps> = ({
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [contactModalOpen, setContactModalOpen] = useState(false);
   const [selectedVoter, setSelectedVoter] = useState<Voter | null>(null);
+  const [legendOpen, setLegendOpen] = useState(false); // Default to collapsed
 
   // Use the Google Maps loader hook
   const { isLoaded, loadError } = useJsApiLoader({
@@ -262,77 +266,92 @@ const VoterMapView: React.FC<VoterMapViewProps> = ({
       {/* Map Legend */}
       <Card sx={{ position: 'absolute', top: 10, left: 10, zIndex: 1, maxWidth: 250 }}>
         <CardContent sx={{ py: 1 }}>
-          <Typography variant="subtitle2" gutterBottom>Map Legend</Typography>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Box sx={{ 
-                width: 24, 
-                height: 24, 
-                borderRadius: '50%', 
-                backgroundColor: '#0F9D58',
-                border: '2px solid white',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'white',
-                fontSize: '10px',
-                fontWeight: 'bold'
-              }}>
-                #
-              </Box>
-              <Typography variant="caption">All Contacted</Typography>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Box sx={{ 
-                width: 24, 
-                height: 24, 
-                borderRadius: '50%', 
-                backgroundColor: '#F4B400',
-                border: '2px solid white',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'white',
-                fontSize: '10px',
-                fontWeight: 'bold'
-              }}>
-                #
-              </Box>
-              <Typography variant="caption">Partially Contacted</Typography>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Box sx={{ 
-                width: 24, 
-                height: 24, 
-                borderRadius: '50%', 
-                backgroundColor: '#DB4437',
-                border: '2px solid white',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'white',
-                fontSize: '10px',
-                fontWeight: 'bold'
-              }}>
-                #
-              </Box>
-              <Typography variant="caption">Not Contacted</Typography>
-            </Box>
-            {currentLocation && (
+          <Box 
+            sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'space-between',
+              cursor: 'pointer'
+            }}
+            onClick={() => setLegendOpen(!legendOpen)}
+          >
+            <Typography variant="subtitle2">Map Legend</Typography>
+            <IconButton size="small">
+              {legendOpen ? <ExpandLess /> : <ExpandMore />}
+            </IconButton>
+          </Box>
+          <Collapse in={legendOpen}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mt: 1 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Box sx={{ 
                   width: 24, 
                   height: 24, 
                   borderRadius: '50%', 
-                  backgroundColor: '#4285F4',
+                  backgroundColor: '#0F9D58',
                   border: '2px solid white',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white',
+                  fontSize: '10px',
+                  fontWeight: 'bold'
                 }}>
+                  #
                 </Box>
-                <Typography variant="caption">Your Location</Typography>
+                <Typography variant="caption">All Contacted</Typography>
               </Box>
-            )}
-          </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box sx={{ 
+                  width: 24, 
+                  height: 24, 
+                  borderRadius: '50%', 
+                  backgroundColor: '#F4B400',
+                  border: '2px solid white',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white',
+                  fontSize: '10px',
+                  fontWeight: 'bold'
+                }}>
+                  #
+                </Box>
+                <Typography variant="caption">Partially Contacted</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box sx={{ 
+                  width: 24, 
+                  height: 24, 
+                  borderRadius: '50%', 
+                  backgroundColor: '#DB4437',
+                  border: '2px solid white',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white',
+                  fontSize: '10px',
+                  fontWeight: 'bold'
+                }}>
+                  #
+                </Box>
+                <Typography variant="caption">Not Contacted</Typography>
+              </Box>
+              {currentLocation && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ 
+                    width: 24, 
+                    height: 24, 
+                    borderRadius: '50%', 
+                    backgroundColor: '#4285F4',
+                    border: '2px solid white',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                  }}>
+                  </Box>
+                  <Typography variant="caption">Your Location</Typography>
+                </Box>
+              )}
+            </Box>
+          </Collapse>
         </CardContent>
       </Card>
 

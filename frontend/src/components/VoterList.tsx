@@ -75,7 +75,7 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
   const [filters, setFilters] = useState<VoterFilter>({
     contactStatus: 'not-contacted',
     travelMode: 'walking',
-    radiusKm: 8, // Default to 5 miles (8 km) for better coverage
+    radiusKm: 3.2, // Default to 2 miles (3.2 km)
     useTravelDistance: false // Default to straight-line distance
   });
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -222,7 +222,7 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
         ...(useLocation && location && !filters.zipCode && { 
           latitude: location.latitude.toString(),
           longitude: location.longitude.toString(),
-          radiusKm: (filters.radiusKm || 8).toString(), // Default 5 miles = 8 km
+          radiusKm: (filters.radiusKm || 3.2).toString(), // Default 2 miles = 3.2 km
           ...(filters.useTravelDistance && { 
             useTravelDistance: 'true',
             travelMode: filters.travelMode || 'walking'
@@ -681,7 +681,7 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
                   <>
                     <Chip 
                       icon={<LocationOn />} 
-                      label={`Within ${Math.round((filters.radiusKm || 8) / 1.60934)} mi`} 
+                      label={`Within ${Math.round((filters.radiusKm || 3.2) / 1.60934)} mi`} 
                       color="success" 
                       size="small" 
                       sx={{ ml: { xs: 1, sm: 2 } }} 
@@ -821,7 +821,7 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
                   
                   <FormControl size="small" sx={{ minWidth: 80 }}>
                     <Select
-                      value={filters.radiusKm || 8}
+                      value={filters.radiusKm || 3.2}
                       onChange={(e) => setFilters({...filters, radiusKm: Number(e.target.value)})}
                       size="small"
                     >
