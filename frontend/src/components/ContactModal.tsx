@@ -491,7 +491,8 @@ const ContactModal: React.FC<ContactModalProps> = ({
   const isAdmin = user?.role === 'admin' || user?.role === 'superadmin';
   const isVolunteer = user?.role === 'volunteer';
   const isWithinProximity = distance !== null && distance <= 100;
-  const canSubmit = !isVolunteer || isWithinProximity || locationError !== null;
+  const hasPhoto = photoFile !== null;
+  const canSubmit = !isVolunteer || isWithinProximity || (locationError !== null && hasPhoto);
 
   if (!voter) return null;
 
@@ -538,7 +539,14 @@ const ContactModal: React.FC<ContactModalProps> = ({
                   isAdmin ? (
                     <>{locationError} As an admin, you can override this requirement.</>
                   ) : (
-                    <>{locationError}</>
+                    <>
+                      {locationError}
+                      {!hasPhoto && (
+                        <Box component="span" sx={{ display: 'block', mt: 0.5, fontWeight: 'bold' }}>
+                          Please take a photo of the house address to verify your visit.
+                        </Box>
+                      )}
+                    </>
                   )
                 ) : distance !== null ? (
                   isWithinProximity ? (
@@ -766,7 +774,22 @@ const ContactModal: React.FC<ContactModalProps> = ({
           </Box>
           
           {/* Photo Capture Controls */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2, flexWrap: 'wrap' }}>
+          <Box sx={{ 
+            mb: 2,
+            ...(locationError && !hasPhoto && isVolunteer && {
+              p: 2,
+              bgcolor: 'warning.light',
+              borderRadius: 1,
+              border: '2px solid',
+              borderColor: 'warning.main'
+            })
+          }}>
+            {locationError && !hasPhoto && isVolunteer && (
+              <Typography variant="body2" sx={{ mb: 1, fontWeight: 'bold', color: 'warning.dark' }}>
+                📷 Photo Required: Since location services are unavailable, please take a photo of the house address to verify your visit.
+              </Typography>
+            )}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
             <input
               ref={fileInputRef}
               type="file"
@@ -818,6 +841,7 @@ const ContactModal: React.FC<ContactModalProps> = ({
                 </IconButton>
               </>
             )}
+            </Box>
           </Box>
           
           <TextField
@@ -863,6 +887,7 @@ const ContactModal: React.FC<ContactModalProps> = ({
         >
           {submitting ? 'Logging Contact...' : 
            checkingLocation ? 'Checking Location...' :
+           (!canSubmit && locationError && !hasPhoto) ? 'Photo Required' :
            !canSubmit ? 'Too Far Away' : 
            (isAdmin && distance !== null && !isWithinProximity) ? 'Override & Log Contact' : 
            'Log Contact'}
