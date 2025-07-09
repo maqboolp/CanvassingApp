@@ -1582,7 +1582,7 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
               <strong>{nearestVoter.voter.firstName} {nearestVoter.voter.lastName}</strong>
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              📍 {nearestVoter.distance.toFixed(2)} km away
+              📍 {(nearestVoter.distance * 0.621371).toFixed(2)} miles away
             </Typography>
             <Box 
               sx={{ 
