@@ -717,7 +717,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
           // Auth error is already handled by ApiErrorHandler (user redirected to login)
           return;
         }
-        setVolunteerCreateResult({ error: error.message });
+        // Try to extract more specific error message
+        const errorMessage = error.getDetailedMessage();
+        setVolunteerCreateResult({ error: errorMessage });
       } else {
         setVolunteerCreateResult({ error: 'Failed to send invitation: ' + (error as Error).message });
       }

@@ -44,6 +44,14 @@ export class ApiErrorHandler {
         errorMessage = errorData.message || errorMessage;
         correlationId = errorData.correlationId;
         errors = errorData.errors;
+      } else if (errorData.errors) {
+        // Handle ASP.NET Core validation errors
+        errors = errorData.errors;
+        // Extract first error message for display
+        const firstError = Object.values(errorData.errors)[0];
+        if (Array.isArray(firstError) && firstError.length > 0) {
+          errorMessage = firstError[0];
+        }
       } else {
         // Handle legacy error format
         errorMessage = errorData.error || errorData.message || errorMessage;
