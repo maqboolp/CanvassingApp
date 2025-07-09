@@ -68,6 +68,7 @@ namespace HooverCanvassingApi.Controllers
                 var existingUser = await _userManager.FindByEmailAsync(request.Email);
                 if (existingUser != null)
                 {
+                    _logger.LogWarning("User with email {Email} already exists", request.Email);
                     return BadRequest(new { error = "User with this email already exists" });
                 }
 
@@ -77,17 +78,25 @@ namespace HooverCanvassingApi.Controllers
                 
                 if (existingToken != null)
                 {
+                    _logger.LogWarning("Active invitation already exists for email {Email}", request.Email);
                     return BadRequest(new { error = "An active invitation already exists for this email" });
                 }
 
                 // Generate secure token
                 var token = GenerateSecureToken();
                 
+                // Parse role safely
+                if (!Enum.TryParse<VolunteerRole>(request.Role, out var role))
+                {
+                    _logger.LogWarning("Invalid role '{Role}' provided for invitation", request.Role);
+                    return BadRequest(new { error = $"Invalid role: {request.Role}" });
+                }
+
                 // Create invitation token
                 var invitation = new InvitationToken
                 {
                     Email = request.Email,
-                    Role = Enum.Parse<VolunteerRole>(request.Role),
+                    Role = role,
                     Token = token,
                     CreatedByUserId = currentUserId
                 };
