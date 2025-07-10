@@ -579,24 +579,11 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
         </Tabs>
       </Box>
 
-      {/* Show Map View */}
-      {currentView === 'map' ? (
-        <Box sx={{ height: 'calc(100vh - 200px)' }}>
-          <VoterMapViewWrapper
-            voters={voters}
-            loading={loading}
-            onRefresh={fetchVoters}
-            currentLocation={location}
-            onContactComplete={handleContactComplete}
-          />
-        </Box>
-      ) : (
-        <>
-          {/* Filter Controls */}
-          <Box sx={{ p: { xs: 1, sm: 2 }, borderBottom: 1, borderColor: 'divider' }}>
+      {/* Shared Filter Controls for both views */}
+      <Box sx={{ p: { xs: 1, sm: 2 }, borderBottom: 1, borderColor: 'divider' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
               <Typography variant="h6" sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
-                Voter List ({total} voters)
+                {currentView === 'map' ? 'Voter Map' : 'Voter List'} ({total} voters)
                 {useLocation && (
                   <>
                     <Chip 
@@ -938,8 +925,21 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
         </Alert>
       )}
 
-      {/* Voter Table */}
-      <TableContainer sx={{ 
+      {/* Conditional View Rendering */}
+      {currentView === 'map' ? (
+        <Box sx={{ height: 'calc(100vh - 300px)' }}>
+          <VoterMapViewWrapper
+            voters={voters}
+            loading={loading}
+            onRefresh={fetchVoters}
+            currentLocation={location}
+            onContactComplete={handleContactComplete}
+          />
+        </Box>
+      ) : (
+        <>
+          {/* Voter Table */}
+          <TableContainer sx={{ 
         maxHeight: 600,
         width: '100%',
         mx: 0 // Remove any horizontal margins
@@ -1248,6 +1248,10 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
         onRowsPerPageChange={handleRowsPerPageChange}
       />
 
+        </>
+      )}
+
+      {/* Dialogs - Available in both views */}
       {/* Contact Modal */}
       <ContactModal
         open={contactModalOpen}
@@ -1450,8 +1454,6 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
           setAddVoterDialogOpen(false);
         }}
       />
-      </>
-      )}
     </Paper>
   );
 };
