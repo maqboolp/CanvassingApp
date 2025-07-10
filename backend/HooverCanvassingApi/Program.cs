@@ -22,6 +22,11 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers(options =>
 {
     options.Filters.Add<ValidationFilter>();
+})
+.AddJsonOptions(options =>
+{
+    // Use camelCase for JSON property names to match JavaScript conventions
+    options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
 });
 
 // Add memory cache
@@ -374,14 +379,6 @@ app.UseMiddleware<GlobalExceptionMiddleware>();
 
 // Serve static files (for uploaded audio)
 app.UseStaticFiles();
-
-// Add request logging middleware
-app.Use(async (context, next) =>
-{
-    Console.WriteLine($"REQUEST: {context.Request.Method} {context.Request.Path} from {context.Request.Headers["User-Agent"].FirstOrDefault()}");
-    await next();
-    Console.WriteLine($"RESPONSE: {context.Response.StatusCode}");
-});
 
 app.UseCors();
 

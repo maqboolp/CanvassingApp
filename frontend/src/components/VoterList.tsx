@@ -77,7 +77,7 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
     travelMode: 'driving', // Default to driving
     radiusKm: 3.2, // Default to 2 miles (3.2 km)
     useTravelDistance: false, // Default to straight-line distance
-    sortBy: 'distance' // Default to distance sorting (will fall back to zip if no location)
+    sortBy: 'lastName' // Default to lastName sorting since location is not auto-enabled
   });
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [useLocation, setUseLocation] = useState(false);
@@ -135,11 +135,11 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
     window.open(mapUrl, '_blank');
   };
 
-  // Set default sorting and try to get location on mount
+  // Set default sorting - removed automatic location request
+  // Users should explicitly click "Find Nearby" to enable location
   useEffect(() => {
-    // Automatically try to get user location on mount
-    // This will set useLocation=true and sortBy='distance' when location is obtained
-    getCurrentLocation();
+    // Don't automatically request location on mount
+    // This ensures the UI state matches the data state
   }, []); // Only run once on mount
 
   // When switching to map view, ensure we have loaded voters
@@ -164,7 +164,6 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
           setFilters(prev => ({ ...prev, sortBy: 'distance' }))
         },
         (error) => {
-          console.warn('Geolocation error:', error);
           // Fallback to ZIP code sorting instead of showing error
           setUseLocation(false);
           setLocation(null);
@@ -173,7 +172,6 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
         }
       );
     } else {
-      console.warn('Geolocation is not supported by this browser.');
       // Fallback to ZIP code sorting
       setUseLocation(false);
       setLocation(null);
@@ -195,7 +193,7 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
         setAvailableTags(tags);
       }
     } catch (err) {
-      console.error('Failed to fetch tags:', err);
+      // Failed to fetch tags, but continue without them
     }
   };
 
@@ -203,7 +201,6 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
     setLoading(true);
     setError(null);
     
-    console.log('Fetching voters with radius:', filters.radiusKm, 'km (', (filters.radiusKm || 3.2) / 1.60934, 'miles)');
     
     try {
       const queryParams = new URLSearchParams({
@@ -239,7 +236,8 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
       }
 
       const token = user?.token || localStorage.getItem('auth_token');
-      const response = await fetch(`${API_BASE_URL}/api/voters?${queryParams}`, {
+      const url = `${API_BASE_URL}/api/voters?${queryParams}`;
+      const response = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -408,7 +406,6 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
               });
             },
             (error) => {
-              console.warn('Geolocation error:', error);
               resolve(null);
             },
             { 
@@ -959,7 +956,7 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
               )}
               <TableCell>Name</TableCell>
               <TableCell>Address</TableCell>
-              {!isMobile && <TableCell>Distance</TableCell>}
+              {(useLocation || !isMobile) && <TableCell>Distance</TableCell>}
               {!isMobile && <TableCell>Age</TableCell>}
               {!isMobile && <TableCell>Vote Frequency</TableCell>}
               <TableCell>Party</TableCell>
@@ -1073,7 +1070,7 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
                     </Box>
                   </TableCell>
                   
-                  {!isMobile && (
+                  {(useLocation || !isMobile) && (
                     <TableCell>
                       {voter.distanceKm ? (
                         <Typography variant="body2" color="primary" sx={{ fontWeight: 'medium' }}>
