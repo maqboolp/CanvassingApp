@@ -32,3 +32,9 @@ logs/
 # Secrets
 appsettings.Production.json
 deployment/.env.*
+
+# DigitalOcean App Specs with secrets
+app-spec.yaml
+app-spec-*.yaml
+kristin-williams-*.yaml
+!app-spec.example.yaml
