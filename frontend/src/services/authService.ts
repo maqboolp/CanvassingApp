@@ -6,32 +6,49 @@ class AuthService {
   private readonly USER_KEY = 'auth_user';
 
   async login(credentials: LoginRequest): Promise<AuthUser> {
-    const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(credentials),
-    });
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(credentials),
+      });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || 'Login failed');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Login failed (HTTP ${response.status})`);
+      }
+
+      const data: ApiResponse<AuthUser> = await response.json();
+      
+      if (!data.success || !data.data) {
+        throw new Error(data.error || 'Login failed - Invalid response');
+      }
+
+      const user = data.data;
+      
+      // Store token and user data
+      localStorage.setItem(this.TOKEN_KEY, user.token);
+      localStorage.setItem(this.USER_KEY, JSON.stringify(user));
+      
+      return user;
+    } catch (error) {
+      // Enhanced error handling to distinguish between different types of failures
+      if (error instanceof TypeError && error.message === 'Failed to fetch') {
+        // Network error - can't reach the server
+        throw new Error(`Cannot connect to server. Please check your internet connection. (API: ${API_BASE_URL})`);
+      } else if (error instanceof SyntaxError) {
+        // JSON parsing error
+        throw new Error('Invalid response from server. Please try again.');
+      } else if (error instanceof Error) {
+        // Pass through other errors with original message
+        throw error;
+      } else {
+        // Unknown error
+        throw new Error('An unexpected error occurred. Please try again.');
+      }
     }
-
-    const data: ApiResponse<AuthUser> = await response.json();
-    
-    if (!data.success || !data.data) {
-      throw new Error(data.error || 'Login failed');
-    }
-
-    const user = data.data;
-    
-    // Store token and user data
-    localStorage.setItem(this.TOKEN_KEY, user.token);
-    localStorage.setItem(this.USER_KEY, JSON.stringify(user));
-    
-    return user;
   }
 
   logout(): void {
@@ -170,49 +187,69 @@ class AuthService {
   }
 
   async forgotPassword(email: string): Promise<{ success: boolean; message: string }> {
-    const response = await fetch(`${API_BASE_URL}/api/auth/forgot-password`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ email }),
-    });
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/forgot-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
 
-    const data: ApiResponse<any> = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(data.error || 'Failed to send reset email');
+      const data: ApiResponse<any> = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to send reset email');
+      }
+
+      return {
+        success: data.success,
+        message: data.message || 'Reset email sent successfully'
+      };
+    } catch (error) {
+      if (error instanceof TypeError && error.message === 'Failed to fetch') {
+        throw new Error('Cannot connect to server. Please check your internet connection.');
+      } else if (error instanceof Error) {
+        throw error;
+      } else {
+        throw new Error('Failed to send reset email');
+      }
     }
-
-    return {
-      success: data.success,
-      message: data.message || 'Reset email sent successfully'
-    };
   }
 
   async resetPassword(email: string, token: string, newPassword: string): Promise<{ success: boolean; message: string }> {
-    const response = await fetch(`${API_BASE_URL}/api/auth/reset-password`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ 
-        email, 
-        token, 
-        newPassword 
-      }),
-    });
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/reset-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          email, 
+          token, 
+          newPassword 
+        }),
+      });
 
-    const data: ApiResponse<any> = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(data.error || 'Failed to reset password');
+      const data: ApiResponse<any> = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to reset password');
+      }
+
+      return {
+        success: data.success,
+        message: data.message || 'Password reset successfully'
+      };
+    } catch (error) {
+      if (error instanceof TypeError && error.message === 'Failed to fetch') {
+        throw new Error('Cannot connect to server. Please check your internet connection.');
+      } else if (error instanceof Error) {
+        throw error;
+      } else {
+        throw new Error('Failed to reset password');
+      }
     }
-
-    return {
-      success: data.success,
-      message: data.message || 'Password reset successfully'
-    };
   }
 }
 

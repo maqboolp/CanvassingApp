@@ -291,6 +291,28 @@ namespace HooverCanvassingApi.Controllers
                 return StatusCode(500, new { error = ex.Message });
             }
         }
+
+        [HttpPost("{id}/duplicate")]
+        public async Task<ActionResult<Campaign>> DuplicateCampaign(int id)
+        {
+            try
+            {
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized();
+
+                var duplicatedCampaign = await _campaignService.DuplicateCampaignAsync(id, userId);
+                if (duplicatedCampaign == null)
+                    return NotFound(new { error = "Campaign not found" });
+
+                return CreatedAtAction(nameof(GetCampaign), new { id = duplicatedCampaign.Id }, duplicatedCampaign);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error duplicating campaign {CampaignId}", id);
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
     }
 
     public class CreateCampaignRequest

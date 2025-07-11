@@ -985,5 +985,54 @@ namespace HooverCanvassingApi.Services
         {
             return await _context.VoiceRecordings.FindAsync(id);
         }
+
+        public async Task<Campaign?> DuplicateCampaignAsync(int campaignId, string userId)
+        {
+            try
+            {
+                var originalCampaign = await _context.Campaigns
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(c => c.Id == campaignId);
+
+                if (originalCampaign == null)
+                    return null;
+
+                // Create a copy of the campaign
+                var duplicatedCampaign = new Campaign
+                {
+                    Name = $"{originalCampaign.Name} (Copy)",
+                    Message = originalCampaign.Message,
+                    Type = originalCampaign.Type,
+                    Status = CampaignStatus.Draft,
+                    CreatedById = userId,
+                    CreatedAt = DateTime.UtcNow,
+                    VoiceUrl = originalCampaign.VoiceUrl,
+                    RecordingUrl = originalCampaign.RecordingUrl,
+                    VoiceRecordingId = originalCampaign.VoiceRecordingId,
+                    FilterZipCodes = originalCampaign.FilterZipCodes,
+                    FilterVoteFrequency = originalCampaign.FilterVoteFrequency,
+                    FilterMinAge = originalCampaign.FilterMinAge,
+                    FilterMaxAge = originalCampaign.FilterMaxAge,
+                    FilterVoterSupport = originalCampaign.FilterVoterSupport,
+                    FilterTags = originalCampaign.FilterTags,
+                    TotalRecipients = 0,
+                    SuccessfulDeliveries = 0,
+                    FailedDeliveries = 0,
+                    PendingDeliveries = 0
+                };
+
+                _context.Campaigns.Add(duplicatedCampaign);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation($"Campaign {campaignId} duplicated as campaign {duplicatedCampaign.Id} by user {userId}");
+
+                return duplicatedCampaign;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error duplicating campaign {campaignId}");
+                return null;
+            }
+        }
     }
 }

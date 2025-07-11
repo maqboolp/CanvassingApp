@@ -19,15 +19,19 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions
+  DialogActions,
+  Collapse
 } from '@mui/material';
 import { 
   Login as LoginIcon, 
   Visibility, 
-  VisibilityOff
+  VisibilityOff,
+  WifiOff,
+  ExpandMore
 } from '@mui/icons-material';
 import { LoginRequest } from '../types';
 import { authService } from '../services/authService';
+import { NetworkDiagnostics } from '../utils/networkDiagnostics';
 
 // Get customer-specific campaign info
 const campaignSlogan = process.env.REACT_APP_CAMPAIGN_SLOGAN || "Join our campaign!";
@@ -52,6 +56,11 @@ const Login: React.FC<LoginProps> = ({ onLogin, isLoading = false, error }) => {
   const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
   const [forgotPasswordMessage, setForgotPasswordMessage] = useState<string | null>(null);
   const [forgotPasswordError, setForgotPasswordError] = useState<string | null>(null);
+  
+  // Network diagnostics state
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
+  const [diagnosticResults, setDiagnosticResults] = useState<string | null>(null);
+  const [runningDiagnostics, setRunningDiagnostics] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,6 +102,44 @@ const Login: React.FC<LoginProps> = ({ onLogin, isLoading = false, error }) => {
     setForgotPasswordError(null);
     setForgotPasswordMessage(null);
   };
+  
+  const handleRunDiagnostics = async () => {
+    setRunningDiagnostics(true);
+    setDiagnosticResults(null);
+    
+    try {
+      const results = await NetworkDiagnostics.runDiagnostics();
+      const endpointChecks = await NetworkDiagnostics.checkAPIEndpoints();
+      
+      let diagnosticText = `Network Diagnostics Results:\n\n`;
+      diagnosticText += `API URL: ${results.apiUrl}\n`;
+      diagnosticText += `Using HTTPS: ${results.isHTTPS ? 'Yes' : 'No'}\n`;
+      diagnosticText += `Internet Connection: ${results.hasInternetConnection ? 'Yes' : 'No'}\n`;
+      diagnosticText += `Can Reach API: ${results.canReachAPI ? 'Yes' : 'No'}\n\n`;
+      
+      if (results.errors.length > 0) {
+        diagnosticText += `Issues Found:\n`;
+        results.errors.forEach(error => {
+          diagnosticText += `- ${error}\n`;
+        });
+        diagnosticText += `\n`;
+      }
+      
+      diagnosticText += `Endpoint Status:\n`;
+      Object.entries(endpointChecks).forEach(([endpoint, reachable]) => {
+        diagnosticText += `- ${endpoint}: ${reachable ? 'Reachable' : 'Unreachable'}\n`;
+      });
+      
+      diagnosticText += `\nBrowser: ${navigator.userAgent.substring(0, 100)}...\n`;
+      diagnosticText += `Timestamp: ${results.timestamp}`;
+      
+      setDiagnosticResults(diagnosticText);
+    } catch (error) {
+      setDiagnosticResults(`Failed to run diagnostics: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setRunningDiagnostics(false);
+    }
+  };
 
   return (
     <Container component="main" maxWidth="sm">
@@ -121,10 +168,66 @@ const Login: React.FC<LoginProps> = ({ onLogin, isLoading = false, error }) => {
             </Box>
 
             {error && (
-              <Alert severity="error" sx={{ mb: 2 }}>
+              <Alert 
+                severity="error" 
+                sx={{ mb: 2 }}
+                action={
+                  error.toLowerCase().includes('load failed') || error.toLowerCase().includes('cannot connect') ? (
+                    <Button 
+                      size="small" 
+                      onClick={() => setShowDiagnostics(!showDiagnostics)}
+                      endIcon={<ExpandMore sx={{ transform: showDiagnostics ? 'rotate(180deg)' : 'rotate(0deg)', transition: '0.3s' }} />}
+                    >
+                      Diagnose
+                    </Button>
+                  ) : undefined
+                }
+              >
                 {error}
               </Alert>
             )}
+            
+            <Collapse in={showDiagnostics}>
+              <Box sx={{ mb: 2, p: 2, bgcolor: 'grey.100', borderRadius: 1 }}>
+                <Typography variant="subtitle2" gutterBottom>
+                  Network Connection Troubleshooting
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  If you're having trouble connecting, try these steps:
+                </Typography>
+                <Box component="ul" sx={{ pl: 2, my: 1 }}>
+                  <Typography component="li" variant="body2" color="text.secondary">
+                    Check your internet connection
+                  </Typography>
+                  <Typography component="li" variant="body2" color="text.secondary">
+                    Disable any VPN or proxy
+                  </Typography>
+                  <Typography component="li" variant="body2" color="text.secondary">
+                    Try a different browser or network
+                  </Typography>
+                  <Typography component="li" variant="body2" color="text.secondary">
+                    Clear your browser cache
+                  </Typography>
+                </Box>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={handleRunDiagnostics}
+                  disabled={runningDiagnostics}
+                  startIcon={runningDiagnostics ? <CircularProgress size={16} /> : <WifiOff />}
+                  sx={{ mt: 1 }}
+                >
+                  {runningDiagnostics ? 'Running Diagnostics...' : 'Run Network Diagnostics'}
+                </Button>
+                {diagnosticResults && (
+                  <Box sx={{ mt: 2, p: 1, bgcolor: 'grey.200', borderRadius: 1 }}>
+                    <Typography variant="caption" component="pre" sx={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
+                      {diagnosticResults}
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
+            </Collapse>
 
             <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
               <TextField

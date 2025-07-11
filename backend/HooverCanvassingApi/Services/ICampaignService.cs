@@ -21,6 +21,7 @@ namespace HooverCanvassingApi.Services
         Task<bool> RetryFailedMessagesAsync(int campaignId, bool overrideOptIn = false, int? batchSize = null, int? batchDelayMinutes = null);
         Task<bool> SealCampaignIfCompleteAsync(int campaignId);
         Task<VoiceRecording?> GetVoiceRecordingAsync(int id);
+        Task<Campaign?> DuplicateCampaignAsync(int campaignId, string userId);
     }
 
     public class CampaignStats

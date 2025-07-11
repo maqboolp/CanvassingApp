@@ -25,7 +25,17 @@ import {
   FormControlLabel,
   RadioGroup,
   Radio,
-  IconButton
+  IconButton,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TableSortLabel,
+  Paper,
+  ToggleButton,
+  ToggleButtonGroup
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -36,7 +46,10 @@ import {
   PlayArrow as PlayIcon,
   Stop as StopIcon,
   Mic as MicIcon,
-  TextFields as TextIcon
+  TextFields as TextIcon,
+  ContentCopy as CopyIcon,
+  ViewList as ListIcon,
+  ViewModule as GridIcon
 } from '@mui/icons-material';
 import { API_BASE_URL } from '../config';
 import { AuthUser, VoterTag } from '../types';
@@ -143,6 +156,11 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
     selectedZipCodes: [] as string[],
     selectedTagIds: [] as number[]
   });
+  
+  // View mode state
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
+  const [orderBy, setOrderBy] = useState<keyof Campaign>('createdAt');
+  const [order, setOrder] = useState<'asc' | 'desc'>('desc');
 
   useEffect(() => {
     fetchCampaigns();
@@ -417,6 +435,26 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
     }
   };
 
+  const duplicateCampaign = async (campaignId: number) => {
+    try {
+      const duplicatedCampaign = await ApiErrorHandler.makeAuthenticatedRequest(
+        `${API_BASE_URL}/api/campaigns/${campaignId}/duplicate`,
+        {
+          method: 'POST'
+        }
+      );
+
+      setSuccess(`Campaign duplicated as "${duplicatedCampaign.name}"`);
+      fetchCampaigns();
+    } catch (error) {
+      if (error instanceof ApiError && error.isAuthError) {
+        // Auth error is already handled by ApiErrorHandler (user redirected to login)
+        return;
+      }
+      setError(error instanceof ApiError ? error.message : 'Error duplicating campaign');
+    }
+  };
+
   const editCampaign = (campaign: Campaign) => {
     setEditingCampaign(campaign);
     // Parse existing ZIP codes from JSON string
@@ -564,6 +602,31 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
     return user.role === 'superadmin';
   };
 
+  // Sorting functions
+  const handleRequestSort = (property: keyof Campaign) => {
+    const isAsc = orderBy === property && order === 'asc';
+    setOrder(isAsc ? 'desc' : 'asc');
+    setOrderBy(property);
+  };
+
+  const sortedCampaigns = [...campaigns].sort((a, b) => {
+    let aValue = a[orderBy];
+    let bValue = b[orderBy];
+    
+    // Handle null/undefined values
+    if (aValue === null || aValue === undefined) return 1;
+    if (bValue === null || bValue === undefined) return -1;
+    
+    // Compare values
+    if (aValue < bValue) {
+      return order === 'asc' ? -1 : 1;
+    }
+    if (aValue > bValue) {
+      return order === 'asc' ? 1 : -1;
+    }
+    return 0;
+  });
+
   if (loading) {
     return <Typography>Loading campaigns...</Typography>;
   }
@@ -572,20 +635,35 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4">Campaign Management</Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => {
-            setCreateDialogOpen(true);
-            // Fetch ZIP codes when dialog opens to ensure we have fresh data
-            if (availableZipCodes.length === 0) {
-              fetchAvailableZipCodes();
-            }
-          }}
-          sx={{ backgroundColor: '#1976d2' }}
-        >
-          Create Campaign
-        </Button>
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          <ToggleButtonGroup
+            value={viewMode}
+            exclusive
+            onChange={(e, newMode) => newMode && setViewMode(newMode)}
+            size="small"
+          >
+            <ToggleButton value="table" aria-label="table view">
+              <ListIcon />
+            </ToggleButton>
+            <ToggleButton value="grid" aria-label="grid view">
+              <GridIcon />
+            </ToggleButton>
+          </ToggleButtonGroup>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => {
+              setCreateDialogOpen(true);
+              // Fetch ZIP codes when dialog opens to ensure we have fresh data
+              if (availableZipCodes.length === 0) {
+                fetchAvailableZipCodes();
+              }
+            }}
+            sx={{ backgroundColor: '#1976d2' }}
+          >
+            Create Campaign
+          </Button>
+        </Box>
       </Box>
 
       {error && (
@@ -600,8 +678,9 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
         </Alert>
       )}
 
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' }, gap: 3 }}>
-        {campaigns.map((campaign) => (
+      {viewMode === 'grid' ? (
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' }, gap: 3 }}>
+          {sortedCampaigns.map((campaign) => (
           <Card key={campaign.id}>
             <CardContent>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
@@ -707,6 +786,15 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                       Edit
                     </Button>
                   )}
+                  <Button
+                    size="small"
+                    startIcon={<CopyIcon />}
+                    onClick={() => duplicateCampaign(campaign.id)}
+                    variant="outlined"
+                    color="info"
+                  >
+                    Copy
+                  </Button>
                   {canDeleteCampaign(campaign) && (
                     <Button
                       size="small"
@@ -760,6 +848,187 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
           </Card>
         ))}
       </Box>
+      ) : (
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>
+                  <TableSortLabel
+                    active={orderBy === 'name'}
+                    direction={orderBy === 'name' ? order : 'asc'}
+                    onClick={() => handleRequestSort('name')}
+                  >
+                    Campaign Name
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell>Type</TableCell>
+                <TableCell>
+                  <TableSortLabel
+                    active={orderBy === 'status'}
+                    direction={orderBy === 'status' ? order : 'asc'}
+                    onClick={() => handleRequestSort('status')}
+                  >
+                    Status
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell align="right">
+                  <TableSortLabel
+                    active={orderBy === 'totalRecipients'}
+                    direction={orderBy === 'totalRecipients' ? order : 'asc'}
+                    onClick={() => handleRequestSort('totalRecipients')}
+                  >
+                    Recipients
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell align="right">
+                  <TableSortLabel
+                    active={orderBy === 'successfulDeliveries'}
+                    direction={orderBy === 'successfulDeliveries' ? order : 'asc'}
+                    onClick={() => handleRequestSort('successfulDeliveries')}
+                  >
+                    Delivered
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell align="right">
+                  <TableSortLabel
+                    active={orderBy === 'failedDeliveries'}
+                    direction={orderBy === 'failedDeliveries' ? order : 'asc'}
+                    onClick={() => handleRequestSort('failedDeliveries')}
+                  >
+                    Failed
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell>
+                  <TableSortLabel
+                    active={orderBy === 'createdAt'}
+                    direction={orderBy === 'createdAt' ? order : 'asc'}
+                    onClick={() => handleRequestSort('createdAt')}
+                  >
+                    Created
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell>Created By</TableCell>
+                <TableCell align="center">Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {sortedCampaigns.map((campaign) => (
+                <TableRow key={campaign.id}>
+                  <TableCell>
+                    <Typography variant="body2" fontWeight="medium">
+                      {campaign.name}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                      {campaign.message.length > 50 
+                        ? `${campaign.message.substring(0, 50)}...` 
+                        : campaign.message}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Chip 
+                      label={getCampaignTypeString(campaign.type)} 
+                      size="small"
+                      color={campaign.type === 0 ? 'primary' : 'secondary'}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Chip 
+                      label={getCampaignStatusString(campaign.status)}
+                      size="small"
+                      color={getStatusColor(campaign.status)}
+                    />
+                  </TableCell>
+                  <TableCell align="right">{campaign.totalRecipients}</TableCell>
+                  <TableCell align="right">
+                    <Typography color="success.main">{campaign.successfulDeliveries}</Typography>
+                  </TableCell>
+                  <TableCell align="right">
+                    <Typography color="error.main">{campaign.failedDeliveries}</Typography>
+                  </TableCell>
+                  <TableCell>{new Date(campaign.createdAt).toLocaleDateString()}</TableCell>
+                  <TableCell>
+                    {user.role === 'superadmin' && campaign.createdById !== user.id && (
+                      <Chip label="Other Admin" size="small" color="info" />
+                    )}
+                    {campaign.createdById === user.id && (
+                      <Chip label="You" size="small" color="success" />
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
+                      {campaign.status === 0 && (
+                        <>
+                          {canSendCampaign() && (
+                            <IconButton
+                              size="small"
+                              onClick={() => setSendDialog({ 
+                                open: true, 
+                                campaignId: campaign.id, 
+                                overrideOptIn: false,
+                                batchSize: 100,
+                                batchDelay: 30
+                              })}
+                              color="primary"
+                              title="Send Campaign"
+                            >
+                              <SendIcon />
+                            </IconButton>
+                          )}
+                          {canEditCampaign(campaign) && (
+                            <IconButton
+                              size="small"
+                              onClick={() => editCampaign(campaign)}
+                              title="Edit Campaign"
+                            >
+                              <EditIcon />
+                            </IconButton>
+                          )}
+                        </>
+                      )}
+                      {campaign.status === 3 && campaign.failedDeliveries > 0 && canSendCampaign() && (
+                        <Button
+                          size="small"
+                          startIcon={<SendIcon />}
+                          onClick={() => setSendDialog({ 
+                            open: true, 
+                            campaignId: campaign.id, 
+                            overrideOptIn: false,
+                            batchSize: 100,
+                            batchDelay: 30
+                          })}
+                          variant="outlined"
+                          color="warning"
+                        >
+                          Retry ({campaign.failedDeliveries})
+                        </Button>
+                      )}
+                      <IconButton
+                        size="small"
+                        onClick={() => duplicateCampaign(campaign.id)}
+                        color="info"
+                        title="Duplicate Campaign"
+                      >
+                        <CopyIcon />
+                      </IconButton>
+                      {canDeleteCampaign(campaign) && (
+                        <IconButton
+                          size="small"
+                          onClick={() => deleteCampaign(campaign.id)}
+                          color="error"
+                          title="Delete Campaign"
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      )}
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
 
       {/* Create Campaign Dialog */}
       <Dialog open={createDialogOpen} onClose={() => {
