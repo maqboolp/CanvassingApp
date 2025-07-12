@@ -41,6 +41,7 @@ const AddVoterDialog: React.FC<AddVoterDialogProps> = ({ open, onClose, onSucces
   const [error, setError] = useState<string | null>(null);
   const [addressSuggestions, setAddressSuggestions] = useState<PlacePrediction[]>([]);
   const [addressInputValue, setAddressInputValue] = useState('');
+  const [selectedAddress, setSelectedAddress] = useState<PlacePrediction | null>(null);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const autocompleteService = useRef<google.maps.places.AutocompleteService | null>(null);
   const placesService = useRef<google.maps.places.PlacesService | null>(null);
@@ -291,6 +292,7 @@ const AddVoterDialog: React.FC<AddVoterDialogProps> = ({ open, onClose, onSucces
       });
       setAddressInputValue('');
       setAddressSuggestions([]);
+      setSelectedAddress(null);
 
       onSuccess();
       onClose();
@@ -343,15 +345,19 @@ const AddVoterDialog: React.FC<AddVoterDialogProps> = ({ open, onClose, onSucces
             <Autocomplete
               sx={{ gridColumn: 'span 2' }}
               options={addressSuggestions}
-              getOptionLabel={(option) => option.description}
+              getOptionLabel={(option) => typeof option === 'string' ? option : option.description}
               loading={loadingSuggestions}
               inputValue={addressInputValue}
-              value={null}
-              onInputChange={(event, newInputValue) => {
+              value={selectedAddress}
+              freeSolo
+              onInputChange={(event, newInputValue, reason) => {
                 setAddressInputValue(newInputValue);
-                // Also update the street address field if user is typing manually
-                if (!event || event.type !== 'click') {
-                  setNewVoter(prev => ({ ...prev, addressLine: newInputValue }));
+                // Clear selection if user is typing
+                if (reason === 'input') {
+                  setSelectedAddress(null);
+                  if (newInputValue) {
+                    setNewVoter(prev => ({ ...prev, addressLine: newInputValue }));
+                  }
                 }
                 if (newInputValue.length >= 3) {
                   fetchAddressSuggestions(newInputValue);
@@ -360,7 +366,15 @@ const AddVoterDialog: React.FC<AddVoterDialogProps> = ({ open, onClose, onSucces
                 }
               }}
               onChange={(event, newValue) => {
-                handleAddressSelect(newValue);
+                if (typeof newValue === 'string') {
+                  // User entered a custom value
+                  setNewVoter(prev => ({ ...prev, addressLine: newValue }));
+                  setSelectedAddress(null);
+                } else if (newValue) {
+                  // User selected an option
+                  setSelectedAddress(newValue);
+                  handleAddressSelect(newValue);
+                }
               }}
               renderInput={(params) => (
                 <TextField
