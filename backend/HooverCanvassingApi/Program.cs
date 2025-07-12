@@ -316,6 +316,9 @@ builder.Services.AddSingleton<IBackgroundServiceMonitor, BackgroundServiceMonito
 // Add audio cleanup service (runs in background)
 builder.Services.AddHostedService<AudioCleanupService>();
 
+// Add campaign monitor service to resume stuck campaigns
+builder.Services.AddHostedService<CampaignMonitorService>();
+
 builder.Services.AddHttpClient();
 builder.Services.AddHttpClient<VoterImportService>();
 builder.Services.AddHttpClient<GoogleMapsService>();

@@ -22,6 +22,7 @@ namespace HooverCanvassingApi.Services
         Task<bool> SealCampaignIfCompleteAsync(int campaignId);
         Task<VoiceRecording?> GetVoiceRecordingAsync(int id);
         Task<Campaign?> DuplicateCampaignAsync(int campaignId, string userId);
+        Task<List<Campaign>> CheckAndResumeStuckCampaignsAsync();
     }
 
     public class CampaignStats

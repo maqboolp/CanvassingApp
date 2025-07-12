@@ -9,7 +9,11 @@
       "Bash(grep:*)",
       "Bash(npm run type-check:*)",
       "Bash(git commit:*)",
-      "Bash(doctl apps create-deployment:*)"
+      "Bash(doctl apps create-deployment:*)",
+      "Bash(doctl apps spec get:*)",
+      "Bash(doctl databases db-query:*)",
+      "Bash(doctl databases connection show:*)",
+      "Bash(doctl databases:*)"
     ],
     "deny": []
   }

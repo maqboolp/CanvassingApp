@@ -500,6 +500,10 @@ namespace HooverCanvassingApi.Services
             var operationName = $"Campaign_{campaignId}_Processing";
             _logger.LogInformation($"ProcessCampaignMessagesWithScopeAsync called for campaign {campaignId} with overrideOptIn={overrideOptIn}");
             
+            // Track start time to handle 30-minute limit
+            var startTime = DateTime.UtcNow;
+            var maxRuntime = TimeSpan.FromMinutes(25); // Stop at 25 minutes to be safe
+            
             try
             {
                 _backgroundMonitor.StartOperation(operationName, $"Processing campaign {campaignId}");
@@ -552,6 +556,20 @@ namespace HooverCanvassingApi.Services
                     
                     for (int batchIndex = 0; batchIndex < pendingMessageIds.Count; batchIndex += effectiveBatchSize)
                     {
+                        // Check if we're approaching the 30-minute limit
+                        var elapsed = DateTime.UtcNow - startTime;
+                        if (elapsed > maxRuntime)
+                        {
+                            _logger.LogWarning($"Campaign {campaignId} processing approaching 30-minute limit after {elapsed.TotalMinutes:F1} minutes. Processed {batchIndex} messages so far.");
+                            
+                            // Update campaign status to allow resumption
+                            await UpdateCampaignProgressAsync(campaignId, successfulDeliveries, failedDeliveries);
+                            
+                            _backgroundMonitor.CompleteOperation(operationName);
+                            _logger.LogInformation($"Campaign {campaignId} paused for resumption. Will continue from message index {batchIndex}");
+                            return;
+                        }
+                        
                         // If this is not the first batch and we have a delay, wait
                         if (batchIndex > 0 && effectiveDelayMinutes > 0)
                         {
@@ -927,6 +945,52 @@ namespace HooverCanvassingApi.Services
             {
                 _logger.LogError(ex, $"Error updating campaign stats for campaign {campaignId}");
             }
+        }
+
+        public async Task<List<Campaign>> CheckAndResumeStuckCampaignsAsync()
+        {
+            var resumedCampaigns = new List<Campaign>();
+            
+            try
+            {
+                // Find campaigns that are stuck in "Sending" status with pending messages
+                var stuckCampaigns = await _context.Campaigns
+                    .Where(c => c.Status == CampaignStatus.Sending && c.PendingDeliveries > 0)
+                    .ToListAsync();
+                
+                foreach (var campaign in stuckCampaigns)
+                {
+                    // Check if campaign has been stuck for more than 5 minutes
+                    var lastActivity = await _context.CampaignMessages
+                        .Where(m => m.CampaignId == campaign.Id && m.SentAt != null)
+                        .OrderByDescending(m => m.SentAt)
+                        .Select(m => m.SentAt)
+                        .FirstOrDefaultAsync();
+                    
+                    if (lastActivity == null || DateTime.UtcNow - lastActivity.Value > TimeSpan.FromMinutes(5))
+                    {
+                        _logger.LogInformation($"Resuming stuck campaign {campaign.Id} ({campaign.Name})");
+                        
+                        // Resume the campaign
+                        var resumed = await SendCampaignAsync(campaign.Id, true, 50, 5);
+                        if (resumed)
+                        {
+                            resumedCampaigns.Add(campaign);
+                        }
+                    }
+                }
+                
+                if (resumedCampaigns.Any())
+                {
+                    _logger.LogInformation($"Resumed {resumedCampaigns.Count} stuck campaigns");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking and resuming stuck campaigns");
+            }
+            
+            return resumedCampaigns;
         }
 
         public async Task<bool> SealCampaignIfCompleteAsync(int campaignId)

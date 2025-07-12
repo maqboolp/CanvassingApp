@@ -313,6 +313,26 @@ namespace HooverCanvassingApi.Controllers
                 return StatusCode(500, new { error = ex.Message });
             }
         }
+
+        [HttpPost("check-stuck")]
+        [Authorize(Roles = "SuperAdmin")]
+        public async Task<ActionResult> CheckStuckCampaigns()
+        {
+            try
+            {
+                var resumedCampaigns = await _campaignService.CheckAndResumeStuckCampaignsAsync();
+                return Ok(new 
+                { 
+                    resumedCount = resumedCampaigns.Count,
+                    campaigns = resumedCampaigns.Select(c => new { c.Id, c.Name, c.Status })
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking stuck campaigns");
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
     }
 
     public class CreateCampaignRequest
