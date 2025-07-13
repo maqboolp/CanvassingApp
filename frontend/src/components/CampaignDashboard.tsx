@@ -1179,7 +1179,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                     <Typography color="error.main">{campaign.failedDeliveries}</Typography>
                   </TableCell>
                   <TableCell align="right">
-                    <Typography color="info.main">{campaign.totalRecipients - campaign.failedDeliveries}</Typography>
+                    <Typography color="info.main">{campaign.totalRecipients - campaign.successfulDeliveries - campaign.failedDeliveries}</Typography>
                   </TableCell>
                   <TableCell>{new Date(campaign.createdAt).toLocaleDateString()}</TableCell>
                   <TableCell>

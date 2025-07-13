@@ -292,14 +292,16 @@ namespace HooverCanvassingApi.Services
             var totalRecipients = campaign.Messages.Count;
             var failed = campaign.Messages.Count(m => m.Status == MessageStatus.Failed);
             
+            var sent = campaign.Messages.Count(m => m.Status == MessageStatus.Sent || m.Status == MessageStatus.Delivered);
+            
             var stats = new CampaignStats
             {
                 TotalRecipients = totalRecipients,
-                Sent = campaign.Messages.Count(m => m.Status == MessageStatus.Sent || m.Status == MessageStatus.Delivered),
+                Sent = sent,
                 Delivered = campaign.Messages.Count(m => m.Status == MessageStatus.Delivered),
                 Failed = failed,
                 Pending = campaign.Messages.Count(m => m.Status == MessageStatus.Pending || m.Status == MessageStatus.Queued),
-                Remaining = totalRecipients - failed, // Messages that can still be retried
+                Remaining = totalRecipients - sent - failed, // Messages not yet processed
                 TotalCost = campaign.Messages.Where(m => m.Cost.HasValue).Sum(m => m.Cost.Value)
             };
 

@@ -33,7 +33,7 @@ namespace HooverCanvassingApi.Services
         public int Delivered { get; set; }
         public int Failed { get; set; }
         public int Pending { get; set; }
-        public int Remaining { get; set; } // Total - Failed (messages that can still be retried)
+        public int Remaining { get; set; } // Messages not yet processed (pending/queued)
         public decimal TotalCost { get; set; }
         public Dictionary<string, int> StatusBreakdown { get; set; } = new();
     }
