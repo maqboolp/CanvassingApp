@@ -50,7 +50,8 @@ import {
   TextFields as TextIcon,
   ContentCopy as CopyIcon,
   ViewList as ListIcon,
-  ViewModule as GridIcon
+  ViewModule as GridIcon,
+  Refresh as RefreshIcon
 } from '@mui/icons-material';
 import { API_BASE_URL } from '../config';
 import { AuthUser, VoterTag } from '../types';
@@ -126,6 +127,7 @@ const getCampaignStatusString = (status: number): string => {
 const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
@@ -179,6 +181,19 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
     fetchVoiceRecordings();
   }, []);
 
+  // Auto-refresh when there are campaigns in "Sending" state
+  useEffect(() => {
+    const hasSendingCampaigns = campaigns.some(c => c.status === 2); // 2 = Sending
+    
+    if (hasSendingCampaigns) {
+      const interval = setInterval(() => {
+        fetchCampaigns(true, false); // Don't show success message for auto-refresh
+      }, 10000); // Refresh every 10 seconds
+      
+      return () => clearInterval(interval);
+    }
+  }, [campaigns]);
+
   useEffect(() => {
     // Update audience count when ZIP codes or tags change
     if (newCampaign.selectedZipCodes.length > 0 || newCampaign.selectedTagIds.length > 0) {
@@ -188,13 +203,23 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
     }
   }, [newCampaign.selectedZipCodes, newCampaign.selectedTagIds]);
 
-  const fetchCampaigns = async () => {
+  const fetchCampaigns = async (isRefresh = false, showSuccess = true) => {
     try {
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+      
       const data = await ApiErrorHandler.makeAuthenticatedRequest(
         `${API_BASE_URL}/api/campaigns`
       );
       console.log('Campaigns data from API:', data);
       setCampaigns(data);
+      
+      if (isRefresh && showSuccess) {
+        setSuccess('Campaigns refreshed');
+      }
     } catch (error) {
       if (error instanceof ApiError && error.isAuthError) {
         // Auth error is already handled by ApiErrorHandler (user redirected to login)
@@ -203,6 +228,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
       setError(error instanceof ApiError ? error.message : 'Error fetching campaigns');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -705,6 +731,20 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4">Campaign Management</Typography>
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          <IconButton
+            onClick={() => fetchCampaigns(true)}
+            disabled={refreshing}
+            title="Refresh campaigns"
+            sx={{ 
+              animation: refreshing ? 'spin 1s linear infinite' : 'none',
+              '@keyframes spin': {
+                '0%': { transform: 'rotate(0deg)' },
+                '100%': { transform: 'rotate(360deg)' }
+              }
+            }}
+          >
+            <RefreshIcon />
+          </IconButton>
           <ToggleButtonGroup
             value={viewMode}
             exclusive
