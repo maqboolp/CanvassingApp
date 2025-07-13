@@ -80,6 +80,11 @@ interface Campaign {
   filterMaxAge?: number;
   filterVoterSupport?: number;
   filterTags?: string;
+  enforceCallingHours: boolean;
+  startHour: number;
+  endHour: number;
+  includeWeekends: boolean;
+  preventDuplicateMessages: boolean;
 }
 
 interface CampaignDashboardProps {
@@ -164,6 +169,8 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
     startHour: 9,
     endHour: 20,
     includeWeekends: false,
+    // Duplicate prevention
+    preventDuplicateMessages: false,
     // Scheduling
     sendNow: true,
     scheduledDate: '',
@@ -376,7 +383,9 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
         enforceCallingHours: newCampaign.type === 'RoboCall' ? newCampaign.enforceCallingHours : false,
         startHour: newCampaign.type === 'RoboCall' ? newCampaign.startHour : 9,
         endHour: newCampaign.type === 'RoboCall' ? newCampaign.endHour : 20,
-        includeWeekends: newCampaign.type === 'RoboCall' ? newCampaign.includeWeekends : false
+        includeWeekends: newCampaign.type === 'RoboCall' ? newCampaign.includeWeekends : false,
+        // Add duplicate prevention setting
+        preventDuplicateMessages: newCampaign.preventDuplicateMessages
       };
       
       console.log('Sending campaign request:', requestBody);
@@ -427,6 +436,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
         startHour: 9,
         endHour: 20,
         includeWeekends: false,
+        preventDuplicateMessages: false,
         sendNow: true,
         scheduledDate: '',
         scheduledTime: ''
@@ -588,6 +598,8 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
       startHour: (campaign as any).startHour ?? 9,
       endHour: (campaign as any).endHour ?? 20,
       includeWeekends: (campaign as any).includeWeekends ?? false,
+      // Duplicate prevention setting (use default if not present)
+      preventDuplicateMessages: (campaign as any).preventDuplicateMessages ?? false,
       // Scheduling (edit doesn't support changing schedule)
       sendNow: true,
       scheduledDate: '',
@@ -631,7 +643,9 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
           startHour: newCampaign.startHour,
           endHour: newCampaign.endHour,
           includeWeekends: newCampaign.includeWeekends
-        } : {})
+        } : {}),
+        // Add duplicate prevention setting
+        preventDuplicateMessages: newCampaign.preventDuplicateMessages
       };
       
       console.log('Updating campaign:', requestBody);
@@ -659,6 +673,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
         startHour: 9,
         endHour: 20,
         includeWeekends: false,
+        preventDuplicateMessages: false,
         sendNow: true,
         scheduledDate: '',
         scheduledTime: ''
@@ -1113,6 +1128,9 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                     Failed
                   </TableSortLabel>
                 </TableCell>
+                <TableCell align="right">
+                  Remaining
+                </TableCell>
                 <TableCell>
                   <TableSortLabel
                     active={orderBy === 'createdAt'}
@@ -1159,6 +1177,9 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                   </TableCell>
                   <TableCell align="right">
                     <Typography color="error.main">{campaign.failedDeliveries}</Typography>
+                  </TableCell>
+                  <TableCell align="right">
+                    <Typography color="info.main">{campaign.totalRecipients - campaign.failedDeliveries}</Typography>
                   </TableCell>
                   <TableCell>{new Date(campaign.createdAt).toLocaleDateString()}</TableCell>
                   <TableCell>
@@ -1596,6 +1617,27 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                   </Alert>
                 )}
               </>
+            )}
+
+            {/* Duplicate Prevention Setting */}
+            <Typography variant="subtitle1" sx={{ mt: 2 }}>Message Settings</Typography>
+            
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={newCampaign.preventDuplicateMessages}
+                  onChange={(e) => setNewCampaign({ ...newCampaign, preventDuplicateMessages: e.target.checked })}
+                />
+              }
+              label="Prevent duplicate messages"
+            />
+            
+            {newCampaign.preventDuplicateMessages && (
+              <Alert severity="info" sx={{ mt: 1 }}>
+                <Typography variant="caption">
+                  Voters who have already received the same {newCampaign.type === 'SMS' ? 'SMS message' : 'voice call'} will be automatically excluded from this campaign.
+                </Typography>
+              </Alert>
             )}
 
             {/* Scheduling Options */}

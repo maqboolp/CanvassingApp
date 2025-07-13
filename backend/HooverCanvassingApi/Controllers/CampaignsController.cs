@@ -64,7 +64,10 @@ namespace HooverCanvassingApi.Controllers
                 EnforceCallingHours = request.EnforceCallingHours,
                 StartHour = request.StartHour,
                 EndHour = request.EndHour,
-                IncludeWeekends = request.IncludeWeekends
+                IncludeWeekends = request.IncludeWeekends,
+                
+                // Duplicate message prevention
+                PreventDuplicateMessages = request.PreventDuplicateMessages
             };
 
             // Auto-generate voice URL for RoboCall campaigns
@@ -127,6 +130,9 @@ namespace HooverCanvassingApi.Controllers
             campaign.StartHour = request.StartHour;
             campaign.EndHour = request.EndHour;
             campaign.IncludeWeekends = request.IncludeWeekends;
+            
+            // Update duplicate message prevention
+            campaign.PreventDuplicateMessages = request.PreventDuplicateMessages;
 
             // Auto-generate voice URL for RoboCall campaigns
             if (campaign.Type == CampaignType.RoboCall)
@@ -391,6 +397,9 @@ namespace HooverCanvassingApi.Controllers
         public int StartHour { get; set; } = 9;
         public int EndHour { get; set; } = 20;
         public bool IncludeWeekends { get; set; } = false;
+        
+        // Duplicate message prevention
+        public bool PreventDuplicateMessages { get; set; } = false;
     }
 
     public class UpdateCampaignRequest
@@ -411,6 +420,9 @@ namespace HooverCanvassingApi.Controllers
         public int StartHour { get; set; } = 9;
         public int EndHour { get; set; } = 20;
         public bool IncludeWeekends { get; set; } = false;
+        
+        // Duplicate message prevention
+        public bool PreventDuplicateMessages { get; set; } = false;
     }
 
     public class ScheduleCampaignRequest

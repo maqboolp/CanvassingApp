@@ -178,10 +178,35 @@ namespace HooverCanvassingApi.Services
             
             // Create campaign messages for each recipient
             var campaignMessages = new List<CampaignMessage>();
+            
+            // Get list of voters who already received this exact message/voice URL (if duplicate prevention is enabled)
+            HashSet<string> duplicateRecipients = new HashSet<string>();
+            if (campaign.PreventDuplicateMessages)
+            {
+                var existingMessages = await _context.CampaignMessages
+                    .Include(cm => cm.Campaign)
+                    .Where(cm => cm.Campaign.Type == campaign.Type && 
+                               (campaign.Type == CampaignType.SMS ? cm.Campaign.Message == campaign.Message :
+                                cm.Campaign.VoiceUrl == campaign.VoiceUrl) &&
+                               cm.Status != MessageStatus.Failed) // Don't exclude failed messages as they can be retried
+                    .Select(cm => cm.RecipientPhone)
+                    .ToListAsync();
+                
+                duplicateRecipients = new HashSet<string>(existingMessages);
+                _logger.LogInformation($"Duplicate prevention enabled: Found {duplicateRecipients.Count} recipients who already received this message");
+            }
+            
             foreach (var voter in recipients)
             {
                 if (!string.IsNullOrEmpty(voter.CellPhone))
                 {
+                    // Skip if duplicate prevention is enabled and this voter already received the same message
+                    if (campaign.PreventDuplicateMessages && duplicateRecipients.Contains(voter.CellPhone))
+                    {
+                        _logger.LogDebug($"Skipping duplicate recipient: {voter.CellPhone}");
+                        continue;
+                    }
+                    
                     campaignMessages.Add(new CampaignMessage
                     {
                         CampaignId = campaign.Id,
@@ -264,13 +289,17 @@ namespace HooverCanvassingApi.Services
             if (campaign == null)
                 return new CampaignStats();
 
+            var totalRecipients = campaign.Messages.Count;
+            var failed = campaign.Messages.Count(m => m.Status == MessageStatus.Failed);
+            
             var stats = new CampaignStats
             {
-                TotalRecipients = campaign.Messages.Count,
+                TotalRecipients = totalRecipients,
                 Sent = campaign.Messages.Count(m => m.Status == MessageStatus.Sent || m.Status == MessageStatus.Delivered),
                 Delivered = campaign.Messages.Count(m => m.Status == MessageStatus.Delivered),
-                Failed = campaign.Messages.Count(m => m.Status == MessageStatus.Failed),
+                Failed = failed,
                 Pending = campaign.Messages.Count(m => m.Status == MessageStatus.Pending || m.Status == MessageStatus.Queued),
+                Remaining = totalRecipients - failed, // Messages that can still be retried
                 TotalCost = campaign.Messages.Where(m => m.Cost.HasValue).Sum(m => m.Cost.Value)
             };
 

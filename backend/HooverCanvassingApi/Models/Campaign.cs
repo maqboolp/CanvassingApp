@@ -41,6 +41,9 @@ namespace HooverCanvassingApi.Models
         public int EndHour { get; set; } = 20;    // 8 PM
         public bool IncludeWeekends { get; set; } = false;
         
+        // Duplicate message prevention
+        public bool PreventDuplicateMessages { get; set; } = false;
+        
         public ICollection<CampaignMessage> Messages { get; set; } = new List<CampaignMessage>();
     }
 
