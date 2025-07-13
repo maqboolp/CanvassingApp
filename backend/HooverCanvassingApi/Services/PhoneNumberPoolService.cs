@@ -20,7 +20,6 @@ namespace HooverCanvassingApi.Services
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<PhoneNumberPoolService> _logger;
-        private readonly ConcurrentDictionary<int, SemaphoreSlim> _numberSemaphores = new();
         private int _lastUsedIndex = -1;
         private readonly object _indexLock = new object();
 
@@ -38,21 +37,18 @@ namespace HooverCanvassingApi.Services
                 $"Inactive: {allNumbers.Count(n => !n.IsActive)}");
             
             var activeNumbers = allNumbers
-                .Where(n => n.IsActive && n.CurrentActiveCalls < n.MaxConcurrentCalls)
+                .Where(n => n.IsActive)
                 .OrderBy(n => n.Id)
                 .ToList();
 
             if (!activeNumbers.Any())
             {
-                _logger.LogWarning($"No available phone numbers in pool. Active numbers with capacity: 0. " +
-                    $"Numbers at capacity: {allNumbers.Count(n => n.IsActive && n.CurrentActiveCalls >= n.MaxConcurrentCalls)}");
+                _logger.LogWarning($"No active phone numbers in pool");
                 return null;
             }
 
-            _logger.LogInformation($"Available phone numbers in pool: {activeNumbers.Count}. " +
-                $"Current capacities: {string.Join(", ", activeNumbers.Select(n => $"{n.PhoneNumber}:{n.CurrentActiveCalls}/{n.MaxConcurrentCalls}"))}");
-
-            // Round-robin selection
+            // Simple round-robin selection without capacity checks
+            // Let Twilio handle queueing multiple calls per number
             lock (_indexLock)
             {
                 _lastUsedIndex = (_lastUsedIndex + 1) % activeNumbers.Count;
@@ -60,38 +56,14 @@ namespace HooverCanvassingApi.Services
 
             var selectedNumber = activeNumbers[_lastUsedIndex];
             
-            // Try to acquire the number
-            var semaphore = _numberSemaphores.GetOrAdd(selectedNumber.Id, _ => new SemaphoreSlim(selectedNumber.MaxConcurrentCalls));
+            // Update usage tracking
+            selectedNumber.CurrentActiveCalls++;
+            selectedNumber.LastUsedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
             
-            if (await semaphore.WaitAsync(0)) // Non-blocking check
-            {
-                // Update active call count
-                selectedNumber.CurrentActiveCalls++;
-                selectedNumber.LastUsedAt = DateTime.UtcNow;
-                await _context.SaveChangesAsync();
-                
-                _logger.LogInformation($"Allocated phone number {selectedNumber.PhoneNumber} (ID: {selectedNumber.Id})");
-                return selectedNumber;
-            }
-
-            // If the selected number is at capacity, try others
-            foreach (var number in activeNumbers.Where(n => n.Id != selectedNumber.Id))
-            {
-                semaphore = _numberSemaphores.GetOrAdd(number.Id, _ => new SemaphoreSlim(number.MaxConcurrentCalls));
-                
-                if (await semaphore.WaitAsync(0))
-                {
-                    number.CurrentActiveCalls++;
-                    number.LastUsedAt = DateTime.UtcNow;
-                    await _context.SaveChangesAsync();
-                    
-                    _logger.LogInformation($"Allocated phone number {number.PhoneNumber} (ID: {number.Id})");
-                    return number;
-                }
-            }
-
-            _logger.LogWarning("All phone numbers are at capacity");
-            return null;
+            _logger.LogInformation($"Allocated phone number {selectedNumber.PhoneNumber} (ID: {selectedNumber.Id}) - Round robin index: {_lastUsedIndex}");
+            
+            return selectedNumber;
         }
 
         public async Task ReleaseNumberAsync(int phoneNumberId)
@@ -105,14 +77,8 @@ namespace HooverCanvassingApi.Services
                     number.CurrentActiveCalls = Math.Max(0, number.CurrentActiveCalls - 1);
                     await _context.SaveChangesAsync();
                     
-                    if (_numberSemaphores.TryGetValue(phoneNumberId, out var semaphore))
-                    {
-                        semaphore.Release();
-                    }
-                    
                     _logger.LogInformation($"Released phone number {number.PhoneNumber} (ID: {phoneNumberId}). " +
-                        $"Active calls: {previousCalls} -> {number.CurrentActiveCalls}. " +
-                        $"Capacity now: {number.CurrentActiveCalls}/{number.MaxConcurrentCalls}");
+                        $"Active calls: {previousCalls} -> {number.CurrentActiveCalls}");
                 }
                 else
                 {
