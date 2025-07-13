@@ -958,14 +958,13 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                     startIcon={<SendIcon />}
                     onClick={async () => {
                       try {
-                        const response = await ApiErrorHandler.makeAuthenticatedRequest(
+                        const data = await ApiErrorHandler.makeAuthenticatedRequest(
                           `${API_BASE_URL}/api/campaigns/check-stuck`,
                           {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' }
                           }
                         );
-                        const data = await response.json();
                         alert(`Resumed ${data.resumedCount} campaigns. Check the campaign status in a few moments.`);
                         fetchCampaigns();
                       } catch (error) {
@@ -1172,14 +1171,13 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                           size="small"
                           onClick={async () => {
                             try {
-                              const response = await ApiErrorHandler.makeAuthenticatedRequest(
+                              const data = await ApiErrorHandler.makeAuthenticatedRequest(
                                 `${API_BASE_URL}/api/campaigns/check-stuck`,
                                 {
                                   method: 'POST',
                                   headers: { 'Content-Type': 'application/json' }
                                 }
                               );
-                              const data = await response.json();
                               alert(`Resumed ${data.resumedCount} campaigns. Check the campaign status in a few moments.`);
                               fetchCampaigns();
                             } catch (error) {
