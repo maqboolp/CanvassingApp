@@ -84,6 +84,7 @@ import AnalyticsComponent from './Analytics';
 import VolunteerResourcesSection from './VolunteerResourcesSection';
 import { PhoneNumberManagement } from './PhoneNumberManagement';
 import { TwilioSettings } from './TwilioSettings';
+import { ApiTest } from './ApiTest';
 import { API_BASE_URL } from '../config';
 import { customerConfig } from '../config/customerConfig';
 import { ApiErrorHandler, ApiError } from '../utils/apiErrorHandler';
@@ -2875,6 +2876,10 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
             
             <Box sx={{ mb: 4 }}>
               <PhoneNumberManagement />
+            </Box>
+            
+            <Box sx={{ mb: 4 }}>
+              <ApiTest />
             </Box>
           </TabPanel>
         )}
