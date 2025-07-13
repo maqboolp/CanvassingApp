@@ -119,6 +119,19 @@ export class ApiErrorHandler {
     }
   }
 
+  static async makeAuthenticatedRequestRaw(url: string, options: RequestInit = {}): Promise<Response> {
+    try {
+      const response = await authService.authenticatedFetch(url, options);
+      return response;
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      // Handle network errors or other unexpected errors
+      throw new ApiError('Network error. Please check your connection and try again.', 0, false);
+    }
+  }
+
   static registerErrorCallback(callback: (error: ApiError) => void) {
     this.errorCallbacks.push(callback);
   }

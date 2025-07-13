@@ -68,7 +68,7 @@ export const PhoneNumberManagement: React.FC = () => {
 
   const fetchPhoneNumbers = async () => {
     try {
-      const response = await ApiErrorHandler.makeAuthenticatedRequest(
+      const response = await ApiErrorHandler.makeAuthenticatedRequestRaw(
         `${API_BASE_URL}/api/phonenumberpool`
       );
       
@@ -89,7 +89,7 @@ export const PhoneNumberManagement: React.FC = () => {
 
   const handleAddNumber = async () => {
     try {
-      const response = await ApiErrorHandler.makeAuthenticatedRequest(
+      const response = await ApiErrorHandler.makeAuthenticatedRequestRaw(
         `${API_BASE_URL}/api/phonenumberpool`,
         {
           method: 'POST',
@@ -116,7 +116,7 @@ export const PhoneNumberManagement: React.FC = () => {
     if (!selectedNumber) return;
 
     try {
-      const response = await ApiErrorHandler.makeAuthenticatedRequest(
+      const response = await ApiErrorHandler.makeAuthenticatedRequestRaw(
         `${API_BASE_URL}/api/phonenumberpool/${selectedNumber.id}`,
         {
           method: 'PUT',
@@ -143,7 +143,7 @@ export const PhoneNumberManagement: React.FC = () => {
     if (!window.confirm('Are you sure you want to remove this phone number?')) return;
 
     try {
-      const response = await ApiErrorHandler.makeAuthenticatedRequest(
+      const response = await ApiErrorHandler.makeAuthenticatedRequestRaw(
         `${API_BASE_URL}/api/phonenumberpool/${id}`,
         { method: 'DELETE' }
       );

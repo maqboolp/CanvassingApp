@@ -62,7 +62,7 @@ export const TwilioSettings: React.FC = () => {
 
   const fetchSettings = async () => {
     try {
-      const response = await ApiErrorHandler.makeAuthenticatedRequest(
+      const response = await ApiErrorHandler.makeAuthenticatedRequestRaw(
         `${API_BASE_URL}/api/settings/twilio`
       );
       
@@ -113,7 +113,7 @@ export const TwilioSettings: React.FC = () => {
         updateData.messagingServiceSid = formData.messagingServiceSid;
       }
 
-      const response = await ApiErrorHandler.makeAuthenticatedRequest(
+      const response = await ApiErrorHandler.makeAuthenticatedRequestRaw(
         `${API_BASE_URL}/api/settings/twilio`,
         {
           method: 'POST',
