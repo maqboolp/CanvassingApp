@@ -183,17 +183,24 @@ namespace HooverCanvassingApi.Services
             HashSet<string> duplicateRecipients = new HashSet<string>();
             if (campaign.PreventDuplicateMessages)
             {
+                // Define statuses that indicate successful delivery (exclude these from retries)
+                var successfulStatuses = new[] { 
+                    MessageStatus.Sent, 
+                    MessageStatus.Delivered, 
+                    MessageStatus.Completed 
+                };
+                
                 var existingMessages = await _context.CampaignMessages
                     .Include(cm => cm.Campaign)
                     .Where(cm => cm.Campaign.Type == campaign.Type && 
                                (campaign.Type == CampaignType.SMS ? cm.Campaign.Message == campaign.Message :
                                 cm.Campaign.VoiceUrl == campaign.VoiceUrl) &&
-                               cm.Status != MessageStatus.Failed) // Don't exclude failed messages as they can be retried
+                               successfulStatuses.Contains(cm.Status)) // Only exclude successfully delivered messages
                     .Select(cm => cm.RecipientPhone)
                     .ToListAsync();
                 
                 duplicateRecipients = new HashSet<string>(existingMessages);
-                _logger.LogInformation($"Duplicate prevention enabled: Found {duplicateRecipients.Count} recipients who already received this message");
+                _logger.LogInformation($"Duplicate prevention enabled: Found {duplicateRecipients.Count} recipients who successfully received this message (failed/busy/no-answer can be retried)");
             }
             
             foreach (var voter in recipients)
