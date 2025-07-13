@@ -7,39 +7,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace HooverCanvassingApi.Migrations
 {
     /// <inheritdoc />
-    public partial class AddTwilioPhoneNumbersTable : Migration
+    public partial class AddTwilioPhoneNumbersTableOnly : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<int>(
-                name: "EndHour",
-                table: "Campaigns",
-                type: "integer",
-                nullable: false,
-                defaultValue: 0);
-
-            migrationBuilder.AddColumn<bool>(
-                name: "EnforceCallingHours",
-                table: "Campaigns",
-                type: "boolean",
-                nullable: false,
-                defaultValue: false);
-
-            migrationBuilder.AddColumn<bool>(
-                name: "IncludeWeekends",
-                table: "Campaigns",
-                type: "boolean",
-                nullable: false,
-                defaultValue: false);
-
-            migrationBuilder.AddColumn<int>(
-                name: "StartHour",
-                table: "Campaigns",
-                type: "integer",
-                nullable: false,
-                defaultValue: 0);
-
             migrationBuilder.CreateTable(
                 name: "TwilioPhoneNumbers",
                 columns: table => new
@@ -69,22 +41,6 @@ namespace HooverCanvassingApi.Migrations
         {
             migrationBuilder.DropTable(
                 name: "TwilioPhoneNumbers");
-
-            migrationBuilder.DropColumn(
-                name: "EndHour",
-                table: "Campaigns");
-
-            migrationBuilder.DropColumn(
-                name: "EnforceCallingHours",
-                table: "Campaigns");
-
-            migrationBuilder.DropColumn(
-                name: "IncludeWeekends",
-                table: "Campaigns");
-
-            migrationBuilder.DropColumn(
-                name: "StartHour",
-                table: "Campaigns");
         }
     }
 }

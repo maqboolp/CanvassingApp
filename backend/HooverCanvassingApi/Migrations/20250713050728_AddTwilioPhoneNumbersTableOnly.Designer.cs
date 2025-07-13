@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace HooverCanvassingApi.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250713044210_AddTwilioPhoneNumbersTable")]
-    partial class AddTwilioPhoneNumbersTable
+    [Migration("20250713050728_AddTwilioPhoneNumbersTableOnly")]
+    partial class AddTwilioPhoneNumbersTableOnly
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
