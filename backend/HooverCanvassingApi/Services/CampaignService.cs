@@ -562,16 +562,27 @@ namespace HooverCanvassingApi.Services
                     for (int batchIndex = 0; batchIndex < pendingMessageIds.Count; batchIndex += effectiveBatchSize)
                     {
                         // Check if we're outside calling hours (for robocalls only)
-                        if (campaignType == CampaignType.RoboCall && !IsWithinCallingHours())
+                        if (campaignType == CampaignType.RoboCall)
                         {
-                            _logger.LogWarning($"Campaign {campaignId} paused - outside calling hours. Processed {successfulDeliveries} calls so far.");
+                            // Get current campaign settings
+                            Campaign? currentCampaign = null;
+                            using (var checkScope = _serviceScopeFactory.CreateScope())
+                            {
+                                var checkContext = checkScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                                currentCampaign = await checkContext.Campaigns.FindAsync(campaignId);
+                            }
                             
-                            // Update campaign status to allow resumption
-                            await UpdateCampaignProgressAsync(campaignId, successfulDeliveries, failedDeliveries);
-                            
-                            _backgroundMonitor.CompleteOperation(operationName);
-                            _logger.LogInformation($"Campaign {campaignId} will automatically resume during calling hours");
-                            return;
+                            if (currentCampaign != null && currentCampaign.EnforceCallingHours && !IsWithinCallingHours(currentCampaign))
+                            {
+                                _logger.LogWarning($"Campaign {campaignId} paused - outside calling hours. Processed {successfulDeliveries} calls so far.");
+                                
+                                // Update campaign status to allow resumption
+                                await UpdateCampaignProgressAsync(campaignId, successfulDeliveries, failedDeliveries);
+                                
+                                _backgroundMonitor.CompleteOperation(operationName);
+                                _logger.LogInformation($"Campaign {campaignId} will automatically resume during calling hours");
+                                return;
+                            }
                         }
                         
                         // Check if we're approaching the 30-minute limit
@@ -814,9 +825,9 @@ namespace HooverCanvassingApi.Services
             }
         }
         
-        private bool IsWithinCallingHours()
+        private bool IsWithinCallingHours(Campaign campaign)
         {
-            if (!_callingHoursSettings.EnforceCallingHours)
+            if (!campaign.EnforceCallingHours)
                 return true;
 
             try
@@ -825,21 +836,21 @@ namespace HooverCanvassingApi.Services
                 var localTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, timeZone);
                 
                 // Check if weekend and weekends are not allowed
-                if (!_callingHoursSettings.IncludeWeekends && 
+                if (!campaign.IncludeWeekends && 
                     (localTime.DayOfWeek == DayOfWeek.Saturday || localTime.DayOfWeek == DayOfWeek.Sunday))
                 {
-                    _logger.LogDebug($"Weekend calling not allowed - current day: {localTime.DayOfWeek}");
+                    _logger.LogDebug($"Weekend calling not allowed for campaign {campaign.Id} - current day: {localTime.DayOfWeek}");
                     return false;
                 }
                 
                 // Check if within allowed hours
                 var currentHour = localTime.Hour;
-                var isWithinHours = currentHour >= _callingHoursSettings.StartHour && 
-                                   currentHour < _callingHoursSettings.EndHour;
+                var isWithinHours = currentHour >= campaign.StartHour && 
+                                   currentHour < campaign.EndHour;
                 
                 if (!isWithinHours)
                 {
-                    _logger.LogDebug($"Outside calling hours - current: {currentHour}, allowed: {_callingHoursSettings.StartHour}-{_callingHoursSettings.EndHour}");
+                    _logger.LogDebug($"Outside calling hours for campaign {campaign.Id} - current: {currentHour}, allowed: {campaign.StartHour}-{campaign.EndHour}");
                 }
                 
                 return isWithinHours;

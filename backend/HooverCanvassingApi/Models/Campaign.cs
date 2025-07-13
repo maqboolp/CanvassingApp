@@ -35,6 +35,12 @@ namespace HooverCanvassingApi.Models
         public int FailedDeliveries { get; set; }
         public int PendingDeliveries { get; set; }
         
+        // Calling hours settings (for RoboCall campaigns)
+        public bool EnforceCallingHours { get; set; } = true;
+        public int StartHour { get; set; } = 9;  // 9 AM
+        public int EndHour { get; set; } = 20;    // 8 PM
+        public bool IncludeWeekends { get; set; } = false;
+        
         public ICollection<CampaignMessage> Messages { get; set; } = new List<CampaignMessage>();
     }
 

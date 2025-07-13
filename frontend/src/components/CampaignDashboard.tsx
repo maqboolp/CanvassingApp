@@ -35,7 +35,8 @@ import {
   TableSortLabel,
   Paper,
   ToggleButton,
-  ToggleButtonGroup
+  ToggleButtonGroup,
+  Switch
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -154,7 +155,12 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
     voiceUrl: '',
     voiceRecordingId: null as number | null,
     selectedZipCodes: [] as string[],
-    selectedTagIds: [] as number[]
+    selectedTagIds: [] as number[],
+    // Calling hours settings
+    enforceCallingHours: true,
+    startHour: 9,
+    endHour: 20,
+    includeWeekends: false
   });
   
   // View mode state
@@ -334,7 +340,12 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
         filterMinAge: null,
         filterMaxAge: null,
         filterVoterSupport: null,
-        filterTagIds: newCampaign.selectedTagIds.length > 0 ? newCampaign.selectedTagIds : null
+        filterTagIds: newCampaign.selectedTagIds.length > 0 ? newCampaign.selectedTagIds : null,
+        // Add calling hours settings for robocalls
+        enforceCallingHours: newCampaign.type === 'RoboCall' ? newCampaign.enforceCallingHours : false,
+        startHour: newCampaign.type === 'RoboCall' ? newCampaign.startHour : 9,
+        endHour: newCampaign.type === 'RoboCall' ? newCampaign.endHour : 20,
+        includeWeekends: newCampaign.type === 'RoboCall' ? newCampaign.includeWeekends : false
       };
       
       console.log('Sending campaign request:', requestBody);
@@ -1300,8 +1311,83 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
               </Typography>
             )}
 
+            {/* Calling Hours Settings for RoboCall campaigns */}
+            {newCampaign.type === 'RoboCall' && (
+              <>
+                <Typography variant="subtitle1" sx={{ mt: 2 }}>Calling Hours</Typography>
+                
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={newCampaign.enforceCallingHours}
+                      onChange={(e) => setNewCampaign({ ...newCampaign, enforceCallingHours: e.target.checked })}
+                    />
+                  }
+                  label="Enforce calling hours"
+                />
+                
+                {newCampaign.enforceCallingHours && (
+                  <Box sx={{ mt: 2, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                    <FormControl fullWidth size="small">
+                      <InputLabel>Start Hour</InputLabel>
+                      <Select
+                        value={newCampaign.startHour}
+                        label="Start Hour"
+                        onChange={(e) => setNewCampaign({ ...newCampaign, startHour: Number(e.target.value) })}
+                      >
+                        {Array.from({ length: 24 }, (_, i) => (
+                          <MenuItem key={i} value={i}>
+                            {i === 0 ? '12:00 AM' : i < 12 ? `${i}:00 AM` : i === 12 ? '12:00 PM' : `${i - 12}:00 PM`}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                    
+                    <FormControl fullWidth size="small">
+                      <InputLabel>End Hour</InputLabel>
+                      <Select
+                        value={newCampaign.endHour}
+                        label="End Hour"
+                        onChange={(e) => setNewCampaign({ ...newCampaign, endHour: Number(e.target.value) })}
+                      >
+                        {Array.from({ length: 24 }, (_, i) => (
+                          <MenuItem key={i} value={i}>
+                            {i === 0 ? '12:00 AM' : i < 12 ? `${i}:00 AM` : i === 12 ? '12:00 PM' : `${i - 12}:00 PM`}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Box>
+                )}
+                
+                {newCampaign.enforceCallingHours && (
+                  <FormControlLabel
+                    sx={{ mt: 1 }}
+                    control={
+                      <Switch
+                        checked={newCampaign.includeWeekends}
+                        onChange={(e) => setNewCampaign({ ...newCampaign, includeWeekends: e.target.checked })}
+                      />
+                    }
+                    label="Include weekends"
+                  />
+                )}
+                
+                {newCampaign.enforceCallingHours && (
+                  <Alert severity="info" sx={{ mt: 1 }}>
+                    <Typography variant="caption">
+                      Calls will be made {newCampaign.includeWeekends ? 'every day' : 'Monday-Friday'} between{' '}
+                      {newCampaign.startHour === 0 ? '12:00 AM' : newCampaign.startHour < 12 ? `${newCampaign.startHour}:00 AM` : newCampaign.startHour === 12 ? '12:00 PM' : `${newCampaign.startHour - 12}:00 PM`} and{' '}
+                      {newCampaign.endHour === 0 ? '12:00 AM' : newCampaign.endHour < 12 ? `${newCampaign.endHour}:00 AM` : newCampaign.endHour === 12 ? '12:00 PM' : `${newCampaign.endHour - 12}:00 PM`} CST.
+                      Campaigns will automatically pause outside these hours.
+                    </Typography>
+                  </Alert>
+                )}
+              </>
+            )}
+
             {audienceCount > 0 && (
-              <Alert severity="info">
+              <Alert severity="info" sx={{ mt: 2 }}>
                 <strong>{audienceCount}</strong> voters will receive this campaign
               </Alert>
             )}

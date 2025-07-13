@@ -59,7 +59,12 @@ namespace HooverCanvassingApi.Controllers
                 FilterVoterSupport = request.FilterVoterSupport,
                 FilterTags = request.FilterTagIds != null && request.FilterTagIds.Any() 
                     ? System.Text.Json.JsonSerializer.Serialize(request.FilterTagIds) 
-                    : null
+                    : null,
+                // Copy calling hours settings
+                EnforceCallingHours = request.EnforceCallingHours,
+                StartHour = request.StartHour,
+                EndHour = request.EndHour,
+                IncludeWeekends = request.IncludeWeekends
             };
 
             // Auto-generate voice URL for RoboCall campaigns
@@ -116,6 +121,12 @@ namespace HooverCanvassingApi.Controllers
             campaign.FilterMinAge = request.FilterMinAge;
             campaign.FilterMaxAge = request.FilterMaxAge;
             campaign.FilterVoterSupport = request.FilterVoterSupport;
+            
+            // Update calling hours settings
+            campaign.EnforceCallingHours = request.EnforceCallingHours;
+            campaign.StartHour = request.StartHour;
+            campaign.EndHour = request.EndHour;
+            campaign.IncludeWeekends = request.IncludeWeekends;
 
             // Auto-generate voice URL for RoboCall campaigns
             if (campaign.Type == CampaignType.RoboCall)
@@ -348,6 +359,12 @@ namespace HooverCanvassingApi.Controllers
         public int? FilterMaxAge { get; set; }
         public VoterSupport? FilterVoterSupport { get; set; }
         public List<int>? FilterTagIds { get; set; }
+        
+        // Calling hours settings
+        public bool EnforceCallingHours { get; set; } = true;
+        public int StartHour { get; set; } = 9;
+        public int EndHour { get; set; } = 20;
+        public bool IncludeWeekends { get; set; } = false;
     }
 
     public class UpdateCampaignRequest
@@ -362,6 +379,12 @@ namespace HooverCanvassingApi.Controllers
         public int? FilterMaxAge { get; set; }
         public VoterSupport? FilterVoterSupport { get; set; }
         public List<int>? FilterTagIds { get; set; }
+        
+        // Calling hours settings
+        public bool EnforceCallingHours { get; set; } = true;
+        public int StartHour { get; set; } = 9;
+        public int EndHour { get; set; } = 20;
+        public bool IncludeWeekends { get; set; } = false;
     }
 
     public class ScheduleCampaignRequest
