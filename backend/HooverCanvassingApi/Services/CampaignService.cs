@@ -143,7 +143,7 @@ namespace HooverCanvassingApi.Services
             return true;
         }
 
-        public async Task<bool> SendCampaignAsync(int campaignId, bool overrideOptIn = false, int? batchSize = null, int? batchDelayMinutes = null)
+        public async Task<bool> SendCampaignAsync(int campaignId, bool overrideOptIn = false)
         {
             var campaign = await GetCampaignAsync(campaignId);
             if (campaign == null)
@@ -231,11 +231,11 @@ namespace HooverCanvassingApi.Services
             await _context.SaveChangesAsync();
 
             // Send messages in background with new scope
-            _logger.LogInformation($"Starting background task for campaign {campaignId} with overrideOptIn={overrideOptIn}, batchSize={batchSize}, batchDelayMinutes={batchDelayMinutes}");
+            _logger.LogInformation($"Starting background task for campaign {campaignId} with overrideOptIn={overrideOptIn}");
             _ = Task.Run(async () => 
             {
                 _logger.LogInformation($"Background task started for campaign {campaignId}");
-                await ProcessCampaignMessagesWithScopeAsync(campaignId, overrideOptIn, batchSize, batchDelayMinutes);
+                await ProcessCampaignMessagesWithScopeAsync(campaignId, overrideOptIn);
             });
 
             _logger.LogInformation($"Campaign {campaignId} started with {campaignMessages.Count} recipients");
@@ -592,14 +592,10 @@ namespace HooverCanvassingApi.Services
             await _context.SaveChangesAsync();
         }
 
-        private async Task ProcessCampaignMessagesWithScopeAsync(int campaignId, bool overrideOptIn = false, int? batchSize = null, int? batchDelayMinutes = null)
+        private async Task ProcessCampaignMessagesWithScopeAsync(int campaignId, bool overrideOptIn = false)
         {
             var operationName = $"Campaign_{campaignId}_Processing";
             _logger.LogInformation($"ProcessCampaignMessagesWithScopeAsync called for campaign {campaignId} with overrideOptIn={overrideOptIn}");
-            
-            // Track start time to handle 30-minute limit
-            var startTime = DateTime.UtcNow;
-            var maxRuntime = TimeSpan.FromMinutes(25); // Stop at 25 minutes to be safe
             
             try
             {
@@ -636,8 +632,7 @@ namespace HooverCanvassingApi.Services
                 }
 
                 var totalMessages = pendingMessageIds.Count;
-                var successfulDeliveries = 0;
-                var failedDeliveries = 0;
+                _logger.LogInformation($"Processing {totalMessages} messages for campaign {campaignId}");
 
                 if (campaignType == CampaignType.SMS)
                 {
@@ -654,85 +649,10 @@ namespace HooverCanvassingApi.Services
                         return;
                     }
                     
-                    _logger.LogInformation($"Processing robocall campaign {campaignId} with voice URL: {voiceUrl}");
-                    
-                    // Process robo calls with batching
-                    var effectiveBatchSize = batchSize ?? pendingMessageIds.Count;
-                    var effectiveDelayMinutes = batchDelayMinutes ?? 0;
-                    
-                    _logger.LogInformation($"Processing {totalMessages} robocalls in batches of {effectiveBatchSize} with {effectiveDelayMinutes} minute delays");
-                    
-                    for (int batchIndex = 0; batchIndex < pendingMessageIds.Count; batchIndex += effectiveBatchSize)
-                    {
-                        // Check if we're outside calling hours (for robocalls only)
-                        if (campaignType == CampaignType.RoboCall)
-                        {
-                            // Get current campaign settings
-                            Campaign? currentCampaign = null;
-                            using (var checkScope = _serviceScopeFactory.CreateScope())
-                            {
-                                var checkContext = checkScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                                currentCampaign = await checkContext.Campaigns.FindAsync(campaignId);
-                            }
-                            
-                            if (currentCampaign != null && currentCampaign.EnforceCallingHours && !IsWithinCallingHours(currentCampaign))
-                            {
-                                _logger.LogWarning($"Campaign {campaignId} paused - outside calling hours. Processed {successfulDeliveries} calls so far.");
-                                
-                                // Update campaign status to allow resumption
-                                await UpdateCampaignProgressAsync(campaignId, successfulDeliveries, failedDeliveries);
-                                
-                                _backgroundMonitor.CompleteOperation(operationName);
-                                _logger.LogInformation($"Campaign {campaignId} will automatically resume during calling hours");
-                                return;
-                            }
-                        }
-                        
-                        // Check if we're approaching the 30-minute limit
-                        var elapsed = DateTime.UtcNow - startTime;
-                        if (elapsed > maxRuntime)
-                        {
-                            _logger.LogWarning($"Campaign {campaignId} processing approaching 30-minute limit after {elapsed.TotalMinutes:F1} minutes. Processed {batchIndex} messages so far.");
-                            
-                            // Update campaign status to allow resumption
-                            await UpdateCampaignProgressAsync(campaignId, successfulDeliveries, failedDeliveries);
-                            
-                            _backgroundMonitor.CompleteOperation(operationName);
-                            _logger.LogInformation($"Campaign {campaignId} paused for resumption. Will continue from message index {batchIndex}");
-                            return;
-                        }
-                        
-                        // If this is not the first batch and we have a delay, wait
-                        if (batchIndex > 0 && effectiveDelayMinutes > 0)
-                        {
-                            _logger.LogInformation($"Waiting {effectiveDelayMinutes} minutes before processing next batch...");
-                            await Task.Delay(TimeSpan.FromMinutes(effectiveDelayMinutes));
-                        }
-                        
-                        var batchMessageIds = pendingMessageIds
-                            .Skip(batchIndex)
-                            .Take(effectiveBatchSize)
-                            .ToList();
-                            
-                        var batchNumber = (batchIndex / effectiveBatchSize) + 1;
-                        _logger.LogInformation($"Processing batch {batchNumber} with {batchMessageIds.Count} calls");
-                        
-                        // Process batch with its own database context
-                        var (batchSuccesses, batchFailures) = await ProcessRobocallBatchAsync(
-                            campaignId, batchMessageIds, voiceUrl!, overrideOptIn, campaignType);
-                            
-                        successfulDeliveries += batchSuccesses;
-                        failedDeliveries += batchFailures;
-                        
-                        _logger.LogInformation($"Batch {batchNumber} completed. Total progress: {successfulDeliveries} successful, {failedDeliveries} failed");
-                    }
+                    await ProcessRobocallCampaignAsync(campaignId, pendingMessageIds, voiceUrl, overrideOptIn);
                 }
 
-                // Final update of campaign status
-                await UpdateCampaignFinalStatusAsync(campaignId, successfulDeliveries, failedDeliveries);
-                
                 _backgroundMonitor.CompleteOperation(operationName);
-                _logger.LogInformation($"Campaign {campaignId} completed: {successfulDeliveries} successful, {failedDeliveries} failed");
             }
             catch (Exception ex)
             {
@@ -744,157 +664,102 @@ namespace HooverCanvassingApi.Services
             }
         }
         
-        private async Task<(int successes, int failures)> ProcessRobocallBatchAsync(
-            int campaignId, List<int> messageIds, string voiceUrl, bool overrideOptIn, CampaignType campaignType)
+        private async Task ProcessRobocallCampaignAsync(int campaignId, List<int> messageIds, string voiceUrl, bool overrideOptIn)
         {
-            var successes = 0;
-            var failures = 0;
-            
             using var scope = _serviceScopeFactory.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var twilioService = scope.ServiceProvider.GetRequiredService<ITwilioService>();
-            var logger = scope.ServiceProvider.GetRequiredService<ILogger<CampaignService>>();
             
-            // Load messages for this batch
+            // Load all messages
             var messages = await context.CampaignMessages
                 .Include(m => m.Voter)
                 .Where(m => messageIds.Contains(m.Id))
                 .ToListAsync();
-                
-            // Get phone number pool service
-            var phoneNumberPool = scope.ServiceProvider.GetRequiredService<IPhoneNumberPoolService>();
             
-            // Get voice recording duration if available
-            int? voiceDurationSeconds = null;
-            var campaign = await context.Campaigns
-                .Include(c => c.VoiceRecording)
-                .FirstOrDefaultAsync(c => c.Id == campaignId);
-            if (campaign?.VoiceRecording?.DurationSeconds != null)
+            var successes = 0;
+            var failures = 0;
+            
+            _logger.LogInformation($"Processing {messages.Count} robocalls for campaign {campaignId}");
+            
+            // Process calls concurrently - Twilio can handle 1000+ concurrent calls
+            // We'll use 50 concurrent calls to be conservative but still fast
+            var maxConcurrency = 50;
+            var semaphore = new SemaphoreSlim(maxConcurrency, maxConcurrency);
+            var tasks = new List<Task<(bool success, CampaignMessage message, Exception? error)>>();
+            
+            foreach (var message in messages)
             {
-                voiceDurationSeconds = campaign.VoiceRecording.DurationSeconds;
-                logger.LogInformation($"Using voice recording duration of {voiceDurationSeconds} seconds for phone number holding");
-            }
-            
-            // Check if we have phone numbers in the pool
-            var availableNumbers = await phoneNumberPool.GetAllNumbersAsync();
-            var activeNumberCount = availableNumbers.Count(n => n.IsActive);
-            
-            if (activeNumberCount == 0)
-            {
-                // Fall back to sequential processing with default number
-                logger.LogWarning("No phone numbers in pool, falling back to sequential processing");
-                
-                foreach (var message in messages)
+                // Check if we're outside calling hours before queuing more calls
+                if (tasks.Count % 100 == 0 && tasks.Count > 0)
                 {
-                    try
+                    var campaign = await context.Campaigns.FindAsync(campaignId);
+                    if (campaign != null && campaign.EnforceCallingHours && !IsWithinCallingHours(campaign))
                     {
-                        await Task.Delay(1000); // Rate limiting
-                        var success = await twilioService.MakeRoboCallAsync(
-                            message.RecipientPhone, 
-                            voiceUrl, 
-                            message.Id,
-                            voiceDurationSeconds);
-                        if (success)
-                        {
-                            successes++;
-                            message.Status = MessageStatus.Sent;
-                            message.SentAt = DateTime.UtcNow;
-                            
-                            if (message.Voter != null)
-                            {
-                                UpdateVoterCampaignStats(message.Voter, campaignId, campaignType);
-                            }
-                        }
-                        else
-                        {
-                            failures++;
-                            message.Status = MessageStatus.Failed;
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogError(ex, $"Error processing message {message.Id}");
-                        failures++;
-                        message.Status = MessageStatus.Failed;
-                        message.ErrorMessage = ex.Message;
+                        _logger.LogWarning($"Campaign {campaignId} paused - outside calling hours. Queued {tasks.Count} calls.");
+                        break;
                     }
                 }
+                
+                tasks.Add(ProcessSingleRobocallWithSemaphoreAsync(message, voiceUrl, twilioService, semaphore));
             }
-            else
+            
+            // Wait for all calls to complete
+            var results = await Task.WhenAll(tasks);
+            
+            // Process results
+            foreach (var (success, message, error) in results)
             {
-                // Process calls concurrently using phone number pool
-                var maxConcurrency = Math.Min(activeNumberCount * 2, 10); // Allow some oversubscription but cap at 10
-                logger.LogInformation($"Processing {messages.Count} calls with {activeNumberCount} phone numbers (max concurrency: {maxConcurrency})");
-                
-                var semaphore = new SemaphoreSlim(maxConcurrency);
-                var tasks = new List<Task<(bool success, CampaignMessage message, Exception? error)>>();
-                
-                foreach (var message in messages)
+                if (success)
                 {
-                    tasks.Add(ProcessSingleRobocallAsync(message, voiceUrl, twilioService, semaphore, logger, voiceDurationSeconds));
-                }
-                
-                var results = await Task.WhenAll(tasks);
-                
-                foreach (var (success, message, error) in results)
-                {
-                    if (success)
+                    successes++;
+                    message.Status = MessageStatus.Sent;
+                    message.SentAt = DateTime.UtcNow;
+                    
+                    if (message.Voter != null)
                     {
-                        successes++;
-                        message.Status = MessageStatus.Sent;
-                        message.SentAt = DateTime.UtcNow;
-                        
-                        if (message.Voter != null)
-                        {
-                            UpdateVoterCampaignStats(message.Voter, campaignId, campaignType);
-                        }
+                        UpdateVoterCampaignStats(message.Voter, campaignId, CampaignType.RoboCall);
                     }
-                    else
+                }
+                else
+                {
+                    failures++;
+                    message.Status = MessageStatus.Failed;
+                    if (error != null)
                     {
-                        failures++;
-                        message.Status = MessageStatus.Failed;
-                        if (error != null)
-                        {
-                            message.ErrorMessage = error.Message;
-                        }
+                        message.ErrorMessage = error.Message;
                     }
                 }
             }
             
-            // Save all changes for this batch
+            // Save all changes
             await context.SaveChangesAsync();
+            await UpdateCampaignFinalStatusAsync(campaignId, successes, failures);
             
-            // Update campaign progress
-            await UpdateCampaignProgressAsync(campaignId, successes, failures);
-            
-            return (successes, failures);
+            _logger.LogInformation($"Robocall campaign {campaignId} completed: {successes} successful, {failures} failed");
         }
         
-        private async Task<(bool success, CampaignMessage message, Exception? error)> ProcessSingleRobocallAsync(
-            CampaignMessage message, 
-            string voiceUrl, 
-            ITwilioService twilioService, 
-            SemaphoreSlim semaphore,
-            ILogger<CampaignService> logger,
-            int? voiceDurationSeconds = null)
+        private async Task<(bool success, CampaignMessage message, Exception? error)> ProcessSingleRobocallWithSemaphoreAsync(
+            CampaignMessage message,
+            string voiceUrl,
+            ITwilioService twilioService,
+            SemaphoreSlim semaphore)
         {
             await semaphore.WaitAsync();
             try
             {
-                // Small random delay to avoid thundering herd
-                await Task.Delay(Random.Shared.Next(100, 500));
+                // Small delay to prevent thundering herd - 20ms between calls
+                // This gives us up to 50 calls per second
+                await Task.Delay(20);
                 
                 var success = await twilioService.MakeRoboCallAsync(
-                    message.RecipientPhone, 
-                    voiceUrl, 
-                    message.Id,
-                    voiceDurationSeconds);
+                    message.RecipientPhone,
+                    voiceUrl,
+                    message.Id);
                     
                 return (success, message, null);
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, $"Error processing message {message.Id}");
                 return (false, message, ex);
             }
             finally
@@ -902,6 +767,7 @@ namespace HooverCanvassingApi.Services
                 semaphore.Release();
             }
         }
+        
         
         private async Task ProcessSmsCampaignAsync(int campaignId, List<int> messageIds, string campaignMessage, bool overrideOptIn)
         {
@@ -1060,7 +926,7 @@ namespace HooverCanvassingApi.Services
         }
 
 
-        public async Task<bool> RetryFailedMessagesAsync(int campaignId, bool overrideOptIn = false, int? batchSize = null, int? batchDelayMinutes = null)
+        public async Task<bool> RetryFailedMessagesAsync(int campaignId, bool overrideOptIn = false)
         {
             try
             {
@@ -1135,44 +1001,28 @@ namespace HooverCanvassingApi.Services
                         }
                         else if (campaign.Type == CampaignType.RoboCall)
                         {
-                            // Retry robo calls with optional batching
-                            var effectiveBatchSize = batchSize ?? Math.Min(messagesToRetry.Count, 50); // Cap batch size
-                            var effectiveDelayMinutes = batchDelayMinutes ?? 0;
+                            // Retry robo calls concurrently
+                            _logger.LogInformation($"Retrying {messagesToRetry.Count} robocalls with high concurrency");
                             
-                            _logger.LogInformation($"Retrying {messagesToRetry.Count} robocalls in batches of {effectiveBatchSize} with {effectiveDelayMinutes} minute delays");
-                            
-                            for (int batchIndex = 0; batchIndex < messagesToRetry.Count; batchIndex += effectiveBatchSize)
-                            {
-                                if (batchIndex > 0 && effectiveDelayMinutes > 0)
+                            var maxConcurrency = 50; // 50 concurrent calls
+                            var semaphore = new SemaphoreSlim(maxConcurrency, maxConcurrency);
+                            var tasks = messagesToRetry
+                                .Where(msg => !string.IsNullOrEmpty(msg.VoiceUrl))
+                                .Select(async msg =>
                                 {
-                                    _logger.LogInformation($"Waiting {effectiveDelayMinutes} minutes before retrying next batch...");
-                                    await Task.Delay(TimeSpan.FromMinutes(effectiveDelayMinutes));
-                                }
-                                
-                                var batch = messagesToRetry.Skip(batchIndex).Take(effectiveBatchSize).ToList();
-                                _logger.LogInformation($"Retrying batch {(batchIndex / effectiveBatchSize) + 1} with {batch.Count} calls");
-                                
-                                // Process batch with some concurrency
-                                var semaphore = new SemaphoreSlim(3, 3); // Max 3 concurrent calls
-                                var batchTasks = batch.Select(async msg =>
-                                {
-                                    if (!string.IsNullOrEmpty(msg.VoiceUrl))
+                                    await semaphore.WaitAsync();
+                                    try
                                     {
-                                        await semaphore.WaitAsync();
-                                        try
-                                        {
-                                            await Task.Delay(500); // Small delay between calls
-                                            await _twilioService.MakeRoboCallAsync(msg.PhoneNumber, msg.VoiceUrl, msg.CampaignMessageId);
-                                        }
-                                        finally
-                                        {
-                                            semaphore.Release();
-                                        }
+                                        await Task.Delay(20); // 20ms delay = up to 50 calls/second
+                                        await _twilioService.MakeRoboCallAsync(msg.PhoneNumber, msg.VoiceUrl, msg.CampaignMessageId);
                                     }
-                                }).ToArray();
+                                    finally
+                                    {
+                                        semaphore.Release();
+                                    }
+                                });
                                 
-                                await Task.WhenAll(batchTasks);
-                            }
+                            await Task.WhenAll(tasks);
                         }
                         
                         _logger.LogInformation($"Background retry completed for campaign {campaignId}");
@@ -1263,7 +1113,7 @@ namespace HooverCanvassingApi.Services
                         _ = Task.Run(async () => 
                         {
                             _logger.LogInformation($"Background task resumed for campaign {campaign.Id}");
-                            await ProcessCampaignMessagesWithScopeAsync(campaign.Id, true, 50, 5);
+                            await ProcessCampaignMessagesWithScopeAsync(campaign.Id, true);
                         });
                         
                         resumedCampaigns.Add(campaign);

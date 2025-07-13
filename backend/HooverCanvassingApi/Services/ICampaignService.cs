@@ -9,7 +9,7 @@ namespace HooverCanvassingApi.Services
         Task<IEnumerable<Campaign>> GetCampaignsAsync();
         Task<Campaign> UpdateCampaignAsync(Campaign campaign);
         Task<bool> DeleteCampaignAsync(int id);
-        Task<bool> SendCampaignAsync(int campaignId, bool overrideOptIn = false, int? batchSize = null, int? batchDelayMinutes = null);
+        Task<bool> SendCampaignAsync(int campaignId, bool overrideOptIn = false);
         Task<bool> ScheduleCampaignAsync(int campaignId, DateTime scheduledTime);
         Task<bool> CancelCampaignAsync(int campaignId);
         Task<IEnumerable<Voter>> GetCampaignRecipientsAsync(int campaignId);
@@ -18,7 +18,7 @@ namespace HooverCanvassingApi.Services
         Task<int> GetRecipientCountAsync(string? filterZipCodes, VoteFrequency? filterVoteFrequency, int? filterMinAge, int? filterMaxAge, VoterSupport? filterVoterSupport, List<int>? filterTagIds = null);
         Task<IEnumerable<string>> GetAvailableZipCodesAsync();
         Task ProcessScheduledCampaignsAsync();
-        Task<bool> RetryFailedMessagesAsync(int campaignId, bool overrideOptIn = false, int? batchSize = null, int? batchDelayMinutes = null);
+        Task<bool> RetryFailedMessagesAsync(int campaignId, bool overrideOptIn = false);
         Task<bool> SealCampaignIfCompleteAsync(int campaignId);
         Task<VoiceRecording?> GetVoiceRecordingAsync(int id);
         Task<Campaign?> DuplicateCampaignAsync(int campaignId, string userId);

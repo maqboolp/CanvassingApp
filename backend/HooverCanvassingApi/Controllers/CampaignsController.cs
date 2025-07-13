@@ -224,9 +224,7 @@ namespace HooverCanvassingApi.Controllers
         {
             var success = await _campaignService.SendCampaignAsync(
                 id, 
-                request?.OverrideOptIn ?? false,
-                request?.BatchSize,
-                request?.BatchDelayMinutes);
+                request?.OverrideOptIn ?? false);
             if (!success)
                 return BadRequest("Campaign cannot be sent");
 
@@ -300,9 +298,7 @@ namespace HooverCanvassingApi.Controllers
             {
                 var success = await _campaignService.RetryFailedMessagesAsync(
                     id, 
-                    request?.OverrideOptIn ?? false,
-                    request?.BatchSize,
-                    request?.BatchDelayMinutes);
+                    request?.OverrideOptIn ?? false);
                 if (!success)
                 {
                     return BadRequest(new { error = "Failed to retry messages. Campaign may be sealed or have no failed messages." });

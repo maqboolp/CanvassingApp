@@ -137,18 +137,6 @@ namespace HooverCanvassingApi.Services
 
             number.IsActive = isActive;
             number.MaxConcurrentCalls = maxConcurrentCalls;
-            
-            // Update semaphore if it exists
-            if (_numberSemaphores.TryGetValue(id, out var oldSemaphore))
-            {
-                _numberSemaphores.TryRemove(id, out _);
-                oldSemaphore.Dispose();
-                
-                if (isActive)
-                {
-                    _numberSemaphores.TryAdd(id, new SemaphoreSlim(maxConcurrentCalls));
-                }
-            }
 
             await _context.SaveChangesAsync();
             
