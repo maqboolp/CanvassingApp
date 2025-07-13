@@ -1583,7 +1583,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
             {!newCampaign.sendNow && newCampaign.scheduledDate && newCampaign.scheduledTime && (
               <Alert severity="info" sx={{ mt: 1 }}>
                 <Typography variant="caption">
-                  Campaign will start on {new Date(newCampaign.scheduledDate).toLocaleDateString()} at {newCampaign.scheduledTime} CST
+                  Campaign will start on {new Date(newCampaign.scheduledDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' })} at {newCampaign.scheduledTime} CST
                   {newCampaign.type === 'RoboCall' && newCampaign.enforceCallingHours && 
                     '. Calls will respect the configured calling hours.'}
                 </Typography>
