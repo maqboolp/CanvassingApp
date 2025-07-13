@@ -365,6 +365,33 @@ builder.Services.AddTransient<IEmailService, EmailService>();
 // Configure Opt-In Settings
 builder.Services.Configure<OptInSettings>(builder.Configuration.GetSection("OptInSettings"));
 
+// Configure Calling Hours Settings
+builder.Services.Configure<CallingHoursSettings>(options =>
+{
+    builder.Configuration.GetSection("CallingHours").Bind(options);
+    
+    // Override with environment variables if provided
+    var enforceHours = Environment.GetEnvironmentVariable("CALLING_HOURS_ENFORCE");
+    if (!string.IsNullOrEmpty(enforceHours))
+        options.EnforceCallingHours = bool.Parse(enforceHours);
+        
+    var startHour = Environment.GetEnvironmentVariable("CALLING_HOURS_START");
+    if (!string.IsNullOrEmpty(startHour))
+        options.StartHour = int.Parse(startHour);
+        
+    var endHour = Environment.GetEnvironmentVariable("CALLING_HOURS_END");
+    if (!string.IsNullOrEmpty(endHour))
+        options.EndHour = int.Parse(endHour);
+        
+    var includeWeekends = Environment.GetEnvironmentVariable("CALLING_HOURS_WEEKENDS");
+    if (!string.IsNullOrEmpty(includeWeekends))
+        options.IncludeWeekends = bool.Parse(includeWeekends);
+        
+    var timeZone = Environment.GetEnvironmentVariable("CALLING_HOURS_TIMEZONE");
+    if (!string.IsNullOrEmpty(timeZone))
+        options.TimeZone = timeZone;
+});
+
 var app = builder.Build();
 
 
