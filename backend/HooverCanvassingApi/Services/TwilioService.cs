@@ -48,7 +48,7 @@ namespace HooverCanvassingApi.Services
             
             if (dbSettings != null)
             {
-                _logger.LogInformation("Loading Twilio configuration from database");
+                _logger.LogDebug("Loading Twilio configuration from database");
                 accountSid = dbSettings.AccountSid;
                 authToken = dbSettings.AuthToken;
                 fromPhone = dbSettings.FromPhoneNumber;
@@ -57,7 +57,7 @@ namespace HooverCanvassingApi.Services
             }
             else
             {
-                _logger.LogInformation("Loading Twilio configuration from appsettings.json");
+                _logger.LogDebug("Loading Twilio configuration from appsettings.json");
                 accountSid = _configuration["Twilio:AccountSid"];
                 authToken = _configuration["Twilio:AuthToken"];
                 fromPhone = _configuration["Twilio:FromPhoneNumber"];
@@ -65,11 +65,11 @@ namespace HooverCanvassingApi.Services
                 messagingSid = _configuration["Twilio:MessagingServiceSid"];
             }
             
-            _logger.LogInformation($"Twilio Config - AccountSid: {(string.IsNullOrEmpty(accountSid) ? "MISSING" : $"***{accountSid.Substring(Math.Max(0, accountSid.Length - 4))}")}");
-            _logger.LogInformation($"Twilio Config - AuthToken: {(string.IsNullOrEmpty(authToken) ? "MISSING" : "***CONFIGURED")}");
-            _logger.LogInformation($"Twilio Config - FromPhone: {(string.IsNullOrEmpty(fromPhone) ? "MISSING" : fromPhone)}");
-            _logger.LogInformation($"Twilio Config - SmsPhone: {(string.IsNullOrEmpty(smsPhone) ? "NOT SET (will use FromPhone)" : smsPhone)}");
-            _logger.LogInformation($"Twilio Config - MessagingServiceSid: {(string.IsNullOrEmpty(messagingSid) ? "NOT SET" : $"***{messagingSid.Substring(Math.Max(0, messagingSid.Length - 4))}")}");
+            _logger.LogDebug($"Twilio Config - AccountSid: {(string.IsNullOrEmpty(accountSid) ? "MISSING" : $"***{accountSid.Substring(Math.Max(0, accountSid.Length - 4))}")}");
+            _logger.LogDebug($"Twilio Config - AuthToken: {(string.IsNullOrEmpty(authToken) ? "MISSING" : "***CONFIGURED")}");
+            _logger.LogDebug($"Twilio Config - FromPhone: {(string.IsNullOrEmpty(fromPhone) ? "MISSING" : fromPhone)}");
+            _logger.LogDebug($"Twilio Config - SmsPhone: {(string.IsNullOrEmpty(smsPhone) ? "NOT SET (will use FromPhone)" : smsPhone)}");
+            _logger.LogDebug($"Twilio Config - MessagingServiceSid: {(string.IsNullOrEmpty(messagingSid) ? "NOT SET" : $"***{messagingSid.Substring(Math.Max(0, messagingSid.Length - 4))}")}");
             
             _accountSid = accountSid ?? throw new InvalidOperationException("Twilio AccountSid not configured");
             _authToken = authToken ?? throw new InvalidOperationException("Twilio AuthToken not configured");
@@ -78,7 +78,7 @@ namespace HooverCanvassingApi.Services
             _messagingServiceSid = messagingSid; // Optional for bulk SMS
             
             TwilioClient.Init(_accountSid, _authToken);
-            _logger.LogInformation("TwilioClient initialized successfully");
+            _logger.LogDebug("TwilioClient initialized successfully");
         }
 
         public async Task<bool> SendSmsAsync(string toPhoneNumber, string message, int campaignMessageId, bool overrideOptIn = false)
