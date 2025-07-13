@@ -232,16 +232,20 @@ namespace HooverCanvassingApi.Services
                 }
                 
                 // Update campaign message with error
-                var campaignMessage = await _context.CampaignMessages
-                    .FirstOrDefaultAsync(cm => cm.Id == campaignMessageId);
-                
-                if (campaignMessage != null)
+                using (var errorScope = _serviceScopeFactory.CreateScope())
                 {
-                    campaignMessage.Status = MessageStatus.Failed;
-                    campaignMessage.ErrorMessage = ex.Message;
-                    campaignMessage.FailedAt = DateTime.UtcNow;
+                    var errorContext = errorScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                    var campaignMessage = await errorContext.CampaignMessages
+                        .FirstOrDefaultAsync(cm => cm.Id == campaignMessageId);
                     
-                    await _context.SaveChangesAsync();
+                    if (campaignMessage != null)
+                    {
+                        campaignMessage.Status = MessageStatus.Failed;
+                        campaignMessage.ErrorMessage = ex.Message;
+                        campaignMessage.FailedAt = DateTime.UtcNow;
+                        
+                        await errorContext.SaveChangesAsync();
+                    }
                 }
                 
                 return false;
@@ -258,7 +262,10 @@ namespace HooverCanvassingApi.Services
         
         private async Task UpdateCampaignMessageWithCall(int campaignMessageId, CallResource call)
         {
-            var campaignMessage = await _context.CampaignMessages
+            using var scope = _serviceScopeFactory.CreateScope();
+            var scopedContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            
+            var campaignMessage = await scopedContext.CampaignMessages
                 .FirstOrDefaultAsync(cm => cm.Id == campaignMessageId);
             
             if (campaignMessage != null)
@@ -267,7 +274,7 @@ namespace HooverCanvassingApi.Services
                 campaignMessage.Status = MapTwilioCallStatusToMessageStatus(call.Status.ToString());
                 campaignMessage.SentAt = DateTime.UtcNow;
                 
-                await _context.SaveChangesAsync();
+                await scopedContext.SaveChangesAsync();
             }
         }
 
@@ -275,7 +282,11 @@ namespace HooverCanvassingApi.Services
         {
             try
             {
-                var campaignMessage = await _context.CampaignMessages
+                using var scope = _serviceScopeFactory.CreateScope();
+                var scopedContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                
+                var campaignMessage = await scopedContext.CampaignMessages
+                    .Include(cm => cm.Campaign)
                     .FirstOrDefaultAsync(cm => cm.TwilioSid == twilioSid);
                 
                 if (campaignMessage == null)
@@ -297,7 +308,7 @@ namespace HooverCanvassingApi.Services
                     campaignMessage.Cost = call.Price != null ? decimal.Parse(call.Price.ToString()) : null;
                 }
 
-                await _context.SaveChangesAsync();
+                await scopedContext.SaveChangesAsync();
                 return campaignMessage;
             }
             catch (Exception ex)
