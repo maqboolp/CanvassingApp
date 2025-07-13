@@ -104,6 +104,45 @@ namespace HooverCanvassingApi.Services
             return true;
         }
 
+        public async Task<bool> ForceStopCampaignAsync(int campaignId)
+        {
+            var campaign = await _context.Campaigns
+                .Include(c => c.Messages)
+                .FirstOrDefaultAsync(c => c.Id == campaignId);
+                
+            if (campaign == null)
+                return false;
+
+            _logger.LogWarning($"Force stopping campaign {campaignId} - {campaign.Name}");
+
+            // Mark campaign as failed
+            campaign.Status = CampaignStatus.Failed;
+
+            // Mark all pending messages as failed
+            var pendingMessages = campaign.Messages
+                .Where(m => m.Status == MessageStatus.Pending || 
+                           m.Status == MessageStatus.Sending ||
+                           m.Status == MessageStatus.Queued)
+                .ToList();
+
+            foreach (var message in pendingMessages)
+            {
+                message.Status = MessageStatus.Failed;
+                message.FailedAt = DateTime.UtcNow;
+                message.ErrorMessage = "Campaign was force stopped";
+            }
+
+            // Update stats
+            campaign.FailedDeliveries = campaign.Messages.Count(m => m.Status == MessageStatus.Failed);
+            campaign.PendingDeliveries = 0;
+
+            await _context.SaveChangesAsync();
+            
+            _logger.LogInformation($"Force stopped campaign {campaignId}. Marked {pendingMessages.Count} messages as failed.");
+            
+            return true;
+        }
+
         public async Task<bool> SendCampaignAsync(int campaignId, bool overrideOptIn = false, int? batchSize = null, int? batchDelayMinutes = null)
         {
             var campaign = await GetCampaignAsync(campaignId);
@@ -114,6 +153,21 @@ namespace HooverCanvassingApi.Services
             {
                 _logger.LogWarning($"Campaign {campaignId} cannot be sent - status: {campaign.Status}");
                 return false;
+            }
+            
+            // Log calling hours information for robocalls
+            if (campaign.Type == CampaignType.RoboCall)
+            {
+                var isWithinHours = IsWithinCallingHours(campaign);
+                _logger.LogInformation($"Robocall campaign {campaignId} - EnforceCallingHours: {campaign.EnforceCallingHours}, " +
+                    $"Hours: {campaign.StartHour}-{campaign.EndHour}, IncludeWeekends: {campaign.IncludeWeekends}, " +
+                    $"CurrentlyWithinHours: {isWithinHours}");
+                    
+                if (campaign.EnforceCallingHours && !isWithinHours)
+                {
+                    _logger.LogWarning($"Robocall campaign {campaignId} started outside calling hours. " +
+                        $"It will begin processing when calling hours start.");
+                }
             }
 
             campaign.Status = CampaignStatus.Sending;
@@ -553,6 +607,17 @@ namespace HooverCanvassingApi.Services
                 }
                 else
                 {
+                    // Validate voice URL for robocalls
+                    if (string.IsNullOrEmpty(voiceUrl))
+                    {
+                        _logger.LogError($"Campaign {campaignId} has no voice URL configured - cannot process robocalls");
+                        await MarkCampaignAsFailedAsync(campaignId);
+                        _backgroundMonitor.FailOperation(operationName, "No voice URL configured");
+                        return;
+                    }
+                    
+                    _logger.LogInformation($"Processing robocall campaign {campaignId} with voice URL: {voiceUrl}");
+                    
                     // Process robo calls with batching
                     var effectiveBatchSize = batchSize ?? pendingMessageIds.Count;
                     var effectiveDelayMinutes = batchDelayMinutes ?? 0;

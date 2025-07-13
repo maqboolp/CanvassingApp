@@ -51,7 +51,8 @@ import {
   ContentCopy as CopyIcon,
   ViewList as ListIcon,
   ViewModule as GridIcon,
-  Refresh as RefreshIcon
+  Refresh as RefreshIcon,
+  Stop as StopCircleIcon
 } from '@mui/icons-material';
 import { API_BASE_URL } from '../config';
 import { AuthUser, VoterTag } from '../types';
@@ -504,6 +505,28 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
         return;
       }
       setError(error instanceof ApiError ? error.message : 'Error deleting campaign');
+    }
+  };
+
+  const forceStopCampaign = async (campaignId: number) => {
+    if (!window.confirm('Are you sure you want to force stop this campaign? All pending messages will be marked as failed.')) return;
+
+    try {
+      await ApiErrorHandler.makeAuthenticatedRequest(
+        `${API_BASE_URL}/api/campaigns/${campaignId}/force-stop`,
+        {
+          method: 'POST'
+        }
+      );
+
+      setSuccess('Campaign force stopped');
+      fetchCampaigns();
+    } catch (error) {
+      if (error instanceof ApiError && error.isAuthError) {
+        // Auth error is already handled by ApiErrorHandler (user redirected to login)
+        return;
+      }
+      setError(error instanceof ApiError ? error.message : 'Error force stopping campaign');
     }
   };
 
@@ -986,6 +1009,18 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                   )}
                 </>
               )}
+              {/* Force stop button for stuck campaigns (SuperAdmin only) */}
+              {campaign.status === 2 && user.role === 'superadmin' && (
+                <Button
+                  size="small"
+                  startIcon={<StopCircleIcon />}
+                  onClick={() => forceStopCampaign(campaign.id)}
+                  color="error"
+                  variant="outlined"
+                >
+                  Force Stop
+                </Button>
+              )}
               {/* Show retry button for completed campaigns with failed messages */}
               {campaign.status === 3 && campaign.failedDeliveries > 0 && canSendCampaign() && (
                 <Button
@@ -1216,6 +1251,17 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                       >
                         <CopyIcon />
                       </IconButton>
+                      {/* Force stop button for stuck campaigns (SuperAdmin only) */}
+                      {campaign.status === 2 && user.role === 'superadmin' && (
+                        <IconButton
+                          size="small"
+                          onClick={() => forceStopCampaign(campaign.id)}
+                          color="error"
+                          title="Force Stop Campaign"
+                        >
+                          <StopCircleIcon />
+                        </IconButton>
+                      )}
                       {canDeleteCampaign(campaign) && (
                         <IconButton
                           size="small"
@@ -1535,8 +1581,17 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                     <Typography variant="caption">
                       Calls will be made {newCampaign.includeWeekends ? 'every day' : 'Monday-Friday'} between{' '}
                       {newCampaign.startHour === 0 ? '12:00 AM' : newCampaign.startHour < 12 ? `${newCampaign.startHour}:00 AM` : newCampaign.startHour === 12 ? '12:00 PM' : `${newCampaign.startHour - 12}:00 PM`} and{' '}
-                      {newCampaign.endHour === 0 ? '12:00 AM' : newCampaign.endHour < 12 ? `${newCampaign.endHour}:00 AM` : newCampaign.endHour === 12 ? '12:00 PM' : `${newCampaign.endHour - 12}:00 PM`} (local time).
-                      Campaigns will automatically pause outside these hours.
+                      {newCampaign.endHour === 0 ? '12:00 AM' : newCampaign.endHour < 12 ? `${newCampaign.endHour}:00 AM` : newCampaign.endHour === 12 ? '12:00 PM' : `${newCampaign.endHour - 12}:00 PM`} (Central Time).
+                      Campaigns will automatically pause outside these hours and resume when calling hours begin.
+                    </Typography>
+                  </Alert>
+                )}
+                
+                {!newCampaign.enforceCallingHours && user.role === 'superadmin' && (
+                  <Alert severity="warning" sx={{ mt: 1 }}>
+                    <Typography variant="caption">
+                      Warning: Calling hours enforcement is disabled. Calls will be made immediately regardless of time.
+                      This should only be used for testing purposes.
                     </Typography>
                   </Alert>
                 )}
@@ -1904,8 +1959,17 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                     <Typography variant="caption">
                       Calls will be made {newCampaign.includeWeekends ? 'every day' : 'Monday-Friday'} between{' '}
                       {newCampaign.startHour === 0 ? '12:00 AM' : newCampaign.startHour < 12 ? `${newCampaign.startHour}:00 AM` : newCampaign.startHour === 12 ? '12:00 PM' : `${newCampaign.startHour - 12}:00 PM`} and{' '}
-                      {newCampaign.endHour === 0 ? '12:00 AM' : newCampaign.endHour < 12 ? `${newCampaign.endHour}:00 AM` : newCampaign.endHour === 12 ? '12:00 PM' : `${newCampaign.endHour - 12}:00 PM`} (local time).
-                      Campaigns will automatically pause outside these hours.
+                      {newCampaign.endHour === 0 ? '12:00 AM' : newCampaign.endHour < 12 ? `${newCampaign.endHour}:00 AM` : newCampaign.endHour === 12 ? '12:00 PM' : `${newCampaign.endHour - 12}:00 PM`} (Central Time).
+                      Campaigns will automatically pause outside these hours and resume when calling hours begin.
+                    </Typography>
+                  </Alert>
+                )}
+                
+                {!newCampaign.enforceCallingHours && user.role === 'superadmin' && (
+                  <Alert severity="warning" sx={{ mt: 1 }}>
+                    <Typography variant="caption">
+                      Warning: Calling hours enforcement is disabled. Calls will be made immediately regardless of time.
+                      This should only be used for testing purposes.
                     </Typography>
                   </Alert>
                 )}

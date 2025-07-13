@@ -170,9 +170,16 @@ namespace HooverCanvassingApi.Controllers
             if (userRole != "SuperAdmin" && campaign.CreatedById != userId)
                 return Forbid("You can only delete campaigns you created");
 
+            // If campaign is sending and user is SuperAdmin, force stop it first
+            if (campaign.Status == CampaignStatus.Sending && userRole == "SuperAdmin")
+            {
+                _logger.LogWarning($"SuperAdmin force stopping campaign {id} before deletion");
+                await _campaignService.ForceStopCampaignAsync(id);
+            }
+
             var success = await _campaignService.DeleteCampaignAsync(id);
             if (!success)
-                return BadRequest("Campaign cannot be deleted");
+                return BadRequest("Campaign cannot be deleted. Only SuperAdmins can delete campaigns that are currently sending.");
 
             return NoContent();
         }
@@ -341,6 +348,25 @@ namespace HooverCanvassingApi.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error checking stuck campaigns");
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpPost("{id}/force-stop")]
+        [Authorize(Roles = "SuperAdmin")]
+        public async Task<ActionResult> ForceStopCampaign(int id)
+        {
+            try
+            {
+                var success = await _campaignService.ForceStopCampaignAsync(id);
+                if (!success)
+                    return NotFound(new { error = "Campaign not found" });
+
+                return Ok(new { message = "Campaign force stopped successfully" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error force stopping campaign {CampaignId}", id);
                 return StatusCode(500, new { error = ex.Message });
             }
         }
