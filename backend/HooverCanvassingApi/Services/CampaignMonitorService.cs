@@ -1,7 +1,11 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.EntityFrameworkCore;
+using HooverCanvassingApi.Data;
+using HooverCanvassingApi.Models;
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -11,7 +15,7 @@ namespace HooverCanvassingApi.Services
     {
         private readonly IServiceProvider _serviceProvider;
         private readonly ILogger<CampaignMonitorService> _logger;
-        private readonly TimeSpan _checkInterval = TimeSpan.FromMinutes(2); // Check every 2 minutes
+        private readonly TimeSpan _checkInterval = TimeSpan.FromMinutes(30); // Check every 30 minutes for logging only
 
         public CampaignMonitorService(IServiceProvider serviceProvider, ILogger<CampaignMonitorService> logger)
         {
@@ -21,13 +25,14 @@ namespace HooverCanvassingApi.Services
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            _logger.LogInformation("Campaign Monitor Service started");
+            _logger.LogInformation("Campaign Monitor Service started - Manual resumption only mode");
 
             while (!stoppingToken.IsCancellationRequested)
             {
                 try
                 {
-                    await CheckAndResumeStuckCampaigns();
+                    // Only log stuck campaigns, don't auto-resume
+                    await LogStuckCampaigns();
                 }
                 catch (Exception ex)
                 {
@@ -40,28 +45,30 @@ namespace HooverCanvassingApi.Services
             _logger.LogInformation("Campaign Monitor Service stopped");
         }
 
-        private async Task CheckAndResumeStuckCampaigns()
+        private async Task LogStuckCampaigns()
         {
             using var scope = _serviceProvider.CreateScope();
-            var campaignService = scope.ServiceProvider.GetRequiredService<ICampaignService>();
+            var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
             try
             {
-                _logger.LogDebug("Checking for stuck campaigns...");
-                var resumedCampaigns = await campaignService.CheckAndResumeStuckCampaignsAsync();
+                // Find campaigns that are stuck in "Sending" status with pending messages
+                var stuckCampaigns = await context.Campaigns
+                    .Where(c => c.Status == CampaignStatus.Sending && c.PendingDeliveries > 0)
+                    .ToListAsync();
                 
-                if (resumedCampaigns.Count > 0)
+                if (stuckCampaigns.Any())
                 {
-                    _logger.LogInformation($"Resumed {resumedCampaigns.Count} stuck campaigns");
-                    foreach (var campaign in resumedCampaigns)
+                    _logger.LogWarning($"Found {stuckCampaigns.Count} stuck campaigns requiring manual intervention:");
+                    foreach (var campaign in stuckCampaigns)
                     {
-                        _logger.LogInformation($"Resumed campaign: {campaign.Id} - {campaign.Name}");
+                        _logger.LogWarning($"Campaign {campaign.Id} ({campaign.Name}) - {campaign.PendingDeliveries} pending messages");
                     }
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error checking and resuming stuck campaigns");
+                _logger.LogError(ex, "Error checking for stuck campaigns");
             }
         }
     }

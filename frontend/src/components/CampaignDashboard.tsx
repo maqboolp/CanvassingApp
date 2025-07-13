@@ -807,6 +807,34 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                   )}
                 </>
               )}
+              {/* Show resume button for stuck campaigns in Sending status */}
+              {campaign.status === 2 && campaign.pendingDeliveries > 0 && canSendCampaign() && (
+                <Button
+                  size="small"
+                  startIcon={<SendIcon />}
+                  onClick={async () => {
+                    try {
+                      const response = await ApiErrorHandler.makeAuthenticatedRequest(
+                        `${API_BASE_URL}/api/campaigns/check-stuck`,
+                        {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' }
+                        }
+                      );
+                      const data = await response.json();
+                      alert(`Resumed ${data.resumedCount} campaigns. Check the campaign status in a few moments.`);
+                      fetchCampaigns();
+                    } catch (error) {
+                      console.error('Error resuming campaigns:', error);
+                      alert('Failed to resume campaigns');
+                    }
+                  }}
+                  variant="contained"
+                  color="warning"
+                >
+                  Resume Campaign
+                </Button>
+              )}
               {/* Show retry button for completed campaigns with failed messages */}
               {campaign.status === 3 && campaign.failedDeliveries > 0 && canSendCampaign() && (
                 <Button

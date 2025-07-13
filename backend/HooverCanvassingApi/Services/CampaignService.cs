@@ -960,42 +960,38 @@ namespace HooverCanvassingApi.Services
                 
                 foreach (var campaign in stuckCampaigns)
                 {
-                    // Check if campaign has been stuck for more than 5 minutes
-                    var lastActivity = await _context.CampaignMessages
-                        .Where(m => m.CampaignId == campaign.Id && m.SentAt != null)
-                        .OrderByDescending(m => m.SentAt)
-                        .Select(m => m.SentAt)
-                        .FirstOrDefaultAsync();
+                    _logger.LogInformation($"Found stuck campaign {campaign.Id} ({campaign.Name}) with {campaign.PendingDeliveries} pending messages");
                     
-                    if (lastActivity == null || DateTime.UtcNow - lastActivity.Value > TimeSpan.FromMinutes(5))
+                    // Check if there's already an active operation for this campaign
+                    var operationName = $"Campaign_{campaign.Id}_Processing";
+                    var activeOps = _backgroundMonitor.GetActiveOperations();
+                    
+                    if (!activeOps.ContainsKey(operationName))
                     {
-                        _logger.LogInformation($"Resuming stuck campaign {campaign.Id} ({campaign.Name})");
+                        _logger.LogInformation($"Resuming campaign {campaign.Id} ({campaign.Name})");
                         
-                        // Check if there's already an active operation for this campaign
-                        var operationName = $"Campaign_{campaign.Id}_Processing";
-                        var activeOps = _backgroundMonitor.GetActiveOperations();
+                        // Resume the campaign by directly calling the processing method
+                        _ = Task.Run(async () => 
+                        {
+                            _logger.LogInformation($"Background task resumed for campaign {campaign.Id}");
+                            await ProcessCampaignMessagesWithScopeAsync(campaign.Id, true, 50, 5);
+                        });
                         
-                        if (!activeOps.ContainsKey(operationName))
-                        {
-                            // Resume the campaign by directly calling the processing method
-                            _ = Task.Run(async () => 
-                            {
-                                _logger.LogInformation($"Background task resumed for campaign {campaign.Id}");
-                                await ProcessCampaignMessagesWithScopeAsync(campaign.Id, true, 50, 5);
-                            });
-                            
-                            resumedCampaigns.Add(campaign);
-                        }
-                        else
-                        {
-                            _logger.LogInformation($"Campaign {campaign.Id} already has an active processing operation");
-                        }
+                        resumedCampaigns.Add(campaign);
+                    }
+                    else
+                    {
+                        _logger.LogInformation($"Campaign {campaign.Id} already has an active processing operation");
                     }
                 }
                 
                 if (resumedCampaigns.Any())
                 {
                     _logger.LogInformation($"Resumed {resumedCampaigns.Count} stuck campaigns");
+                }
+                else if (stuckCampaigns.Any())
+                {
+                    _logger.LogInformation($"Found {stuckCampaigns.Count} stuck campaigns but all have active operations");
                 }
             }
             catch (Exception ex)
