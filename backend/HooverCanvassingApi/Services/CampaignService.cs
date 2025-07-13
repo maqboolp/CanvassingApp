@@ -971,11 +971,24 @@ namespace HooverCanvassingApi.Services
                     {
                         _logger.LogInformation($"Resuming stuck campaign {campaign.Id} ({campaign.Name})");
                         
-                        // Resume the campaign
-                        var resumed = await SendCampaignAsync(campaign.Id, true, 50, 5);
-                        if (resumed)
+                        // Check if there's already an active operation for this campaign
+                        var operationName = $"Campaign_{campaign.Id}_Processing";
+                        var activeOps = _backgroundMonitor.GetActiveOperations();
+                        
+                        if (!activeOps.ContainsKey(operationName))
                         {
+                            // Resume the campaign by directly calling the processing method
+                            _ = Task.Run(async () => 
+                            {
+                                _logger.LogInformation($"Background task resumed for campaign {campaign.Id}");
+                                await ProcessCampaignMessagesWithScopeAsync(campaign.Id, true, 50, 5);
+                            });
+                            
                             resumedCampaigns.Add(campaign);
+                        }
+                        else
+                        {
+                            _logger.LogInformation($"Campaign {campaign.Id} already has an active processing operation");
                         }
                     }
                 }
