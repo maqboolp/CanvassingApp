@@ -157,7 +157,7 @@ export const PhoneNumberManagement: React.FC = () => {
   };
 
   const getSuccessRate = (made: number, failed: number) => {
-    if (made === 0) return 0;
+    if (made === 0) return '0';
     return ((made - failed) / made * 100).toFixed(1);
   };
 

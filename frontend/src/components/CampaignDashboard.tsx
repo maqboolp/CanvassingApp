@@ -533,7 +533,16 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
       voiceUrl: campaign.voiceUrl || '',
       voiceRecordingId: campaign.voiceRecordingId || null,
       selectedZipCodes,
-      selectedTagIds
+      selectedTagIds,
+      // Calling hours settings (use defaults if not present)
+      enforceCallingHours: (campaign as any).enforceCallingHours ?? true,
+      startHour: (campaign as any).startHour ?? 9,
+      endHour: (campaign as any).endHour ?? 20,
+      includeWeekends: (campaign as any).includeWeekends ?? false,
+      // Scheduling (edit doesn't support changing schedule)
+      sendNow: true,
+      scheduledDate: '',
+      scheduledTime: ''
     });
     
     // Set voice type based on whether a recording is selected
