@@ -187,6 +187,7 @@ export const TwilioSettings: React.FC = () => {
               <TextField
                 label="Account SID"
                 fullWidth
+                variant="outlined"
                 value={formData.accountSid}
                 onChange={(e) => setFormData({ ...formData, accountSid: e.target.value })}
                 placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
@@ -196,6 +197,7 @@ export const TwilioSettings: React.FC = () => {
               <TextField
                 label="Auth Token"
                 fullWidth
+                variant="outlined"
                 type={showAuthToken ? 'text' : 'password'}
                 value={formData.authToken}
                 onChange={(e) => setFormData({ ...formData, authToken: e.target.value })}
@@ -207,6 +209,7 @@ export const TwilioSettings: React.FC = () => {
                       <IconButton
                         onClick={() => setShowAuthToken(!showAuthToken)}
                         edge="end"
+                        size="small"
                       >
                         {showAuthToken ? <VisibilityOff /> : <Visibility />}
                       </IconButton>
