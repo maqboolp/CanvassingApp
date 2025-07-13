@@ -18,6 +18,7 @@ namespace HooverCanvassingApi.Services
         private readonly string _accountSid;
         private readonly string _authToken;
         private readonly string _fromPhoneNumber;
+        private readonly string? _smsPhoneNumber;
         private readonly string? _messagingServiceSid;
 
         public TwilioService(
@@ -37,16 +38,19 @@ namespace HooverCanvassingApi.Services
             var accountSid = _configuration["Twilio:AccountSid"];
             var authToken = _configuration["Twilio:AuthToken"];
             var fromPhone = _configuration["Twilio:FromPhoneNumber"];
+            var smsPhone = _configuration["Twilio:SmsPhoneNumber"];
             var messagingSid = _configuration["Twilio:MessagingServiceSid"];
             
             _logger.LogInformation($"Twilio Config - AccountSid: {(string.IsNullOrEmpty(accountSid) ? "MISSING" : $"***{accountSid.Substring(Math.Max(0, accountSid.Length - 4))}")}");
             _logger.LogInformation($"Twilio Config - AuthToken: {(string.IsNullOrEmpty(authToken) ? "MISSING" : "***CONFIGURED")}");
             _logger.LogInformation($"Twilio Config - FromPhone: {(string.IsNullOrEmpty(fromPhone) ? "MISSING" : fromPhone)}");
+            _logger.LogInformation($"Twilio Config - SmsPhone: {(string.IsNullOrEmpty(smsPhone) ? "NOT SET (will use FromPhone)" : smsPhone)}");
             _logger.LogInformation($"Twilio Config - MessagingServiceSid: {(string.IsNullOrEmpty(messagingSid) ? "NOT SET" : $"***{messagingSid.Substring(Math.Max(0, messagingSid.Length - 4))}")}");
             
             _accountSid = accountSid ?? throw new InvalidOperationException("Twilio AccountSid not configured");
             _authToken = authToken ?? throw new InvalidOperationException("Twilio AuthToken not configured");
             _fromPhoneNumber = fromPhone ?? throw new InvalidOperationException("Twilio FromPhoneNumber not configured");
+            _smsPhoneNumber = smsPhone; // Optional - will fall back to FromPhoneNumber if not set
             _messagingServiceSid = messagingSid; // Optional for bulk SMS
             
             TwilioClient.Init(_accountSid, _authToken);
@@ -97,10 +101,12 @@ namespace HooverCanvassingApi.Services
                 }
                 else
                 {
-                    _logger.LogInformation($"Using From Phone Number: {_fromPhoneNumber}");
+                    // Use SMS-specific phone number if configured, otherwise fall back to default
+                    var smsFromNumber = !string.IsNullOrEmpty(_smsPhoneNumber) ? _smsPhoneNumber : _fromPhoneNumber;
+                    _logger.LogInformation($"Using From Phone Number: {smsFromNumber}");
                     messageResource = await MessageResource.CreateAsync(
                         body: message,
-                        from: new PhoneNumber(_fromPhoneNumber),
+                        from: new PhoneNumber(smsFromNumber),
                         to: new PhoneNumber(formattedNumber)
                     );
                 }
@@ -398,10 +404,12 @@ namespace HooverCanvassingApi.Services
                 }
                 else
                 {
-                    _logger.LogInformation($"Using From Phone Number: {_fromPhoneNumber}");
+                    // Use SMS-specific phone number if configured, otherwise fall back to default
+                    var smsFromNumber = !string.IsNullOrEmpty(_smsPhoneNumber) ? _smsPhoneNumber : _fromPhoneNumber;
+                    _logger.LogInformation($"Using From Phone Number: {smsFromNumber}");
                     messageResource = await MessageResource.CreateAsync(
                         body: message,
-                        from: new PhoneNumber(_fromPhoneNumber),
+                        from: new PhoneNumber(smsFromNumber),
                         to: new PhoneNumber(formattedNumber)
                     );
                 }

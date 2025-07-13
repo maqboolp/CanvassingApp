@@ -71,7 +71,8 @@ import {
   Delete,
   Schedule,
   TableChart as TableIcon,
-  Close as CloseIcon
+  Close as CloseIcon,
+  Settings as SettingsIcon
 } from '@mui/icons-material';
 import { AuthUser, Voter, ContactStatus, VoterSupport, VoterTagDetail } from '../types';
 import VoterList from './VoterList';
@@ -82,6 +83,7 @@ import VoterStagingImport from './VoterStagingImport';
 import AnalyticsComponent from './Analytics';
 import VolunteerResourcesSection from './VolunteerResourcesSection';
 import { PhoneNumberManagement } from './PhoneNumberManagement';
+import { TwilioSettings } from './TwilioSettings';
 import { API_BASE_URL } from '../config';
 import { customerConfig } from '../config/customerConfig';
 import { ApiErrorHandler, ApiError } from '../utils/apiErrorHandler';
@@ -135,7 +137,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
       ...(user.role === 'admin' || user.role === 'superadmin' ? ['tags'] : []),
       'resources',
       'engagement',
-      ...(user.role === 'admin' || user.role === 'superadmin' ? ['dataManagement'] : [])
+      ...(user.role === 'admin' || user.role === 'superadmin' ? ['dataManagement'] : []),
+      ...(user.role === 'admin' || user.role === 'superadmin' ? ['settings'] : [])
     ];
     return tabs.indexOf(tabName);
   };
@@ -1529,6 +1532,9 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
           {(user.role === 'admin' || user.role === 'superadmin') && (
             <Tab label="Data Mgmt" icon={<Upload />} />
           )}
+          {(user.role === 'admin' || user.role === 'superadmin') && (
+            <Tab label="Settings" icon={<SettingsIcon />} />
+          )}
         </Tabs>
       </Box>
 
@@ -2863,6 +2869,19 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
               </CardContent>
             </Card>
           </Box>
+          </TabPanel>
+        )}
+
+        {/* Settings Tab - For Admins and SuperAdmins */}
+        {(user.role === 'admin' || user.role === 'superadmin') && (
+          <TabPanel value={currentTab} index={getTabIndex('settings')}>
+            <Typography variant="h5" gutterBottom>
+              System Settings
+            </Typography>
+            
+            <Box sx={{ mb: 4 }}>
+              <TwilioSettings />
+            </Box>
           </TabPanel>
         )}
       </Container>

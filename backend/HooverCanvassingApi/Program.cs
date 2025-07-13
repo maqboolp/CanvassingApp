@@ -165,11 +165,13 @@ Console.WriteLine($"Google API Key: {(string.IsNullOrEmpty(googleApiKey) ? "MISS
 var twilioAccountSid = builder.Configuration["Twilio:AccountSid"];
 var twilioAuthToken = builder.Configuration["Twilio:AuthToken"];
 var twilioFromPhone = builder.Configuration["Twilio:FromPhoneNumber"];
+var twilioSmsPhone = builder.Configuration["Twilio:SmsPhoneNumber"];
 var twilioMessagingSid = builder.Configuration["Twilio:MessagingServiceSid"];
 
 Console.WriteLine($"Twilio AccountSid: {(string.IsNullOrEmpty(twilioAccountSid) ? "MISSING" : $"***{twilioAccountSid.Substring(Math.Max(0, twilioAccountSid.Length - 4))}")} (Length: {twilioAccountSid?.Length ?? 0})");
 Console.WriteLine($"Twilio AuthToken: {(string.IsNullOrEmpty(twilioAuthToken) ? "MISSING" : "***CONFIGURED")} (Length: {twilioAuthToken?.Length ?? 0})");
 Console.WriteLine($"Twilio FromPhone: {(string.IsNullOrEmpty(twilioFromPhone) ? "MISSING" : twilioFromPhone)} (Length: {twilioFromPhone?.Length ?? 0})");
+Console.WriteLine($"Twilio SmsPhone: {(string.IsNullOrEmpty(twilioSmsPhone) ? "NOT SET (will use FromPhone)" : twilioSmsPhone)} (Length: {twilioSmsPhone?.Length ?? 0})");
 Console.WriteLine($"Twilio MessagingSid: {(string.IsNullOrEmpty(twilioMessagingSid) ? "NOT SET" : $"***{twilioMessagingSid.Substring(Math.Max(0, twilioMessagingSid.Length - 4))}")} (Length: {twilioMessagingSid?.Length ?? 0})");
 
 if (string.IsNullOrEmpty(connectionString))
