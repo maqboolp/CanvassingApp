@@ -14,6 +14,7 @@ namespace HooverCanvassingApi.Services
         private readonly IConfiguration _configuration;
         private readonly ILogger<TwilioService> _logger;
         private readonly IServiceScopeFactory _serviceScopeFactory;
+        private readonly IPhoneNumberPoolService _phoneNumberPool;
         private readonly string _accountSid;
         private readonly string _authToken;
         private readonly string _fromPhoneNumber;
@@ -23,12 +24,14 @@ namespace HooverCanvassingApi.Services
             ApplicationDbContext context,
             IConfiguration configuration,
             ILogger<TwilioService> logger,
-            IServiceScopeFactory serviceScopeFactory)
+            IServiceScopeFactory serviceScopeFactory,
+            IPhoneNumberPoolService phoneNumberPool)
         {
             _context = context;
             _configuration = configuration;
             _logger = logger;
             _serviceScopeFactory = serviceScopeFactory;
+            _phoneNumberPool = phoneNumberPool;
             
             // Debug logging for Twilio configuration
             var accountSid = _configuration["Twilio:AccountSid"];
@@ -145,37 +148,58 @@ namespace HooverCanvassingApi.Services
 
         public async Task<bool> MakeRoboCallAsync(string toPhoneNumber, string voiceUrl, int campaignMessageId)
         {
+            TwilioPhoneNumber? phoneNumber = null;
             try
             {
                 var formattedNumber = FormatPhoneNumber(toPhoneNumber);
                 
-                var call = await CallResource.CreateAsync(
+                // Get an available phone number from the pool
+                phoneNumber = await _phoneNumberPool.GetNextAvailableNumberAsync();
+                if (phoneNumber == null)
+                {
+                    // Fall back to the default configured number if pool is empty or all numbers are busy
+                    _logger.LogWarning("No available phone numbers in pool, using default number");
+                    
+                    var call = await CallResource.CreateAsync(
+                        url: new Uri(voiceUrl),
+                        to: new PhoneNumber(formattedNumber),
+                        from: new PhoneNumber(_fromPhoneNumber),
+                        timeout: 60,
+                        record: false
+                    );
+                    
+                    await UpdateCampaignMessageWithCall(campaignMessageId, call);
+                    _logger.LogInformation($"Robo call initiated to {formattedNumber} using default number, SID: {call.Sid}");
+                    return true;
+                }
+                
+                _logger.LogInformation($"Using phone number {phoneNumber.PhoneNumber} from pool for call to {formattedNumber}");
+                
+                var poolCall = await CallResource.CreateAsync(
                     url: new Uri(voiceUrl),
                     to: new PhoneNumber(formattedNumber),
-                    from: new PhoneNumber(_fromPhoneNumber),
+                    from: new PhoneNumber(phoneNumber.PhoneNumber),
                     timeout: 60,
-                    record: false // Set to true if you want to record calls
+                    record: false
                 );
 
-                // Update campaign message with Twilio SID and status
-                var campaignMessage = await _context.CampaignMessages
-                    .FirstOrDefaultAsync(cm => cm.Id == campaignMessageId);
+                await UpdateCampaignMessageWithCall(campaignMessageId, poolCall);
                 
-                if (campaignMessage != null)
-                {
-                    campaignMessage.TwilioSid = call.Sid;
-                    campaignMessage.Status = MapTwilioCallStatusToMessageStatus(call.Status.ToString());
-                    campaignMessage.SentAt = DateTime.UtcNow;
-                    
-                    await _context.SaveChangesAsync();
-                }
-
-                _logger.LogInformation($"Robo call initiated to {formattedNumber}, SID: {call.Sid}");
+                // Track successful call
+                await _phoneNumberPool.IncrementCallCountAsync(phoneNumber.Id, true);
+                
+                _logger.LogInformation($"Robo call initiated to {formattedNumber} from {phoneNumber.PhoneNumber}, SID: {poolCall.Sid}");
                 return true;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Failed to make robo call to {toPhoneNumber}");
+                
+                // Track failed call if we got a phone number
+                if (phoneNumber != null)
+                {
+                    await _phoneNumberPool.IncrementCallCountAsync(phoneNumber.Id, false);
+                }
                 
                 // Update campaign message with error
                 var campaignMessage = await _context.CampaignMessages
@@ -191,6 +215,29 @@ namespace HooverCanvassingApi.Services
                 }
                 
                 return false;
+            }
+            finally
+            {
+                // Release the phone number back to the pool
+                if (phoneNumber != null)
+                {
+                    await _phoneNumberPool.ReleaseNumberAsync(phoneNumber.Id);
+                }
+            }
+        }
+        
+        private async Task UpdateCampaignMessageWithCall(int campaignMessageId, CallResource call)
+        {
+            var campaignMessage = await _context.CampaignMessages
+                .FirstOrDefaultAsync(cm => cm.Id == campaignMessageId);
+            
+            if (campaignMessage != null)
+            {
+                campaignMessage.TwilioSid = call.Sid;
+                campaignMessage.Status = MapTwilioCallStatusToMessageStatus(call.Status.ToString());
+                campaignMessage.SentAt = DateTime.UtcNow;
+                
+                await _context.SaveChangesAsync();
             }
         }
 

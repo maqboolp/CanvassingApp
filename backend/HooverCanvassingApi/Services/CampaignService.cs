@@ -658,25 +658,77 @@ namespace HooverCanvassingApi.Services
                 .Where(m => messageIds.Contains(m.Id))
                 .ToListAsync();
                 
-            foreach (var message in messages)
+            // Get phone number pool service
+            var phoneNumberPool = scope.ServiceProvider.GetRequiredService<IPhoneNumberPoolService>();
+            
+            // Check if we have phone numbers in the pool
+            var availableNumbers = await phoneNumberPool.GetAllNumbersAsync();
+            var activeNumberCount = availableNumbers.Count(n => n.IsActive);
+            
+            if (activeNumberCount == 0)
             {
-                try
+                // Fall back to sequential processing with default number
+                logger.LogWarning("No phone numbers in pool, falling back to sequential processing");
+                
+                foreach (var message in messages)
                 {
-                    // Add small delay to respect rate limits
-                    await Task.Delay(1000);
-
-                    var success = await twilioService.MakeRoboCallAsync(
-                        message.RecipientPhone, 
-                        voiceUrl, 
-                        message.Id);
-
+                    try
+                    {
+                        await Task.Delay(1000); // Rate limiting
+                        var success = await twilioService.MakeRoboCallAsync(
+                            message.RecipientPhone, 
+                            voiceUrl, 
+                            message.Id);
+                        if (success)
+                        {
+                            successes++;
+                            message.Status = MessageStatus.Sent;
+                            message.SentAt = DateTime.UtcNow;
+                            
+                            if (message.Voter != null)
+                            {
+                                UpdateVoterCampaignStats(message.Voter, campaignId, campaignType);
+                            }
+                        }
+                        else
+                        {
+                            failures++;
+                            message.Status = MessageStatus.Failed;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, $"Error processing message {message.Id}");
+                        failures++;
+                        message.Status = MessageStatus.Failed;
+                        message.ErrorMessage = ex.Message;
+                    }
+                }
+            }
+            else
+            {
+                // Process calls concurrently using phone number pool
+                var maxConcurrency = Math.Min(activeNumberCount * 2, 10); // Allow some oversubscription but cap at 10
+                logger.LogInformation($"Processing {messages.Count} calls with {activeNumberCount} phone numbers (max concurrency: {maxConcurrency})");
+                
+                var semaphore = new SemaphoreSlim(maxConcurrency);
+                var tasks = new List<Task<(bool success, CampaignMessage message, Exception? error)>>();
+                
+                foreach (var message in messages)
+                {
+                    tasks.Add(ProcessSingleRobocallAsync(message, voiceUrl, twilioService, semaphore, logger));
+                }
+                
+                var results = await Task.WhenAll(tasks);
+                
+                foreach (var (success, message, error) in results)
+                {
                     if (success)
                     {
                         successes++;
                         message.Status = MessageStatus.Sent;
                         message.SentAt = DateTime.UtcNow;
                         
-                        // Update voter stats
                         if (message.Voter != null)
                         {
                             UpdateVoterCampaignStats(message.Voter, campaignId, campaignType);
@@ -686,14 +738,11 @@ namespace HooverCanvassingApi.Services
                     {
                         failures++;
                         message.Status = MessageStatus.Failed;
+                        if (error != null)
+                        {
+                            message.ErrorMessage = error.Message;
+                        }
                     }
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex, $"Error processing message {message.Id}");
-                    failures++;
-                    message.Status = MessageStatus.Failed;
-                    message.ErrorMessage = ex.Message;
                 }
             }
             
@@ -704,6 +753,37 @@ namespace HooverCanvassingApi.Services
             await UpdateCampaignProgressAsync(campaignId, successes, failures);
             
             return (successes, failures);
+        }
+        
+        private async Task<(bool success, CampaignMessage message, Exception? error)> ProcessSingleRobocallAsync(
+            CampaignMessage message, 
+            string voiceUrl, 
+            ITwilioService twilioService, 
+            SemaphoreSlim semaphore,
+            ILogger<CampaignService> logger)
+        {
+            await semaphore.WaitAsync();
+            try
+            {
+                // Small random delay to avoid thundering herd
+                await Task.Delay(Random.Shared.Next(100, 500));
+                
+                var success = await twilioService.MakeRoboCallAsync(
+                    message.RecipientPhone, 
+                    voiceUrl, 
+                    message.Id);
+                    
+                return (success, message, null);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, $"Error processing message {message.Id}");
+                return (false, message, ex);
+            }
+            finally
+            {
+                semaphore.Release();
+            }
         }
         
         private async Task ProcessSmsCampaignAsync(int campaignId, List<int> messageIds, string campaignMessage, bool overrideOptIn)

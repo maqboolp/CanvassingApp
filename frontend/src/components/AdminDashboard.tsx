@@ -81,6 +81,7 @@ import VoiceRecordings from './VoiceRecordings';
 import VoterStagingImport from './VoterStagingImport';
 import AnalyticsComponent from './Analytics';
 import VolunteerResourcesSection from './VolunteerResourcesSection';
+import { PhoneNumberManagement } from './PhoneNumberManagement';
 import { API_BASE_URL } from '../config';
 import { customerConfig } from '../config/customerConfig';
 import { ApiErrorHandler, ApiError } from '../utils/apiErrorHandler';
@@ -130,6 +131,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
       'history',
       ...(user.role === 'admin' || user.role === 'superadmin' ? ['campaigns'] : []),
       ...(user.role === 'admin' || user.role === 'superadmin' ? ['voiceRecordings'] : []),
+      ...(user.role === 'admin' || user.role === 'superadmin' ? ['phoneNumbers'] : []),
       ...(user.role === 'admin' || user.role === 'superadmin' ? ['tags'] : []),
       'resources',
       'engagement',
@@ -1509,6 +1511,9 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
             <Tab label="Voice Recordings" icon={<Phone />} />
           )}
           {(user.role === 'admin' || user.role === 'superadmin') && (
+            <Tab label="Phone Numbers" icon={<ContactPhone />} />
+          )}
+          {(user.role === 'admin' || user.role === 'superadmin') && (
             <Tab label="Tags" icon={<LocalOffer />} />
           )}
           <Tab label="Resources" icon={<MenuBook />} />
@@ -2398,6 +2403,13 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
         {(user.role === 'admin' || user.role === 'superadmin') && (
           <TabPanel value={currentTab} index={getTabIndex('voiceRecordings')}>
             <VoiceRecordings user={user} />
+          </TabPanel>
+        )}
+
+        {/* Phone Numbers Tab - For Admins and SuperAdmins */}
+        {(user.role === 'admin' || user.role === 'superadmin') && (
+          <TabPanel value={currentTab} index={getTabIndex('phoneNumbers')}>
+            <PhoneNumberManagement />
           </TabPanel>
         )}
 

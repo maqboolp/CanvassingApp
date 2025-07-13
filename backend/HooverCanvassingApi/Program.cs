@@ -274,6 +274,7 @@ builder.Services.AddAuthorization();
 // Add custom services
 builder.Services.AddScoped<VoterImportService>();
 builder.Services.AddScoped<ITwilioService, TwilioService>();
+builder.Services.AddScoped<IPhoneNumberPoolService, PhoneNumberPoolService>();
 builder.Services.AddScoped<ICampaignService, CampaignService>();
 builder.Services.AddScoped<IOptInInvitationService, OptInInvitationService>();
 builder.Services.AddScoped<IAudioConversionService, AudioConversionService>();
