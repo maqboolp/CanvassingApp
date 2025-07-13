@@ -133,7 +133,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
       'history',
       ...(user.role === 'admin' || user.role === 'superadmin' ? ['campaigns'] : []),
       ...(user.role === 'admin' || user.role === 'superadmin' ? ['voiceRecordings'] : []),
-      ...(user.role === 'admin' || user.role === 'superadmin' ? ['phoneNumbers'] : []),
       ...(user.role === 'admin' || user.role === 'superadmin' ? ['tags'] : []),
       'resources',
       'engagement',
@@ -1514,9 +1513,6 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
             <Tab label="Voice Recordings" icon={<Phone />} />
           )}
           {(user.role === 'admin' || user.role === 'superadmin') && (
-            <Tab label="Phone Numbers" icon={<ContactPhone />} />
-          )}
-          {(user.role === 'admin' || user.role === 'superadmin') && (
             <Tab label="Tags" icon={<LocalOffer />} />
           )}
           <Tab label="Resources" icon={<MenuBook />} />
@@ -2412,12 +2408,6 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
           </TabPanel>
         )}
 
-        {/* Phone Numbers Tab - For Admins and SuperAdmins */}
-        {(user.role === 'admin' || user.role === 'superadmin') && (
-          <TabPanel value={currentTab} index={getTabIndex('phoneNumbers')}>
-            <PhoneNumberManagement />
-          </TabPanel>
-        )}
 
         {/* Tags Tab - For Admins and SuperAdmins */}
         {(user.role === 'admin' || user.role === 'superadmin') && (
@@ -2881,6 +2871,10 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
             
             <Box sx={{ mb: 4 }}>
               <TwilioSettings />
+            </Box>
+            
+            <Box sx={{ mb: 4 }}>
+              <PhoneNumberManagement />
             </Box>
           </TabPanel>
         )}
