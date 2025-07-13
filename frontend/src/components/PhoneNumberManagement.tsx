@@ -71,6 +71,11 @@ export const PhoneNumberManagement: React.FC = () => {
       const response = await ApiErrorHandler.makeAuthenticatedRequest(
         `${API_BASE_URL}/api/phonenumberpool`
       );
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const data = await response.json();
       setPhoneNumbers(data);
     } catch (err) {
