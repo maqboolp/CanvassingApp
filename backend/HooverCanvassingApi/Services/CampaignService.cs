@@ -1058,45 +1058,7 @@ namespace HooverCanvassingApi.Services
                     VoiceUrl = campaign.VoiceUrl
                 }).ToList();
 
-                // Retry based on campaign type
-                if (campaign.Type == CampaignType.SMS)
-                {
-                    var messageList = messagesToRetry.Select(m => 
-                        (m.PhoneNumber, m.Message, m.CampaignMessageId)).ToList();
-                    
-                    await _twilioService.SendBulkSmsAsync(messageList, overrideOptIn);
-                }
-                else if (campaign.Type == CampaignType.RoboCall)
-                {
-                    // Retry robo calls with optional batching
-                    var effectiveBatchSize = batchSize ?? messagesToRetry.Count;
-                    var effectiveDelayMinutes = batchDelayMinutes ?? 0;
-                    
-                    _logger.LogInformation($"Retrying {messagesToRetry.Count} robocalls in batches of {effectiveBatchSize} with {effectiveDelayMinutes} minute delays");
-                    
-                    for (int batchIndex = 0; batchIndex < messagesToRetry.Count; batchIndex += effectiveBatchSize)
-                    {
-                        if (batchIndex > 0 && effectiveDelayMinutes > 0)
-                        {
-                            _logger.LogInformation($"Waiting {effectiveDelayMinutes} minutes before retrying next batch...");
-                            await Task.Delay(TimeSpan.FromMinutes(effectiveDelayMinutes));
-                        }
-                        
-                        var batch = messagesToRetry.Skip(batchIndex).Take(effectiveBatchSize).ToList();
-                        _logger.LogInformation($"Retrying batch {(batchIndex / effectiveBatchSize) + 1} with {batch.Count} calls");
-                        
-                        foreach (var msg in batch)
-                        {
-                            if (!string.IsNullOrEmpty(msg.VoiceUrl))
-                            {
-                                await Task.Delay(1000); // Small delay between calls
-                                await _twilioService.MakeRoboCallAsync(msg.PhoneNumber, msg.VoiceUrl, msg.CampaignMessageId);
-                            }
-                        }
-                    }
-                }
-
-                // Update retry count for failed messages
+                // Update retry count for failed messages first
                 foreach (var msg in failedMessages)
                 {
                     msg.RetryCount++;
@@ -1104,6 +1066,70 @@ namespace HooverCanvassingApi.Services
                     msg.ErrorMessage = null;
                 }
                 await _context.SaveChangesAsync();
+                
+                // Start retry processing in background to avoid HTTP timeouts
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        _logger.LogInformation($"Starting background retry for campaign {campaignId}");
+                        
+                        if (campaign.Type == CampaignType.SMS)
+                        {
+                            var messageList = messagesToRetry.Select(m => 
+                                (m.PhoneNumber, m.Message, m.CampaignMessageId)).ToList();
+                            
+                            await _twilioService.SendBulkSmsAsync(messageList, overrideOptIn);
+                        }
+                        else if (campaign.Type == CampaignType.RoboCall)
+                        {
+                            // Retry robo calls with optional batching
+                            var effectiveBatchSize = batchSize ?? Math.Min(messagesToRetry.Count, 50); // Cap batch size
+                            var effectiveDelayMinutes = batchDelayMinutes ?? 0;
+                            
+                            _logger.LogInformation($"Retrying {messagesToRetry.Count} robocalls in batches of {effectiveBatchSize} with {effectiveDelayMinutes} minute delays");
+                            
+                            for (int batchIndex = 0; batchIndex < messagesToRetry.Count; batchIndex += effectiveBatchSize)
+                            {
+                                if (batchIndex > 0 && effectiveDelayMinutes > 0)
+                                {
+                                    _logger.LogInformation($"Waiting {effectiveDelayMinutes} minutes before retrying next batch...");
+                                    await Task.Delay(TimeSpan.FromMinutes(effectiveDelayMinutes));
+                                }
+                                
+                                var batch = messagesToRetry.Skip(batchIndex).Take(effectiveBatchSize).ToList();
+                                _logger.LogInformation($"Retrying batch {(batchIndex / effectiveBatchSize) + 1} with {batch.Count} calls");
+                                
+                                // Process batch with some concurrency
+                                var semaphore = new SemaphoreSlim(3, 3); // Max 3 concurrent calls
+                                var batchTasks = batch.Select(async msg =>
+                                {
+                                    if (!string.IsNullOrEmpty(msg.VoiceUrl))
+                                    {
+                                        await semaphore.WaitAsync();
+                                        try
+                                        {
+                                            await Task.Delay(500); // Small delay between calls
+                                            await _twilioService.MakeRoboCallAsync(msg.PhoneNumber, msg.VoiceUrl, msg.CampaignMessageId);
+                                        }
+                                        finally
+                                        {
+                                            semaphore.Release();
+                                        }
+                                    }
+                                }).ToArray();
+                                
+                                await Task.WhenAll(batchTasks);
+                            }
+                        }
+                        
+                        _logger.LogInformation($"Background retry completed for campaign {campaignId}");
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, $"Error during background retry for campaign {campaignId}");
+                    }
+                });
 
                 // Schedule status update check
                 _ = Task.Run(async () =>

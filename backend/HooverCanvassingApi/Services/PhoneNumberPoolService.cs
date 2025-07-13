@@ -32,16 +32,25 @@ namespace HooverCanvassingApi.Services
 
         public async Task<AdditionalPhoneNumber?> GetNextAvailableNumberAsync()
         {
-            var activeNumbers = await _context.AdditionalPhoneNumbers
+            var allNumbers = await _context.AdditionalPhoneNumbers.ToListAsync();
+            _logger.LogInformation($"Phone pool status - Total numbers: {allNumbers.Count}, " +
+                $"Active: {allNumbers.Count(n => n.IsActive)}, " +
+                $"Inactive: {allNumbers.Count(n => !n.IsActive)}");
+            
+            var activeNumbers = allNumbers
                 .Where(n => n.IsActive && n.CurrentActiveCalls < n.MaxConcurrentCalls)
                 .OrderBy(n => n.Id)
-                .ToListAsync();
+                .ToList();
 
             if (!activeNumbers.Any())
             {
-                _logger.LogWarning("No available phone numbers in pool");
+                _logger.LogWarning($"No available phone numbers in pool. Active numbers with capacity: 0. " +
+                    $"Numbers at capacity: {allNumbers.Count(n => n.IsActive && n.CurrentActiveCalls >= n.MaxConcurrentCalls)}");
                 return null;
             }
+
+            _logger.LogInformation($"Available phone numbers in pool: {activeNumbers.Count}. " +
+                $"Current capacities: {string.Join(", ", activeNumbers.Select(n => $"{n.PhoneNumber}:{n.CurrentActiveCalls}/{n.MaxConcurrentCalls}"))}");
 
             // Round-robin selection
             lock (_indexLock)
@@ -92,6 +101,7 @@ namespace HooverCanvassingApi.Services
                 var number = await _context.AdditionalPhoneNumbers.FindAsync(phoneNumberId);
                 if (number != null)
                 {
+                    var previousCalls = number.CurrentActiveCalls;
                     number.CurrentActiveCalls = Math.Max(0, number.CurrentActiveCalls - 1);
                     await _context.SaveChangesAsync();
                     
@@ -100,7 +110,13 @@ namespace HooverCanvassingApi.Services
                         semaphore.Release();
                     }
                     
-                    _logger.LogInformation($"Released phone number {number.PhoneNumber} (ID: {phoneNumberId})");
+                    _logger.LogInformation($"Released phone number {number.PhoneNumber} (ID: {phoneNumberId}). " +
+                        $"Active calls: {previousCalls} -> {number.CurrentActiveCalls}. " +
+                        $"Capacity now: {number.CurrentActiveCalls}/{number.MaxConcurrentCalls}");
+                }
+                else
+                {
+                    _logger.LogWarning($"Attempted to release non-existent phone number ID: {phoneNumberId}");
                 }
             }
             catch (Exception ex)
@@ -179,12 +195,24 @@ namespace HooverCanvassingApi.Services
             var number = await _context.AdditionalPhoneNumbers.FindAsync(phoneNumberId);
             if (number != null)
             {
+                var previousTotal = number.TotalCallsMade;
+                var previousFailed = number.TotalCallsFailed;
+                
                 number.TotalCallsMade++;
                 if (!success)
                 {
                     number.TotalCallsFailed++;
                 }
                 await _context.SaveChangesAsync();
+                
+                _logger.LogInformation($"Updated call stats for {number.PhoneNumber} (ID: {phoneNumberId}). " +
+                    $"Total calls: {previousTotal} -> {number.TotalCallsMade}. " +
+                    $"Failed calls: {previousFailed} -> {number.TotalCallsFailed}. " +
+                    $"Success rate: {((number.TotalCallsMade - number.TotalCallsFailed) / (double)number.TotalCallsMade * 100):F1}%");
+            }
+            else
+            {
+                _logger.LogWarning($"Attempted to increment call count for non-existent phone number ID: {phoneNumberId}");
             }
         }
     }
