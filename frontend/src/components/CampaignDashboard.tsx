@@ -981,7 +981,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                   {campaign.type === 1 && (
                     <Box sx={{ mt: 1 }}>
                       <Typography variant="caption" color="text.secondary">
-                        Robocalls: 9AM-8PM CST, Mon-Fri only
+                        Robocalls: 9AM-8PM (local time), Mon-Fri only
                       </Typography>
                     </Box>
                   )}
@@ -1537,7 +1537,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                     <Typography variant="caption">
                       Calls will be made {newCampaign.includeWeekends ? 'every day' : 'Monday-Friday'} between{' '}
                       {newCampaign.startHour === 0 ? '12:00 AM' : newCampaign.startHour < 12 ? `${newCampaign.startHour}:00 AM` : newCampaign.startHour === 12 ? '12:00 PM' : `${newCampaign.startHour - 12}:00 PM`} and{' '}
-                      {newCampaign.endHour === 0 ? '12:00 AM' : newCampaign.endHour < 12 ? `${newCampaign.endHour}:00 AM` : newCampaign.endHour === 12 ? '12:00 PM' : `${newCampaign.endHour - 12}:00 PM`} CST.
+                      {newCampaign.endHour === 0 ? '12:00 AM' : newCampaign.endHour < 12 ? `${newCampaign.endHour}:00 AM` : newCampaign.endHour === 12 ? '12:00 PM' : `${newCampaign.endHour - 12}:00 PM`} (local time).
                       Campaigns will automatically pause outside these hours.
                     </Typography>
                   </Alert>
@@ -1583,7 +1583,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
             {!newCampaign.sendNow && newCampaign.scheduledDate && newCampaign.scheduledTime && (
               <Alert severity="info" sx={{ mt: 1 }}>
                 <Typography variant="caption">
-                  Campaign will start on {new Date(newCampaign.scheduledDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' })} at {newCampaign.scheduledTime} CST
+                  Campaign will start on {new Date(newCampaign.scheduledDate + 'T' + newCampaign.scheduledTime).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' })} at {newCampaign.scheduledTime} (local time)
                   {newCampaign.type === 'RoboCall' && newCampaign.enforceCallingHours && 
                     '. Calls will respect the configured calling hours.'}
                 </Typography>
@@ -1906,7 +1906,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                     <Typography variant="caption">
                       Calls will be made {newCampaign.includeWeekends ? 'every day' : 'Monday-Friday'} between{' '}
                       {newCampaign.startHour === 0 ? '12:00 AM' : newCampaign.startHour < 12 ? `${newCampaign.startHour}:00 AM` : newCampaign.startHour === 12 ? '12:00 PM' : `${newCampaign.startHour - 12}:00 PM`} and{' '}
-                      {newCampaign.endHour === 0 ? '12:00 AM' : newCampaign.endHour < 12 ? `${newCampaign.endHour}:00 AM` : newCampaign.endHour === 12 ? '12:00 PM' : `${newCampaign.endHour - 12}:00 PM`} CST.
+                      {newCampaign.endHour === 0 ? '12:00 AM' : newCampaign.endHour < 12 ? `${newCampaign.endHour}:00 AM` : newCampaign.endHour === 12 ? '12:00 PM' : `${newCampaign.endHour - 12}:00 PM`} (local time).
                       Campaigns will automatically pause outside these hours.
                     </Typography>
                   </Alert>
