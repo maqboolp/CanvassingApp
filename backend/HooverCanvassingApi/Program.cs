@@ -189,15 +189,17 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
         if (!enhancedConnectionString.Contains("Pooling="))
             enhancedConnectionString += ";Pooling=true";
         if (!enhancedConnectionString.Contains("Maximum Pool Size="))
-            enhancedConnectionString += ";Maximum Pool Size=20";
+            enhancedConnectionString += ";Maximum Pool Size=10";
         if (!enhancedConnectionString.Contains("Minimum Pool Size="))
-            enhancedConnectionString += ";Minimum Pool Size=5";
+            enhancedConnectionString += ";Minimum Pool Size=2";
         if (!enhancedConnectionString.Contains("Connection Lifetime="))
             enhancedConnectionString += ";Connection Lifetime=300"; // 5 minutes
         if (!enhancedConnectionString.Contains("Connection Idle Lifetime="))
             enhancedConnectionString += ";Connection Idle Lifetime=60"; // 1 minute
         if (!enhancedConnectionString.Contains("Timeout="))
             enhancedConnectionString += ";Timeout=30"; // 30 seconds command timeout
+        if (!enhancedConnectionString.Contains("Command Timeout="))
+            enhancedConnectionString += ";Command Timeout=30";
     }
     
     options.UseNpgsql(enhancedConnectionString, npgsqlOptions =>
