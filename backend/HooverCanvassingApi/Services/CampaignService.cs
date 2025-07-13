@@ -757,6 +757,17 @@ namespace HooverCanvassingApi.Services
             // Get phone number pool service
             var phoneNumberPool = scope.ServiceProvider.GetRequiredService<IPhoneNumberPoolService>();
             
+            // Get voice recording duration if available
+            int? voiceDurationSeconds = null;
+            var campaign = await context.Campaigns
+                .Include(c => c.VoiceRecording)
+                .FirstOrDefaultAsync(c => c.Id == campaignId);
+            if (campaign?.VoiceRecording?.DurationSeconds != null)
+            {
+                voiceDurationSeconds = campaign.VoiceRecording.DurationSeconds;
+                logger.LogInformation($"Using voice recording duration of {voiceDurationSeconds} seconds for phone number holding");
+            }
+            
             // Check if we have phone numbers in the pool
             var availableNumbers = await phoneNumberPool.GetAllNumbersAsync();
             var activeNumberCount = availableNumbers.Count(n => n.IsActive);
@@ -774,7 +785,8 @@ namespace HooverCanvassingApi.Services
                         var success = await twilioService.MakeRoboCallAsync(
                             message.RecipientPhone, 
                             voiceUrl, 
-                            message.Id);
+                            message.Id,
+                            voiceDurationSeconds);
                         if (success)
                         {
                             successes++;
@@ -812,7 +824,7 @@ namespace HooverCanvassingApi.Services
                 
                 foreach (var message in messages)
                 {
-                    tasks.Add(ProcessSingleRobocallAsync(message, voiceUrl, twilioService, semaphore, logger));
+                    tasks.Add(ProcessSingleRobocallAsync(message, voiceUrl, twilioService, semaphore, logger, voiceDurationSeconds));
                 }
                 
                 var results = await Task.WhenAll(tasks);
@@ -856,7 +868,8 @@ namespace HooverCanvassingApi.Services
             string voiceUrl, 
             ITwilioService twilioService, 
             SemaphoreSlim semaphore,
-            ILogger<CampaignService> logger)
+            ILogger<CampaignService> logger,
+            int? voiceDurationSeconds = null)
         {
             await semaphore.WaitAsync();
             try
@@ -867,7 +880,8 @@ namespace HooverCanvassingApi.Services
                 var success = await twilioService.MakeRoboCallAsync(
                     message.RecipientPhone, 
                     voiceUrl, 
-                    message.Id);
+                    message.Id,
+                    voiceDurationSeconds);
                     
                 return (success, message, null);
             }

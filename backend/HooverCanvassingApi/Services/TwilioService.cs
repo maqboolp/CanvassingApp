@@ -176,9 +176,10 @@ namespace HooverCanvassingApi.Services
             }
         }
 
-        public async Task<bool> MakeRoboCallAsync(string toPhoneNumber, string voiceUrl, int campaignMessageId)
+        public async Task<bool> MakeRoboCallAsync(string toPhoneNumber, string voiceUrl, int campaignMessageId, int? expectedDurationSeconds = null)
         {
             AdditionalPhoneNumber? phoneNumber = null;
+            bool callInitiated = false;
             try
             {
                 var formattedNumber = FormatPhoneNumber(toPhoneNumber);
@@ -218,7 +219,24 @@ namespace HooverCanvassingApi.Services
                 // Track successful call
                 await _phoneNumberPool.IncrementCallCountAsync(phoneNumber.Id, true);
                 
-                _logger.LogInformation($"Robo call initiated to {formattedNumber} from {phoneNumber.PhoneNumber}, SID: {poolCall.Sid}");
+                // Schedule delayed release based on expected call duration
+                var holdDurationSeconds = (expectedDurationSeconds ?? 60) + 30; // Add 30 second buffer
+                _ = Task.Delay(TimeSpan.FromSeconds(holdDurationSeconds))
+                    .ContinueWith(async _ =>
+                    {
+                        try
+                        {
+                            await _phoneNumberPool.ReleaseNumberAsync(phoneNumber.Id);
+                            _logger.LogInformation($"Released phone number {phoneNumber.PhoneNumber} after {holdDurationSeconds} seconds");
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, $"Error releasing phone number {phoneNumber.PhoneNumber}");
+                        }
+                    });
+                
+                _logger.LogInformation($"Robo call initiated to {formattedNumber} from {phoneNumber.PhoneNumber}, SID: {poolCall.Sid}, will hold for {holdDurationSeconds}s");
+                callInitiated = true;
                 return true;
             }
             catch (Exception ex)
@@ -252,10 +270,19 @@ namespace HooverCanvassingApi.Services
             }
             finally
             {
-                // Release the phone number back to the pool
-                if (phoneNumber != null)
+                // Only release immediately if call failed and we didn't schedule a delayed release
+                if (phoneNumber != null && !callInitiated)
                 {
-                    await _phoneNumberPool.ReleaseNumberAsync(phoneNumber.Id);
+                    // Release immediately for failed calls
+                    try
+                    {
+                        await _phoneNumberPool.ReleaseNumberAsync(phoneNumber.Id);
+                        _logger.LogInformation($"Immediately released phone number {phoneNumber.PhoneNumber} due to failed call");
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, $"Error immediately releasing phone number {phoneNumber.PhoneNumber}");
+                    }
                 }
             }
         }
