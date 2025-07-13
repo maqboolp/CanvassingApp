@@ -178,7 +178,7 @@ namespace HooverCanvassingApi.Services
 
         public async Task<bool> MakeRoboCallAsync(string toPhoneNumber, string voiceUrl, int campaignMessageId)
         {
-            TwilioPhoneNumber? phoneNumber = null;
+            AdditionalPhoneNumber? phoneNumber = null;
             try
             {
                 var formattedNumber = FormatPhoneNumber(toPhoneNumber);

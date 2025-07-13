@@ -38,7 +38,7 @@ import {
 import { API_BASE_URL } from '../config';
 import { ApiErrorHandler } from '../utils/apiErrorHandler';
 
-interface TwilioPhoneNumber {
+interface AdditionalPhoneNumber {
   id: number;
   phoneNumber: string;
   friendlyName?: string;
@@ -53,12 +53,12 @@ interface TwilioPhoneNumber {
 }
 
 export const PhoneNumberManagement: React.FC = () => {
-  const [phoneNumbers, setPhoneNumbers] = useState<TwilioPhoneNumber[]>([]);
+  const [phoneNumbers, setPhoneNumbers] = useState<AdditionalPhoneNumber[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [selectedNumber, setSelectedNumber] = useState<TwilioPhoneNumber | null>(null);
+  const [selectedNumber, setSelectedNumber] = useState<AdditionalPhoneNumber | null>(null);
   const [newNumber, setNewNumber] = useState({ phoneNumber: '', friendlyName: '' });
   const [editForm, setEditForm] = useState({ isActive: true, maxConcurrentCalls: 1 });
 
@@ -160,7 +160,7 @@ export const PhoneNumberManagement: React.FC = () => {
     }
   };
 
-  const openEditDialog = (number: TwilioPhoneNumber) => {
+  const openEditDialog = (number: AdditionalPhoneNumber) => {
     setSelectedNumber(number);
     setEditForm({
       isActive: number.isActive,
@@ -187,7 +187,12 @@ export const PhoneNumberManagement: React.FC = () => {
   return (
     <Box>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h5">Twilio Phone Number Pool</Typography>
+        <Box>
+          <Typography variant="h5">Additional Phone Numbers for Robocalls</Typography>
+          <Typography variant="body2" color="text.secondary">
+            Add extra phone numbers to speed up robocall campaigns and prevent rate limiting
+          </Typography>
+        </Box>
         <Button
           variant="contained"
           startIcon={<AddIcon />}
@@ -208,7 +213,7 @@ export const PhoneNumberManagement: React.FC = () => {
           <Box display="flex" alignItems="center" gap={1} mb={2}>
             <InfoIcon color="info" fontSize="small" />
             <Typography variant="body2" color="text.secondary">
-              Configure multiple phone numbers to speed up robocall campaigns. Calls will be distributed across active numbers.
+              These additional numbers work alongside your primary voice number to handle more concurrent calls. Each number can handle its configured limit of simultaneous calls.
             </Typography>
           </Box>
 
@@ -333,7 +338,7 @@ export const PhoneNumberManagement: React.FC = () => {
 
       {/* Add Phone Number Dialog */}
       <Dialog open={addDialogOpen} onClose={() => setAddDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Add Phone Number</DialogTitle>
+        <DialogTitle>Add Additional Phone Number</DialogTitle>
         <DialogContent>
           <Box display="flex" flexDirection="column" gap={2} mt={1}>
             <TextField
@@ -342,7 +347,7 @@ export const PhoneNumberManagement: React.FC = () => {
               value={newNumber.phoneNumber}
               onChange={(e) => setNewNumber({ ...newNumber, phoneNumber: e.target.value })}
               placeholder="+1 (555) 123-4567"
-              helperText="Enter your Twilio phone number"
+              helperText="Enter an additional Twilio phone number for robocalls"
             />
             <TextField
               label="Friendly Name (Optional)"

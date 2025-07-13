@@ -7,10 +7,10 @@ namespace HooverCanvassingApi.Services
 {
     public interface IPhoneNumberPoolService
     {
-        Task<TwilioPhoneNumber?> GetNextAvailableNumberAsync();
+        Task<AdditionalPhoneNumber?> GetNextAvailableNumberAsync();
         Task ReleaseNumberAsync(int phoneNumberId);
-        Task<List<TwilioPhoneNumber>> GetAllNumbersAsync();
-        Task<TwilioPhoneNumber> AddPhoneNumberAsync(string phoneNumber, string? friendlyName = null);
+        Task<List<AdditionalPhoneNumber>> GetAllNumbersAsync();
+        Task<AdditionalPhoneNumber> AddPhoneNumberAsync(string phoneNumber, string? friendlyName = null);
         Task<bool> RemovePhoneNumberAsync(int id);
         Task<bool> UpdatePhoneNumberAsync(int id, bool isActive, int maxConcurrentCalls);
         Task IncrementCallCountAsync(int phoneNumberId, bool success);
@@ -30,9 +30,9 @@ namespace HooverCanvassingApi.Services
             _logger = logger;
         }
 
-        public async Task<TwilioPhoneNumber?> GetNextAvailableNumberAsync()
+        public async Task<AdditionalPhoneNumber?> GetNextAvailableNumberAsync()
         {
-            var activeNumbers = await _context.TwilioPhoneNumbers
+            var activeNumbers = await _context.AdditionalPhoneNumbers
                 .Where(n => n.IsActive && n.CurrentActiveCalls < n.MaxConcurrentCalls)
                 .OrderBy(n => n.Id)
                 .ToListAsync();
@@ -89,7 +89,7 @@ namespace HooverCanvassingApi.Services
         {
             try
             {
-                var number = await _context.TwilioPhoneNumbers.FindAsync(phoneNumberId);
+                var number = await _context.AdditionalPhoneNumbers.FindAsync(phoneNumberId);
                 if (number != null)
                 {
                     number.CurrentActiveCalls = Math.Max(0, number.CurrentActiveCalls - 1);
@@ -109,16 +109,16 @@ namespace HooverCanvassingApi.Services
             }
         }
 
-        public async Task<List<TwilioPhoneNumber>> GetAllNumbersAsync()
+        public async Task<List<AdditionalPhoneNumber>> GetAllNumbersAsync()
         {
-            return await _context.TwilioPhoneNumbers
+            return await _context.AdditionalPhoneNumbers
                 .OrderBy(n => n.CreatedAt)
                 .ToListAsync();
         }
 
-        public async Task<TwilioPhoneNumber> AddPhoneNumberAsync(string phoneNumber, string? friendlyName = null)
+        public async Task<AdditionalPhoneNumber> AddPhoneNumberAsync(string phoneNumber, string? friendlyName = null)
         {
-            var twilioNumber = new TwilioPhoneNumber
+            var twilioNumber = new AdditionalPhoneNumber
             {
                 PhoneNumber = phoneNumber,
                 FriendlyName = friendlyName ?? phoneNumber,
@@ -127,7 +127,7 @@ namespace HooverCanvassingApi.Services
                 CreatedAt = DateTime.UtcNow
             };
 
-            _context.TwilioPhoneNumbers.Add(twilioNumber);
+            _context.AdditionalPhoneNumbers.Add(twilioNumber);
             await _context.SaveChangesAsync();
             
             _logger.LogInformation($"Added new phone number to pool: {phoneNumber}");
@@ -136,11 +136,11 @@ namespace HooverCanvassingApi.Services
 
         public async Task<bool> RemovePhoneNumberAsync(int id)
         {
-            var number = await _context.TwilioPhoneNumbers.FindAsync(id);
+            var number = await _context.AdditionalPhoneNumbers.FindAsync(id);
             if (number == null)
                 return false;
 
-            _context.TwilioPhoneNumbers.Remove(number);
+            _context.AdditionalPhoneNumbers.Remove(number);
             await _context.SaveChangesAsync();
             
             _logger.LogInformation($"Removed phone number from pool: {number.PhoneNumber}");
@@ -149,7 +149,7 @@ namespace HooverCanvassingApi.Services
 
         public async Task<bool> UpdatePhoneNumberAsync(int id, bool isActive, int maxConcurrentCalls)
         {
-            var number = await _context.TwilioPhoneNumbers.FindAsync(id);
+            var number = await _context.AdditionalPhoneNumbers.FindAsync(id);
             if (number == null)
                 return false;
 
@@ -176,7 +176,7 @@ namespace HooverCanvassingApi.Services
 
         public async Task IncrementCallCountAsync(int phoneNumberId, bool success)
         {
-            var number = await _context.TwilioPhoneNumbers.FindAsync(phoneNumberId);
+            var number = await _context.AdditionalPhoneNumbers.FindAsync(phoneNumberId);
             if (number != null)
             {
                 number.TotalCallsMade++;

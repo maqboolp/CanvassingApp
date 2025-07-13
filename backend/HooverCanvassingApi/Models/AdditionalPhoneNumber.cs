@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace HooverCanvassingApi.Models
 {
-    public class TwilioPhoneNumber
+    public class AdditionalPhoneNumber
     {
         [Key]
         public int Id { get; set; }

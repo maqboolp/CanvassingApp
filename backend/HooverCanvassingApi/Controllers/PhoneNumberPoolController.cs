@@ -23,14 +23,14 @@ namespace HooverCanvassingApi.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<List<TwilioPhoneNumber>>> GetPhoneNumbers()
+        public async Task<ActionResult<List<AdditionalPhoneNumber>>> GetPhoneNumbers()
         {
             var numbers = await _phoneNumberPool.GetAllNumbersAsync();
             return Ok(numbers);
         }
 
         [HttpPost]
-        public async Task<ActionResult<TwilioPhoneNumber>> AddPhoneNumber([FromBody] AddPhoneNumberRequest request)
+        public async Task<ActionResult<AdditionalPhoneNumber>> AddPhoneNumber([FromBody] AddPhoneNumberRequest request)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
