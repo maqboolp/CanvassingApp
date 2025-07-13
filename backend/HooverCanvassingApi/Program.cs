@@ -319,6 +319,9 @@ builder.Services.AddHostedService<AudioCleanupService>();
 // Add campaign monitor service to resume stuck campaigns
 builder.Services.AddHostedService<CampaignMonitorService>();
 
+// Add campaign scheduler service to start scheduled campaigns
+builder.Services.AddHostedService<CampaignSchedulerService>();
+
 builder.Services.AddHttpClient();
 builder.Services.AddHttpClient<VoterImportService>();
 builder.Services.AddHttpClient<GoogleMapsService>();

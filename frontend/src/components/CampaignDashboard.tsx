@@ -160,7 +160,11 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
     enforceCallingHours: true,
     startHour: 9,
     endHour: 20,
-    includeWeekends: false
+    includeWeekends: false,
+    // Scheduling
+    sendNow: true,
+    scheduledDate: '',
+    scheduledTime: ''
   });
   
   // View mode state
@@ -350,7 +354,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
       
       console.log('Sending campaign request:', requestBody);
       
-      await ApiErrorHandler.makeAuthenticatedRequest(
+      const createdCampaign = await ApiErrorHandler.makeAuthenticatedRequest(
         `${API_BASE_URL}/api/campaigns`,
         {
           method: 'POST',
@@ -358,7 +362,31 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
         }
       );
 
-      setSuccess('Campaign created successfully');
+      // If scheduling for later, call the schedule endpoint
+      if (!newCampaign.sendNow && newCampaign.scheduledDate && newCampaign.scheduledTime) {
+        const scheduledDateTime = new Date(`${newCampaign.scheduledDate}T${newCampaign.scheduledTime}`);
+        await ApiErrorHandler.makeAuthenticatedRequest(
+          `${API_BASE_URL}/api/campaigns/${createdCampaign.id}/schedule`,
+          {
+            method: 'POST',
+            body: JSON.stringify({ scheduledTime: scheduledDateTime.toISOString() })
+          }
+        );
+        setSuccess(`Campaign scheduled for ${scheduledDateTime.toLocaleString()}`);
+      } else if (newCampaign.sendNow) {
+        // Send immediately
+        await ApiErrorHandler.makeAuthenticatedRequest(
+          `${API_BASE_URL}/api/campaigns/${createdCampaign.id}/send`,
+          {
+            method: 'POST',
+            body: JSON.stringify({ overrideOptIn: false })
+          }
+        );
+        setSuccess('Campaign created and sending started');
+      } else {
+        setSuccess('Campaign created successfully');
+      }
+
       setCreateDialogOpen(false);
       setNewCampaign({
         name: '', 
@@ -367,7 +395,14 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
         voiceUrl: '',
         voiceRecordingId: null,
         selectedZipCodes: [],
-        selectedTagIds: []
+        selectedTagIds: [],
+        enforceCallingHours: true,
+        startHour: 9,
+        endHour: 20,
+        includeWeekends: false,
+        sendNow: true,
+        scheduledDate: '',
+        scheduledTime: ''
       });
       setVoiceType('text');
       setSelectedTags([]);
@@ -554,7 +589,14 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
         voiceUrl: '',
         voiceRecordingId: null,
         selectedZipCodes: [],
-        selectedTagIds: []
+        selectedTagIds: [],
+        enforceCallingHours: true,
+        startHour: 9,
+        endHour: 20,
+        includeWeekends: false,
+        sendNow: true,
+        scheduledDate: '',
+        scheduledTime: ''
       });
       setVoiceType('text');
       setSelectedTags([]);
@@ -734,6 +776,15 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                   : campaign.message}
               </Typography>
 
+              {/* Show scheduled time for scheduled campaigns */}
+              {campaign.status === 1 && campaign.scheduledTime && (
+                <Alert severity="info" sx={{ mb: 2 }}>
+                  <Typography variant="caption">
+                    Scheduled to start: {new Date(campaign.scheduledTime).toLocaleString()}
+                  </Typography>
+                </Alert>
+              )}
+
               <Box sx={{ mb: 2 }}>
                 <Typography variant="body2">
                   Recipients: {campaign.totalRecipients}
@@ -817,6 +868,31 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                     </Button>
                   )}
                 </>
+              )}
+              {/* Show cancel button for scheduled campaigns */}
+              {campaign.status === 1 && canSendCampaign() && (
+                <Button
+                  size="small"
+                  variant="outlined"
+                  color="error"
+                  onClick={async () => {
+                    if (window.confirm('Are you sure you want to cancel this scheduled campaign?')) {
+                      try {
+                        await ApiErrorHandler.makeAuthenticatedRequest(
+                          `${API_BASE_URL}/api/campaigns/${campaign.id}/cancel`,
+                          { method: 'POST' }
+                        );
+                        setSuccess('Campaign cancelled');
+                        fetchCampaigns();
+                      } catch (error) {
+                        console.error('Error cancelling campaign:', error);
+                        setError('Failed to cancel campaign');
+                      }
+                    }
+                  }}
+                >
+                  Cancel Schedule
+                </Button>
               )}
               {/* Show resume button for stuck campaigns in Sending status */}
               {campaign.status === 2 && campaign.pendingDeliveries > 0 && canSendCampaign() && (
@@ -1386,6 +1462,51 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
               </>
             )}
 
+            {/* Scheduling Options */}
+            <Typography variant="subtitle1" sx={{ mt: 2 }}>Campaign Timing</Typography>
+            
+            <RadioGroup
+              value={newCampaign.sendNow ? 'now' : 'scheduled'}
+              onChange={(e) => setNewCampaign({ ...newCampaign, sendNow: e.target.value === 'now' })}
+            >
+              <FormControlLabel value="now" control={<Radio />} label="Send immediately after creation" />
+              <FormControlLabel value="scheduled" control={<Radio />} label="Schedule for later" />
+            </RadioGroup>
+            
+            {!newCampaign.sendNow && (
+              <Box sx={{ mt: 2, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                <TextField
+                  label="Schedule Date"
+                  type="date"
+                  value={newCampaign.scheduledDate}
+                  onChange={(e) => setNewCampaign({ ...newCampaign, scheduledDate: e.target.value })}
+                  InputLabelProps={{ shrink: true }}
+                  inputProps={{ min: new Date().toISOString().split('T')[0] }}
+                  fullWidth
+                  size="small"
+                />
+                <TextField
+                  label="Schedule Time"
+                  type="time"
+                  value={newCampaign.scheduledTime}
+                  onChange={(e) => setNewCampaign({ ...newCampaign, scheduledTime: e.target.value })}
+                  InputLabelProps={{ shrink: true }}
+                  fullWidth
+                  size="small"
+                />
+              </Box>
+            )}
+            
+            {!newCampaign.sendNow && newCampaign.scheduledDate && newCampaign.scheduledTime && (
+              <Alert severity="info" sx={{ mt: 1 }}>
+                <Typography variant="caption">
+                  Campaign will start on {new Date(newCampaign.scheduledDate).toLocaleDateString()} at {newCampaign.scheduledTime} CST
+                  {newCampaign.type === 'RoboCall' && newCampaign.enforceCallingHours && 
+                    '. Calls will respect the configured calling hours.'}
+                </Typography>
+              </Alert>
+            )}
+
             {audienceCount > 0 && (
               <Alert severity="info" sx={{ mt: 2 }}>
                 <strong>{audienceCount}</strong> voters will receive this campaign
@@ -1402,7 +1523,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
             onClick={createCampaign} 
             variant="contained"
           >
-            Create Campaign
+            {newCampaign.sendNow ? 'Create & Send Campaign' : 'Schedule Campaign'}
           </Button>
         </DialogActions>
       </Dialog>
