@@ -34,12 +34,36 @@ namespace HooverCanvassingApi.Services
             _serviceScopeFactory = serviceScopeFactory;
             _phoneNumberPool = phoneNumberPool;
             
-            // Debug logging for Twilio configuration
-            var accountSid = _configuration["Twilio:AccountSid"];
-            var authToken = _configuration["Twilio:AuthToken"];
-            var fromPhone = _configuration["Twilio:FromPhoneNumber"];
-            var smsPhone = _configuration["Twilio:SmsPhoneNumber"];
-            var messagingSid = _configuration["Twilio:MessagingServiceSid"];
+            // Try to load settings from database first
+            var dbSettings = context.TwilioConfigurations
+                .Where(s => s.IsActive)
+                .OrderByDescending(s => s.UpdatedAt)
+                .FirstOrDefault();
+            
+            string? accountSid;
+            string? authToken;
+            string? fromPhone;
+            string? smsPhone;
+            string? messagingSid;
+            
+            if (dbSettings != null)
+            {
+                _logger.LogInformation("Loading Twilio configuration from database");
+                accountSid = dbSettings.AccountSid;
+                authToken = dbSettings.AuthToken;
+                fromPhone = dbSettings.FromPhoneNumber;
+                smsPhone = dbSettings.SmsPhoneNumber;
+                messagingSid = dbSettings.MessagingServiceSid;
+            }
+            else
+            {
+                _logger.LogInformation("Loading Twilio configuration from appsettings.json");
+                accountSid = _configuration["Twilio:AccountSid"];
+                authToken = _configuration["Twilio:AuthToken"];
+                fromPhone = _configuration["Twilio:FromPhoneNumber"];
+                smsPhone = _configuration["Twilio:SmsPhoneNumber"];
+                messagingSid = _configuration["Twilio:MessagingServiceSid"];
+            }
             
             _logger.LogInformation($"Twilio Config - AccountSid: {(string.IsNullOrEmpty(accountSid) ? "MISSING" : $"***{accountSid.Substring(Math.Max(0, accountSid.Length - 4))}")}");
             _logger.LogInformation($"Twilio Config - AuthToken: {(string.IsNullOrEmpty(authToken) ? "MISSING" : "***CONFIGURED")}");

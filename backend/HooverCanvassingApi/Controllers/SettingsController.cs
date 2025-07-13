@@ -3,6 +3,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
 using HooverCanvassingApi.Configuration;
 using System.Text.Json;
+using HooverCanvassingApi.Data;
+using HooverCanvassingApi.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace HooverCanvassingApi.Controllers
 {
@@ -15,21 +18,43 @@ namespace HooverCanvassingApi.Controllers
         private readonly IWebHostEnvironment _environment;
         private readonly ILogger<SettingsController> _logger;
         private readonly string _appsettingsPath;
+        private readonly ApplicationDbContext _dbContext;
 
         public SettingsController(
             IConfiguration configuration,
             IWebHostEnvironment environment,
-            ILogger<SettingsController> logger)
+            ILogger<SettingsController> logger,
+            ApplicationDbContext dbContext)
         {
             _configuration = configuration;
             _environment = environment;
             _logger = logger;
             _appsettingsPath = Path.Combine(_environment.ContentRootPath, "appsettings.json");
+            _dbContext = dbContext;
         }
 
         [HttpGet("twilio")]
-        public ActionResult<TwilioSettings> GetTwilioSettings()
+        public async Task<ActionResult<TwilioSettings>> GetTwilioSettings()
         {
+            // Try to get settings from database first
+            var dbSettings = await _dbContext.TwilioConfigurations
+                .Where(s => s.IsActive)
+                .OrderByDescending(s => s.UpdatedAt)
+                .FirstOrDefaultAsync();
+
+            if (dbSettings != null)
+            {
+                return Ok(new TwilioSettings
+                {
+                    AccountSid = dbSettings.AccountSid,
+                    FromPhoneNumber = dbSettings.FromPhoneNumber ?? "",
+                    SmsPhoneNumber = dbSettings.SmsPhoneNumber ?? "",
+                    MessagingServiceSid = dbSettings.MessagingServiceSid ?? "",
+                    HasAuthToken = !string.IsNullOrEmpty(dbSettings.AuthToken)
+                });
+            }
+
+            // Fall back to configuration file
             var settings = new TwilioSettings
             {
                 AccountSid = _configuration["Twilio:AccountSid"] ?? "",
@@ -48,59 +73,47 @@ namespace HooverCanvassingApi.Controllers
         {
             try
             {
-                // Read existing appsettings.json
-                var json = await System.IO.File.ReadAllTextAsync(_appsettingsPath);
-                var config = JsonSerializer.Deserialize<Dictionary<string, object>>(json, new JsonSerializerOptions
-                {
-                    WriteIndented = true,
-                    PropertyNameCaseInsensitive = true
-                });
+                // Get existing settings from database or create new
+                var dbSettings = await _dbContext.TwilioConfigurations
+                    .Where(s => s.IsActive)
+                    .OrderByDescending(s => s.UpdatedAt)
+                    .FirstOrDefaultAsync();
 
-                if (config == null)
+                if (dbSettings == null)
                 {
-                    return StatusCode(500, new { message = "Failed to read configuration" });
+                    // Create new settings if none exist
+                    dbSettings = new TwilioConfiguration
+                    {
+                        AccountSid = "",
+                        AuthToken = "",
+                        IsActive = true
+                    };
+                    _dbContext.TwilioConfigurations.Add(dbSettings);
                 }
-
-                // Get or create Twilio section
-                if (!config.ContainsKey("Twilio"))
-                {
-                    config["Twilio"] = new Dictionary<string, object>();
-                }
-
-                var twilioSection = JsonSerializer.Deserialize<Dictionary<string, object>>(
-                    JsonSerializer.Serialize(config["Twilio"]),
-                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                ) ?? new Dictionary<string, object>();
 
                 // Update only provided values
                 if (!string.IsNullOrEmpty(request.AccountSid))
-                    twilioSection["AccountSid"] = request.AccountSid;
+                    dbSettings.AccountSid = request.AccountSid;
 
                 if (!string.IsNullOrEmpty(request.AuthToken))
-                    twilioSection["AuthToken"] = request.AuthToken;
+                    dbSettings.AuthToken = request.AuthToken;
 
                 if (request.FromPhoneNumber != null)
-                    twilioSection["FromPhoneNumber"] = request.FromPhoneNumber;
+                    dbSettings.FromPhoneNumber = request.FromPhoneNumber;
 
                 if (request.SmsPhoneNumber != null)
-                    twilioSection["SmsPhoneNumber"] = request.SmsPhoneNumber;
+                    dbSettings.SmsPhoneNumber = request.SmsPhoneNumber;
 
                 if (request.MessagingServiceSid != null)
-                    twilioSection["MessagingServiceSid"] = request.MessagingServiceSid;
+                    dbSettings.MessagingServiceSid = request.MessagingServiceSid;
 
-                config["Twilio"] = twilioSection;
+                dbSettings.UpdatedAt = DateTime.UtcNow;
 
-                // Write back to appsettings.json
-                var updatedJson = JsonSerializer.Serialize(config, new JsonSerializerOptions
-                {
-                    WriteIndented = true
-                });
+                await _dbContext.SaveChangesAsync();
 
-                await System.IO.File.WriteAllTextAsync(_appsettingsPath, updatedJson);
+                _logger.LogInformation("Twilio settings updated successfully in database");
 
-                _logger.LogInformation("Twilio settings updated successfully");
-
-                return Ok(new { message = "Twilio settings updated successfully. Please restart the application for changes to take effect." });
+                return Ok(new { message = "Twilio settings updated successfully." });
             }
             catch (Exception ex)
             {
