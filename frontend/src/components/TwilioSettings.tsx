@@ -65,6 +65,12 @@ export const TwilioSettings: React.FC = () => {
       const response = await ApiErrorHandler.makeAuthenticatedRequest(
         `${API_BASE_URL}/api/settings/twilio`
       );
+      
+      if (!response || !response.ok) {
+        const status = response?.status || 'Network error';
+        throw new Error(`HTTP error! status: ${status}`);
+      }
+      
       const data = await response.json();
       setSettings(data);
       setFormData({
@@ -76,7 +82,7 @@ export const TwilioSettings: React.FC = () => {
       });
     } catch (err) {
       setError('Failed to load Twilio settings');
-      console.error(err);
+      console.error('Twilio settings error:', err);
     } finally {
       setLoading(false);
     }
@@ -115,6 +121,11 @@ export const TwilioSettings: React.FC = () => {
           body: JSON.stringify(updateData)
         }
       );
+
+      if (!response || !response.ok) {
+        const status = response?.status || 'Network error';
+        throw new Error(`HTTP error! status: ${status}`);
+      }
 
       const result = await response.json();
       setSuccess(result.message || 'Settings updated successfully');
