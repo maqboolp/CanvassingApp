@@ -72,15 +72,16 @@ export const PhoneNumberManagement: React.FC = () => {
         `${API_BASE_URL}/api/phonenumberpool`
       );
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (!response || !response.ok) {
+        const status = response?.status || 'Network error';
+        throw new Error(`HTTP error! status: ${status}`);
       }
       
       const data = await response.json();
       setPhoneNumbers(data);
     } catch (err) {
-      setError('Failed to fetch phone numbers');
-      console.error(err);
+      setError('Failed to fetch phone numbers. Please ensure the database migration has been applied.');
+      console.error('Phone number fetch error:', err);
     } finally {
       setLoading(false);
     }
@@ -88,7 +89,7 @@ export const PhoneNumberManagement: React.FC = () => {
 
   const handleAddNumber = async () => {
     try {
-      await ApiErrorHandler.makeAuthenticatedRequest(
+      const response = await ApiErrorHandler.makeAuthenticatedRequest(
         `${API_BASE_URL}/api/phonenumberpool`,
         {
           method: 'POST',
@@ -97,12 +98,17 @@ export const PhoneNumberManagement: React.FC = () => {
         }
       );
       
+      if (!response || !response.ok) {
+        const status = response?.status || 'Network error';
+        throw new Error(`HTTP error! status: ${status}`);
+      }
+      
       setAddDialogOpen(false);
       setNewNumber({ phoneNumber: '', friendlyName: '' });
       fetchPhoneNumbers();
     } catch (err) {
       setError('Failed to add phone number');
-      console.error(err);
+      console.error('Add phone number error:', err);
     }
   };
 
@@ -110,7 +116,7 @@ export const PhoneNumberManagement: React.FC = () => {
     if (!selectedNumber) return;
 
     try {
-      await ApiErrorHandler.makeAuthenticatedRequest(
+      const response = await ApiErrorHandler.makeAuthenticatedRequest(
         `${API_BASE_URL}/api/phonenumberpool/${selectedNumber.id}`,
         {
           method: 'PUT',
@@ -119,12 +125,17 @@ export const PhoneNumberManagement: React.FC = () => {
         }
       );
       
+      if (!response || !response.ok) {
+        const status = response?.status || 'Network error';
+        throw new Error(`HTTP error! status: ${status}`);
+      }
+      
       setEditDialogOpen(false);
       setSelectedNumber(null);
       fetchPhoneNumbers();
     } catch (err) {
       setError('Failed to update phone number');
-      console.error(err);
+      console.error('Update phone number error:', err);
     }
   };
 
@@ -132,15 +143,20 @@ export const PhoneNumberManagement: React.FC = () => {
     if (!window.confirm('Are you sure you want to remove this phone number?')) return;
 
     try {
-      await ApiErrorHandler.makeAuthenticatedRequest(
+      const response = await ApiErrorHandler.makeAuthenticatedRequest(
         `${API_BASE_URL}/api/phonenumberpool/${id}`,
         { method: 'DELETE' }
       );
       
+      if (!response || !response.ok) {
+        const status = response?.status || 'Network error';
+        throw new Error(`HTTP error! status: ${status}`);
+      }
+      
       fetchPhoneNumbers();
     } catch (err) {
       setError('Failed to delete phone number');
-      console.error(err);
+      console.error('Delete phone number error:', err);
     }
   };
 
