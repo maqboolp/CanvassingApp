@@ -182,7 +182,9 @@ namespace HooverCanvassingApi.Services
             bool callInitiated = false;
             try
             {
+                _logger.LogInformation($"Starting robo call for campaign message {campaignMessageId} to {toPhoneNumber}");
                 var formattedNumber = FormatPhoneNumber(toPhoneNumber);
+                _logger.LogInformation($"Formatted phone number: {formattedNumber}");
                 
                 // Get an available phone number from the pool
                 phoneNumber = await _phoneNumberPool.GetNextAvailableNumberAsync();
@@ -213,7 +215,11 @@ namespace HooverCanvassingApi.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Failed to make robo call to {toPhoneNumber}");
+                _logger.LogError(ex, $"Failed to make robo call to {toPhoneNumber}. Error: {ex.Message}");
+                if (ex.InnerException != null)
+                {
+                    _logger.LogError($"Inner exception: {ex.InnerException.Message}");
+                }
                 
                 // Track failed call if we got a phone number
                 if (phoneNumber != null)

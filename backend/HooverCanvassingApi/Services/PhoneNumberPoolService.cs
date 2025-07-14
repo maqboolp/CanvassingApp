@@ -2,6 +2,7 @@ using HooverCanvassingApi.Data;
 using HooverCanvassingApi.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Concurrent;
+using System.Text.RegularExpressions;
 
 namespace HooverCanvassingApi.Services
 {
@@ -20,8 +21,8 @@ namespace HooverCanvassingApi.Services
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<PhoneNumberPoolService> _logger;
-        private int _lastUsedIndex = -1;
-        private readonly object _indexLock = new object();
+        private static int _lastUsedIndex = -1;
+        private static readonly object _indexLock = new object();
 
         public PhoneNumberPoolService(ApplicationDbContext context, ILogger<PhoneNumberPoolService> logger)
         {
@@ -114,9 +115,12 @@ namespace HooverCanvassingApi.Services
                 
                 if (!exists)
                 {
+                    // Ensure phone number is properly formatted
+                    var formattedNumber = FormatPhoneNumber(phoneNumber);
+                    
                     var twilioNumber = new TwilioPhoneNumber
                     {
-                        Number = phoneNumber,
+                        Number = formattedNumber,
                         IsActive = true,
                         MaxConcurrentCalls = 50, // Default to 50 concurrent calls per Twilio limits
                         CreatedAt = DateTime.UtcNow
@@ -188,6 +192,21 @@ namespace HooverCanvassingApi.Services
             {
                 _logger.LogWarning($"Attempted to increment call count for non-existent phone number ID: {phoneNumberId}");
             }
+        }
+        
+        private string FormatPhoneNumber(string phoneNumber)
+        {
+            // Remove all non-digits
+            var digitsOnly = Regex.Replace(phoneNumber, @"[^\d]", "");
+            
+            // Add country code if missing
+            if (digitsOnly.Length == 10)
+            {
+                digitsOnly = "1" + digitsOnly;
+            }
+            
+            // Add + prefix
+            return "+" + digitsOnly;
         }
     }
 }
