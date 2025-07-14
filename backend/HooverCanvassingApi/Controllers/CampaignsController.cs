@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using HooverCanvassingApi.Models;
 using HooverCanvassingApi.Services;
 using System.Security.Claims;
+using HooverCanvassingApi.Configuration;
 
 namespace HooverCanvassingApi.Controllers
 {
@@ -13,11 +14,13 @@ namespace HooverCanvassingApi.Controllers
     {
         private readonly ICampaignService _campaignService;
         private readonly ILogger<CampaignsController> _logger;
+        private readonly CallingHoursSettings _callingHoursSettings;
 
-        public CampaignsController(ICampaignService campaignService, ILogger<CampaignsController> logger)
+        public CampaignsController(ICampaignService campaignService, ILogger<CampaignsController> logger, IConfiguration configuration)
         {
             _campaignService = campaignService;
             _logger = logger;
+            _callingHoursSettings = configuration.GetSection("CallingHours").Get<CallingHoursSettings>() ?? new CallingHoursSettings();
         }
 
         [HttpGet]
@@ -231,19 +234,40 @@ namespace HooverCanvassingApi.Controllers
                 // Check if it's a robocall campaign with enforced calling hours
                 if (campaign.Type == CampaignType.RoboCall && campaign.EnforceCallingHours)
                 {
-                    var currentHour = DateTime.Now.Hour;
-                    var currentDay = DateTime.Now.DayOfWeek;
-                    
-                    // Check weekend restriction
-                    if (!campaign.IncludeWeekends && (currentDay == DayOfWeek.Saturday || currentDay == DayOfWeek.Sunday))
+                    try
                     {
-                        return BadRequest(new { error = $"Campaign cannot be sent on weekends. Calling hours are configured for weekdays only." });
+                        var timeZone = TimeZoneInfo.FindSystemTimeZoneById(_callingHoursSettings.TimeZone);
+                        var localTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, timeZone);
+                        
+                        // Check weekend restriction
+                        if (!campaign.IncludeWeekends && (localTime.DayOfWeek == DayOfWeek.Saturday || localTime.DayOfWeek == DayOfWeek.Sunday))
+                        {
+                            return BadRequest(new { error = $"Campaign cannot be sent on weekends. Calling hours are configured for weekdays only." });
+                        }
+                        
+                        // Check hour restriction
+                        if (localTime.Hour < campaign.StartHour || localTime.Hour >= campaign.EndHour)
+                        {
+                            var timeString = localTime.ToString("h:mm tt");
+                            return BadRequest(new { error = $"Campaign cannot be sent outside calling hours ({campaign.StartHour}:00 - {campaign.EndHour}:00). Current time is {timeString} {_callingHoursSettings.TimeZone}." });
+                        }
                     }
-                    
-                    // Check hour restriction
-                    if (currentHour < campaign.StartHour || currentHour >= campaign.EndHour)
+                    catch (TimeZoneNotFoundException)
                     {
-                        return BadRequest(new { error = $"Campaign cannot be sent outside calling hours ({campaign.StartHour}:00 - {campaign.EndHour}:00). Current time is {currentHour}:00." });
+                        _logger.LogError($"Invalid timezone: {_callingHoursSettings.TimeZone}");
+                        // Fall back to server time if timezone is invalid
+                        var currentHour = DateTime.Now.Hour;
+                        var currentDay = DateTime.Now.DayOfWeek;
+                        
+                        if (!campaign.IncludeWeekends && (currentDay == DayOfWeek.Saturday || currentDay == DayOfWeek.Sunday))
+                        {
+                            return BadRequest(new { error = $"Campaign cannot be sent on weekends. Calling hours are configured for weekdays only." });
+                        }
+                        
+                        if (currentHour < campaign.StartHour || currentHour >= campaign.EndHour)
+                        {
+                            return BadRequest(new { error = $"Campaign cannot be sent outside calling hours ({campaign.StartHour}:00 - {campaign.EndHour}:00). Current server time is {currentHour}:00." });
+                        }
                     }
                 }
 
