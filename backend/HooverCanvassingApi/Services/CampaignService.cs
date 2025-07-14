@@ -155,18 +155,19 @@ namespace HooverCanvassingApi.Services
                 return false;
             }
             
-            // Log calling hours information for robocalls
-            if (campaign.Type == CampaignType.RoboCall)
+            // Check calling hours for robocalls BEFORE starting
+            if (campaign.Type == CampaignType.RoboCall && campaign.EnforceCallingHours)
             {
                 var isWithinHours = IsWithinCallingHours(campaign);
                 _logger.LogInformation($"Robocall campaign {campaignId} - EnforceCallingHours: {campaign.EnforceCallingHours}, " +
                     $"Hours: {campaign.StartHour}-{campaign.EndHour}, IncludeWeekends: {campaign.IncludeWeekends}, " +
                     $"CurrentlyWithinHours: {isWithinHours}");
                     
-                if (campaign.EnforceCallingHours && !isWithinHours)
+                if (!isWithinHours)
                 {
-                    _logger.LogWarning($"Robocall campaign {campaignId} started outside calling hours. " +
-                        $"It will begin processing when calling hours start.");
+                    _logger.LogWarning($"Robocall campaign {campaignId} BLOCKED - outside calling hours. " +
+                        $"Current time is outside {campaign.StartHour}:00 - {campaign.EndHour}:00");
+                    return false;
                 }
             }
 
@@ -687,12 +688,26 @@ namespace HooverCanvassingApi.Services
             var semaphore = new SemaphoreSlim(maxConcurrency, maxConcurrency);
             var tasks = new List<Task<(bool success, CampaignMessage message, Exception? error)>>();
             
+            // Check calling hours BEFORE processing any messages
+            var campaign = await context.Campaigns.FindAsync(campaignId);
+            if (campaign != null && campaign.EnforceCallingHours && !IsWithinCallingHours(campaign))
+            {
+                _logger.LogWarning($"Campaign {campaignId} processing skipped - outside calling hours. Will retry later.");
+                // Mark messages back to pending so they can be processed later
+                foreach (var msg in messages)
+                {
+                    msg.Status = MessageStatus.Pending;
+                }
+                await context.SaveChangesAsync();
+                return;
+            }
+            
             foreach (var message in messages)
             {
                 // Check if we're outside calling hours before queuing more calls
-                if (tasks.Count % 100 == 0 && tasks.Count > 0)
+                if (tasks.Count % 50 == 0 && tasks.Count > 0)
                 {
-                    var campaign = await context.Campaigns.FindAsync(campaignId);
+                    campaign = await context.Campaigns.FindAsync(campaignId);
                     if (campaign != null && campaign.EnforceCallingHours && !IsWithinCallingHours(campaign))
                     {
                         _logger.LogWarning($"Campaign {campaignId} paused - outside calling hours. Queued {tasks.Count} calls.");
