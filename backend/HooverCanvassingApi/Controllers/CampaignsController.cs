@@ -461,8 +461,6 @@ namespace HooverCanvassingApi.Controllers
     public class SendCampaignRequest
     {
         public bool OverrideOptIn { get; set; }
-        public int? BatchSize { get; set; }
-        public int? BatchDelayMinutes { get; set; }
     }
 
     public class PreviewAudienceRequest
