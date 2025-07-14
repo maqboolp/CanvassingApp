@@ -326,6 +326,7 @@ builder.Services.AddHostedService<CampaignMonitorService>();
 
 // Add campaign scheduler service to start scheduled campaigns
 builder.Services.AddHostedService<CampaignSchedulerService>();
+builder.Services.AddHostedService<PhoneNumberPoolInitializer>();
 
 builder.Services.AddHttpClient();
 builder.Services.AddHttpClient<VoterImportService>();

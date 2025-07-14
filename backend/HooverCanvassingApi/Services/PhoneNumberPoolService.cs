@@ -7,10 +7,10 @@ namespace HooverCanvassingApi.Services
 {
     public interface IPhoneNumberPoolService
     {
-        Task<AdditionalPhoneNumber?> GetNextAvailableNumberAsync();
+        Task<TwilioPhoneNumber?> GetNextAvailableNumberAsync();
         Task ReleaseNumberAsync(int phoneNumberId);
-        Task<List<AdditionalPhoneNumber>> GetAllNumbersAsync();
-        Task<AdditionalPhoneNumber> AddPhoneNumberAsync(string phoneNumber, string? friendlyName = null);
+        Task<List<TwilioPhoneNumber>> GetAllNumbersAsync();
+        Task<List<TwilioPhoneNumber>> AddPhoneNumbersAsync(string phoneNumbers);
         Task<bool> RemovePhoneNumberAsync(int id);
         Task<bool> UpdatePhoneNumberAsync(int id, bool isActive, int maxConcurrentCalls);
         Task IncrementCallCountAsync(int phoneNumberId, bool success);
@@ -29,9 +29,9 @@ namespace HooverCanvassingApi.Services
             _logger = logger;
         }
 
-        public async Task<AdditionalPhoneNumber?> GetNextAvailableNumberAsync()
+        public async Task<TwilioPhoneNumber?> GetNextAvailableNumberAsync()
         {
-            var allNumbers = await _context.AdditionalPhoneNumbers.ToListAsync();
+            var allNumbers = await _context.TwilioPhoneNumbers.ToListAsync();
             _logger.LogInformation($"Phone pool status - Total numbers: {allNumbers.Count}, " +
                 $"Active: {allNumbers.Count(n => n.IsActive)}, " +
                 $"Inactive: {allNumbers.Count(n => !n.IsActive)}");
@@ -61,7 +61,7 @@ namespace HooverCanvassingApi.Services
             selectedNumber.LastUsedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
             
-            _logger.LogInformation($"Allocated phone number {selectedNumber.PhoneNumber} (ID: {selectedNumber.Id}) - Round robin index: {_lastUsedIndex}");
+            _logger.LogInformation($"Allocated phone number {selectedNumber.Number} (ID: {selectedNumber.Id}) - Round robin index: {_lastUsedIndex}");
             
             return selectedNumber;
         }
@@ -70,14 +70,14 @@ namespace HooverCanvassingApi.Services
         {
             try
             {
-                var number = await _context.AdditionalPhoneNumbers.FindAsync(phoneNumberId);
+                var number = await _context.TwilioPhoneNumbers.FindAsync(phoneNumberId);
                 if (number != null)
                 {
                     var previousCalls = number.CurrentActiveCalls;
                     number.CurrentActiveCalls = Math.Max(0, number.CurrentActiveCalls - 1);
                     await _context.SaveChangesAsync();
                     
-                    _logger.LogInformation($"Released phone number {number.PhoneNumber} (ID: {phoneNumberId}). " +
+                    _logger.LogInformation($"Released phone number {number.Number} (ID: {phoneNumberId}). " +
                         $"Active calls: {previousCalls} -> {number.CurrentActiveCalls}");
                 }
                 else
@@ -91,47 +91,67 @@ namespace HooverCanvassingApi.Services
             }
         }
 
-        public async Task<List<AdditionalPhoneNumber>> GetAllNumbersAsync()
+        public async Task<List<TwilioPhoneNumber>> GetAllNumbersAsync()
         {
-            return await _context.AdditionalPhoneNumbers
+            return await _context.TwilioPhoneNumbers
                 .OrderBy(n => n.CreatedAt)
                 .ToListAsync();
         }
 
-        public async Task<AdditionalPhoneNumber> AddPhoneNumberAsync(string phoneNumber, string? friendlyName = null)
+        public async Task<List<TwilioPhoneNumber>> AddPhoneNumbersAsync(string phoneNumbers)
         {
-            var twilioNumber = new AdditionalPhoneNumber
-            {
-                PhoneNumber = phoneNumber,
-                FriendlyName = friendlyName ?? phoneNumber,
-                IsActive = true,
-                MaxConcurrentCalls = 1, // Default to 1 concurrent call
-                CreatedAt = DateTime.UtcNow
-            };
+            var addedNumbers = new List<TwilioPhoneNumber>();
+            var numberList = phoneNumbers.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(n => n.Trim())
+                .Where(n => !string.IsNullOrWhiteSpace(n))
+                .Distinct();
 
-            _context.AdditionalPhoneNumbers.Add(twilioNumber);
-            await _context.SaveChangesAsync();
+            foreach (var phoneNumber in numberList)
+            {
+                // Check if number already exists
+                var exists = await _context.TwilioPhoneNumbers
+                    .AnyAsync(n => n.Number == phoneNumber);
+                
+                if (!exists)
+                {
+                    var twilioNumber = new TwilioPhoneNumber
+                    {
+                        Number = phoneNumber,
+                        IsActive = true,
+                        MaxConcurrentCalls = 50, // Default to 50 concurrent calls per Twilio limits
+                        CreatedAt = DateTime.UtcNow
+                    };
+
+                    _context.TwilioPhoneNumbers.Add(twilioNumber);
+                    addedNumbers.Add(twilioNumber);
+                    _logger.LogInformation($"Added new phone number to pool: {phoneNumber}");
+                }
+                else
+                {
+                    _logger.LogWarning($"Phone number {phoneNumber} already exists in pool");
+                }
+            }
             
-            _logger.LogInformation($"Added new phone number to pool: {phoneNumber}");
-            return twilioNumber;
+            await _context.SaveChangesAsync();
+            return addedNumbers;
         }
 
         public async Task<bool> RemovePhoneNumberAsync(int id)
         {
-            var number = await _context.AdditionalPhoneNumbers.FindAsync(id);
+            var number = await _context.TwilioPhoneNumbers.FindAsync(id);
             if (number == null)
                 return false;
 
-            _context.AdditionalPhoneNumbers.Remove(number);
+            _context.TwilioPhoneNumbers.Remove(number);
             await _context.SaveChangesAsync();
             
-            _logger.LogInformation($"Removed phone number from pool: {number.PhoneNumber}");
+            _logger.LogInformation($"Removed phone number from pool: {number.Number}");
             return true;
         }
 
         public async Task<bool> UpdatePhoneNumberAsync(int id, bool isActive, int maxConcurrentCalls)
         {
-            var number = await _context.AdditionalPhoneNumbers.FindAsync(id);
+            var number = await _context.TwilioPhoneNumbers.FindAsync(id);
             if (number == null)
                 return false;
 
@@ -140,13 +160,13 @@ namespace HooverCanvassingApi.Services
 
             await _context.SaveChangesAsync();
             
-            _logger.LogInformation($"Updated phone number {number.PhoneNumber}: Active={isActive}, MaxConcurrent={maxConcurrentCalls}");
+            _logger.LogInformation($"Updated phone number {number.Number}: Active={isActive}, MaxConcurrent={maxConcurrentCalls}");
             return true;
         }
 
         public async Task IncrementCallCountAsync(int phoneNumberId, bool success)
         {
-            var number = await _context.AdditionalPhoneNumbers.FindAsync(phoneNumberId);
+            var number = await _context.TwilioPhoneNumbers.FindAsync(phoneNumberId);
             if (number != null)
             {
                 var previousTotal = number.TotalCallsMade;
@@ -159,7 +179,7 @@ namespace HooverCanvassingApi.Services
                 }
                 await _context.SaveChangesAsync();
                 
-                _logger.LogInformation($"Updated call stats for {number.PhoneNumber} (ID: {phoneNumberId}). " +
+                _logger.LogInformation($"Updated call stats for {number.Number} (ID: {phoneNumberId}). " +
                     $"Total calls: {previousTotal} -> {number.TotalCallsMade}. " +
                     $"Failed calls: {previousFailed} -> {number.TotalCallsFailed}. " +
                     $"Success rate: {((number.TotalCallsMade - number.TotalCallsFailed) / (double)number.TotalCallsMade * 100):F1}%");

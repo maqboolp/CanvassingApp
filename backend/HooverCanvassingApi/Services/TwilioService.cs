@@ -120,7 +120,7 @@ namespace HooverCanvassingApi.Services
                     messageResource = await MessageResource.CreateAsync(
                         body: message,
                         messagingServiceSid: _messagingServiceSid,
-                        to: new PhoneNumber(formattedNumber)
+                        to: new Twilio.Types.PhoneNumber(formattedNumber)
                     );
                 }
                 else
@@ -130,8 +130,8 @@ namespace HooverCanvassingApi.Services
                     _logger.LogInformation($"Using From Phone Number: {smsFromNumber}");
                     messageResource = await MessageResource.CreateAsync(
                         body: message,
-                        from: new PhoneNumber(smsFromNumber),
-                        to: new PhoneNumber(formattedNumber)
+                        from: new Twilio.Types.PhoneNumber(smsFromNumber),
+                        to: new Twilio.Types.PhoneNumber(formattedNumber)
                     );
                 }
 
@@ -178,7 +178,7 @@ namespace HooverCanvassingApi.Services
 
         public async Task<bool> MakeRoboCallAsync(string toPhoneNumber, string voiceUrl, int campaignMessageId)
         {
-            AdditionalPhoneNumber? phoneNumber = null;
+            TwilioPhoneNumber? phoneNumber = null;
             bool callInitiated = false;
             try
             {
@@ -188,28 +188,16 @@ namespace HooverCanvassingApi.Services
                 phoneNumber = await _phoneNumberPool.GetNextAvailableNumberAsync();
                 if (phoneNumber == null)
                 {
-                    // Fall back to the default configured number if pool is empty or all numbers are busy
-                    _logger.LogWarning("No available phone numbers in pool, using default number");
-                    
-                    var call = await CallResource.CreateAsync(
-                        url: new Uri(voiceUrl),
-                        to: new PhoneNumber(formattedNumber),
-                        from: new PhoneNumber(_fromPhoneNumber),
-                        timeout: 60,
-                        record: false
-                    );
-                    
-                    await UpdateCampaignMessageWithCall(campaignMessageId, call);
-                    _logger.LogInformation($"Robo call initiated to {formattedNumber} using default number, SID: {call.Sid}");
-                    return true;
+                    _logger.LogError("No available phone numbers in pool. Ensure phone numbers are added to the pool.");
+                    throw new InvalidOperationException("No phone numbers available in the pool");
                 }
                 
-                _logger.LogInformation($"Using phone number {phoneNumber.PhoneNumber} from pool for call to {formattedNumber}");
+                _logger.LogInformation($"Using phone number {phoneNumber.Number} from pool for call to {formattedNumber}");
                 
                 var poolCall = await CallResource.CreateAsync(
                     url: new Uri(voiceUrl),
-                    to: new PhoneNumber(formattedNumber),
-                    from: new PhoneNumber(phoneNumber.PhoneNumber),
+                    to: new Twilio.Types.PhoneNumber(formattedNumber),
+                    from: new Twilio.Types.PhoneNumber(phoneNumber.Number),
                     timeout: 60,
                     record: false
                 );
@@ -222,7 +210,7 @@ namespace HooverCanvassingApi.Services
                 // Release the phone number immediately after initiating the call
                 // Twilio will handle queueing if the number is busy
                 await _phoneNumberPool.ReleaseNumberAsync(phoneNumber.Id);
-                _logger.LogInformation($"Robo call initiated to {formattedNumber} from {phoneNumber.PhoneNumber}, SID: {poolCall.Sid}");
+                _logger.LogInformation($"Robo call initiated to {formattedNumber} from {phoneNumber.Number}, SID: {poolCall.Sid}");
                 callInitiated = true;
                 return true;
             }
@@ -263,11 +251,11 @@ namespace HooverCanvassingApi.Services
                     try
                     {
                         await _phoneNumberPool.ReleaseNumberAsync(phoneNumber.Id);
-                        _logger.LogInformation($"Released phone number {phoneNumber.PhoneNumber} due to failed call initiation");
+                        _logger.LogInformation($"Released phone number {phoneNumber.Number} due to failed call initiation");
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, $"Error releasing phone number {phoneNumber.PhoneNumber}");
+                        _logger.LogError(ex, $"Error releasing phone number {phoneNumber.Number}");
                     }
                 }
             }
@@ -447,7 +435,7 @@ namespace HooverCanvassingApi.Services
                     messageResource = await MessageResource.CreateAsync(
                         body: message,
                         messagingServiceSid: _messagingServiceSid,
-                        to: new PhoneNumber(formattedNumber)
+                        to: new Twilio.Types.PhoneNumber(formattedNumber)
                     );
                 }
                 else
@@ -457,8 +445,8 @@ namespace HooverCanvassingApi.Services
                     _logger.LogInformation($"Using From Phone Number: {smsFromNumber}");
                     messageResource = await MessageResource.CreateAsync(
                         body: message,
-                        from: new PhoneNumber(smsFromNumber),
-                        to: new PhoneNumber(formattedNumber)
+                        from: new Twilio.Types.PhoneNumber(smsFromNumber),
+                        to: new Twilio.Types.PhoneNumber(formattedNumber)
                     );
                 }
 

@@ -23,31 +23,29 @@ namespace HooverCanvassingApi.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<List<AdditionalPhoneNumber>>> GetPhoneNumbers()
+        public async Task<ActionResult<List<TwilioPhoneNumber>>> GetPhoneNumbers()
         {
             var numbers = await _phoneNumberPool.GetAllNumbersAsync();
             return Ok(numbers);
         }
 
         [HttpPost]
-        public async Task<ActionResult<AdditionalPhoneNumber>> AddPhoneNumber([FromBody] AddPhoneNumberRequest request)
+        public async Task<ActionResult<List<TwilioPhoneNumber>>> AddPhoneNumbers([FromBody] AddPhoneNumbersRequest request)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
             try
             {
-                var phoneNumber = await _phoneNumberPool.AddPhoneNumberAsync(
-                    request.PhoneNumber, 
-                    request.FriendlyName);
+                var phoneNumbers = await _phoneNumberPool.AddPhoneNumbersAsync(request.PhoneNumbers);
                 
-                _logger.LogInformation($"Added phone number {request.PhoneNumber} to pool");
-                return Ok(phoneNumber);
+                _logger.LogInformation($"Added {phoneNumbers.Count} phone numbers to pool");
+                return Ok(phoneNumbers);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error adding phone number");
-                return StatusCode(500, new { message = "Error adding phone number" });
+                return StatusCode(500, new { message = "Error adding phone numbers" });
             }
         }
 
@@ -81,20 +79,17 @@ namespace HooverCanvassingApi.Controllers
         }
     }
 
-    public class AddPhoneNumberRequest
+    public class AddPhoneNumbersRequest
     {
         [Required]
-        [Phone]
-        public string PhoneNumber { get; set; } = string.Empty;
-        
-        public string? FriendlyName { get; set; }
+        public string PhoneNumbers { get; set; } = string.Empty;
     }
 
     public class UpdatePhoneNumberRequest
     {
         public bool IsActive { get; set; }
         
-        [Range(1, 10)]
+        [Range(1, 50)]
         public int MaxConcurrentCalls { get; set; }
     }
 }
