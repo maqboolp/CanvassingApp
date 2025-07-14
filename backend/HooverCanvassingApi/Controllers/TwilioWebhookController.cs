@@ -12,11 +12,13 @@ namespace HooverCanvassingApi.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<TwilioWebhookController> _logger;
+        private readonly IPhoneNumberPoolService _phoneNumberPool;
 
-        public TwilioWebhookController(ApplicationDbContext context, ILogger<TwilioWebhookController> logger)
+        public TwilioWebhookController(ApplicationDbContext context, ILogger<TwilioWebhookController> logger, IPhoneNumberPoolService phoneNumberPool)
         {
             _context = context;
             _logger = logger;
+            _phoneNumberPool = phoneNumberPool;
         }
 
         [HttpPost("sms-status")]
@@ -71,6 +73,7 @@ namespace HooverCanvassingApi.Controllers
                 var callStatus = Request.Form["CallStatus"].ToString();
                 var callDuration = Request.Form["CallDuration"].ToString();
                 var recordingUrl = Request.Form["RecordingUrl"].ToString();
+                var fromNumber = Request.Form["From"].ToString();
 
                 _logger.LogInformation($"Call Status callback: SID={callSid}, Status={callStatus}");
 
@@ -98,6 +101,20 @@ namespace HooverCanvassingApi.Controllers
                         campaignMessage.Status == MessageStatus.NoAnswer)
                     {
                         campaignMessage.DeliveredAt = DateTime.UtcNow;
+                    }
+
+                    // Track phone stats based on the From number
+                    if (!string.IsNullOrEmpty(fromNumber))
+                    {
+                        // Look up the phone number in our pool
+                        var phoneNumbers = await _phoneNumberPool.GetAllNumbersAsync();
+                        var phoneNumber = phoneNumbers.FirstOrDefault(p => p.Number == fromNumber);
+                        if (phoneNumber != null)
+                        {
+                            var success = campaignMessage.Status == MessageStatus.Completed;
+                            await _phoneNumberPool.IncrementCallCountAsync(phoneNumber.Id, success);
+                            _logger.LogInformation($"Updated phone stats for {fromNumber} (ID: {phoneNumber.Id}), Success: {success}");
+                        }
                     }
 
                     await _context.SaveChangesAsync();

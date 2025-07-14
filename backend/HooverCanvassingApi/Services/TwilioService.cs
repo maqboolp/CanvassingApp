@@ -204,9 +204,6 @@ namespace HooverCanvassingApi.Services
 
                 await UpdateCampaignMessageWithCall(campaignMessageId, poolCall);
                 
-                // Track successful call
-                await _phoneNumberPool.IncrementCallCountAsync(phoneNumber.Id, true);
-                
                 // Release the phone number immediately after initiating the call
                 // Twilio will handle queueing if the number is busy
                 await _phoneNumberPool.ReleaseNumberAsync(phoneNumber.Id);
