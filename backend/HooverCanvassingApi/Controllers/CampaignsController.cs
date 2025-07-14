@@ -222,13 +222,45 @@ namespace HooverCanvassingApi.Controllers
         [Authorize(Roles = "SuperAdmin")]
         public async Task<ActionResult> SendCampaign(int id, SendCampaignRequest request)
         {
-            var success = await _campaignService.SendCampaignAsync(
-                id, 
-                request?.OverrideOptIn ?? false);
-            if (!success)
-                return BadRequest("Campaign cannot be sent");
+            try
+            {
+                var campaign = await _campaignService.GetCampaignAsync(id);
+                if (campaign == null)
+                    return NotFound(new { error = "Campaign not found" });
 
-            return Ok(new { message = "Campaign is being sent" });
+                // Check if it's a robocall campaign with enforced calling hours
+                if (campaign.Type == CampaignType.RoboCall && campaign.EnforceCallingHours)
+                {
+                    var currentHour = DateTime.Now.Hour;
+                    var currentDay = DateTime.Now.DayOfWeek;
+                    
+                    // Check weekend restriction
+                    if (!campaign.IncludeWeekends && (currentDay == DayOfWeek.Saturday || currentDay == DayOfWeek.Sunday))
+                    {
+                        return BadRequest(new { error = $"Campaign cannot be sent on weekends. Calling hours are configured for weekdays only." });
+                    }
+                    
+                    // Check hour restriction
+                    if (currentHour < campaign.StartHour || currentHour >= campaign.EndHour)
+                    {
+                        return BadRequest(new { error = $"Campaign cannot be sent outside calling hours ({campaign.StartHour}:00 - {campaign.EndHour}:00). Current time is {currentHour}:00." });
+                    }
+                }
+
+                var success = await _campaignService.SendCampaignAsync(
+                    id, 
+                    request?.OverrideOptIn ?? false);
+                    
+                if (!success)
+                    return BadRequest(new { error = "Campaign cannot be sent. Please check the campaign status and try again." });
+
+                return Ok(new { message = "Campaign is being sent" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending campaign {CampaignId}", id);
+                return StatusCode(500, new { error = "An error occurred while sending the campaign" });
+            }
         }
 
         [HttpPost("{id}/schedule")]

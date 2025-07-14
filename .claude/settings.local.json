@@ -14,7 +14,8 @@
       "Bash(doctl databases db-query:*)",
       "Bash(doctl databases connection show:*)",
       "Bash(doctl databases:*)",
-      "Bash(doctl apps:*)"
+      "Bash(doctl apps:*)",
+      "Bash(mv:*)"
     ],
     "deny": []
   }
