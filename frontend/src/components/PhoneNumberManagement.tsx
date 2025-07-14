@@ -38,11 +38,11 @@ import {
 import { API_BASE_URL } from '../config';
 import { ApiErrorHandler } from '../utils/apiErrorHandler';
 
-interface AdditionalPhoneNumber {
+interface TwilioPhoneNumber {
   id: number;
-  phoneNumber: string;
-  friendlyName?: string;
+  number: string;
   isActive: boolean;
+  isMainNumber: boolean;
   maxConcurrentCalls: number;
   currentActiveCalls: number;
   createdAt: string;
@@ -53,14 +53,14 @@ interface AdditionalPhoneNumber {
 }
 
 export const PhoneNumberManagement: React.FC = () => {
-  const [phoneNumbers, setPhoneNumbers] = useState<AdditionalPhoneNumber[]>([]);
+  const [phoneNumbers, setPhoneNumbers] = useState<TwilioPhoneNumber[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [selectedNumber, setSelectedNumber] = useState<AdditionalPhoneNumber | null>(null);
-  const [newNumber, setNewNumber] = useState({ phoneNumber: '', friendlyName: '' });
-  const [editForm, setEditForm] = useState({ isActive: true, maxConcurrentCalls: 1 });
+  const [selectedNumber, setSelectedNumber] = useState<TwilioPhoneNumber | null>(null);
+  const [newNumbers, setNewNumbers] = useState('');
+  const [editForm, setEditForm] = useState({ isActive: true, maxConcurrentCalls: 50 });
 
   useEffect(() => {
     fetchPhoneNumbers();
@@ -87,14 +87,14 @@ export const PhoneNumberManagement: React.FC = () => {
     }
   };
 
-  const handleAddNumber = async () => {
+  const handleAddNumbers = async () => {
     try {
       const response = await ApiErrorHandler.makeAuthenticatedRequestRaw(
         `${API_BASE_URL}/api/phonenumberpool`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(newNumber)
+          body: JSON.stringify({ phoneNumbers: newNumbers })
         }
       );
       
@@ -104,7 +104,7 @@ export const PhoneNumberManagement: React.FC = () => {
       }
       
       setAddDialogOpen(false);
-      setNewNumber({ phoneNumber: '', friendlyName: '' });
+      setNewNumbers('');
       fetchPhoneNumbers();
     } catch (err) {
       setError('Failed to add phone number');
@@ -160,7 +160,7 @@ export const PhoneNumberManagement: React.FC = () => {
     }
   };
 
-  const openEditDialog = (number: AdditionalPhoneNumber) => {
+  const openEditDialog = (number: TwilioPhoneNumber) => {
     setSelectedNumber(number);
     setEditForm({
       isActive: number.isActive,
@@ -255,11 +255,11 @@ export const PhoneNumberManagement: React.FC = () => {
                       <TableCell>
                         <Box>
                           <Typography variant="body2">
-                            {formatPhoneNumber(number.phoneNumber)}
+                            {formatPhoneNumber(number.number)}
                           </Typography>
-                          {number.friendlyName && (
-                            <Typography variant="caption" color="text.secondary">
-                              {number.friendlyName}
+                          {number.isMainNumber && (
+                            <Typography variant="caption" color="primary">
+                              Main Number
                             </Typography>
                           )}
                         </Box>
@@ -336,36 +336,31 @@ export const PhoneNumberManagement: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Add Phone Number Dialog */}
+      {/* Add Phone Numbers Dialog */}
       <Dialog open={addDialogOpen} onClose={() => setAddDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Add Additional Phone Number</DialogTitle>
+        <DialogTitle>Add Phone Numbers</DialogTitle>
         <DialogContent>
           <Box display="flex" flexDirection="column" gap={2} mt={1}>
             <TextField
-              label="Phone Number"
+              label="Phone Numbers"
               fullWidth
-              value={newNumber.phoneNumber}
-              onChange={(e) => setNewNumber({ ...newNumber, phoneNumber: e.target.value })}
-              placeholder="+1 (555) 123-4567"
-              helperText="Enter an additional Twilio phone number for robocalls"
-            />
-            <TextField
-              label="Friendly Name (Optional)"
-              fullWidth
-              value={newNumber.friendlyName}
-              onChange={(e) => setNewNumber({ ...newNumber, friendlyName: e.target.value })}
-              placeholder="Main Campaign Line"
+              multiline
+              rows={4}
+              value={newNumbers}
+              onChange={(e) => setNewNumbers(e.target.value)}
+              placeholder="+15551234567, +15559876543, +15555555555"
+              helperText="Enter Twilio phone numbers separated by commas"
             />
           </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setAddDialogOpen(false)}>Cancel</Button>
           <Button
-            onClick={handleAddNumber}
+            onClick={handleAddNumbers}
             variant="contained"
-            disabled={!newNumber.phoneNumber}
+            disabled={!newNumbers.trim()}
           >
-            Add Number
+            Add Numbers
           </Button>
         </DialogActions>
       </Dialog>
@@ -392,7 +387,7 @@ export const PhoneNumberManagement: React.FC = () => {
                   value={editForm.maxConcurrentCalls}
                   onChange={(_, value) => setEditForm({ ...editForm, maxConcurrentCalls: value as number })}
                   min={1}
-                  max={10}
+                  max={50}
                   marks
                   valueLabelDisplay="auto"
                 />
