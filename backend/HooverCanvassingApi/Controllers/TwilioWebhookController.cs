@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using HooverCanvassingApi.Services;
 using HooverCanvassingApi.Data;
 using HooverCanvassingApi.Models;
@@ -8,6 +9,7 @@ namespace HooverCanvassingApi.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [AllowAnonymous]
     public class TwilioWebhookController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
