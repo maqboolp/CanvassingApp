@@ -19,20 +19,23 @@ namespace HooverCanvassingApi.Services
 
     public class PhoneNumberPoolService : IPhoneNumberPoolService
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IServiceScopeFactory _scopeFactory;
         private readonly ILogger<PhoneNumberPoolService> _logger;
         private static int _lastUsedIndex = -1;
         private static readonly object _indexLock = new object();
 
-        public PhoneNumberPoolService(ApplicationDbContext context, ILogger<PhoneNumberPoolService> logger)
+        public PhoneNumberPoolService(IServiceScopeFactory scopeFactory, ILogger<PhoneNumberPoolService> logger)
         {
-            _context = context;
+            _scopeFactory = scopeFactory;
             _logger = logger;
         }
 
         public async Task<TwilioPhoneNumber?> GetNextAvailableNumberAsync()
         {
-            var allNumbers = await _context.TwilioPhoneNumbers.ToListAsync();
+            using var scope = _scopeFactory.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            
+            var allNumbers = await context.TwilioPhoneNumbers.ToListAsync();
             _logger.LogInformation($"Phone pool status - Total numbers: {allNumbers.Count}, " +
                 $"Active: {allNumbers.Count(n => n.IsActive)}, " +
                 $"Inactive: {allNumbers.Count(n => !n.IsActive)}");
@@ -50,19 +53,21 @@ namespace HooverCanvassingApi.Services
 
             // Simple round-robin selection without capacity checks
             // Let Twilio handle queueing multiple calls per number
+            int currentIndex;
             lock (_indexLock)
             {
                 _lastUsedIndex = (_lastUsedIndex + 1) % activeNumbers.Count;
+                currentIndex = _lastUsedIndex;
             }
 
-            var selectedNumber = activeNumbers[_lastUsedIndex];
+            var selectedNumber = activeNumbers[currentIndex];
             
             // Update usage tracking
             selectedNumber.CurrentActiveCalls++;
             selectedNumber.LastUsedAt = DateTime.UtcNow;
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
             
-            _logger.LogInformation($"Allocated phone number {selectedNumber.Number} (ID: {selectedNumber.Id}) - Round robin index: {_lastUsedIndex}");
+            _logger.LogInformation($"Allocated phone number {selectedNumber.Number} (ID: {selectedNumber.Id}) - Round robin index: {currentIndex}");
             
             return selectedNumber;
         }
@@ -71,12 +76,15 @@ namespace HooverCanvassingApi.Services
         {
             try
             {
-                var number = await _context.TwilioPhoneNumbers.FindAsync(phoneNumberId);
+                using var scope = _scopeFactory.CreateScope();
+                var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                
+                var number = await context.TwilioPhoneNumbers.FindAsync(phoneNumberId);
                 if (number != null)
                 {
                     var previousCalls = number.CurrentActiveCalls;
                     number.CurrentActiveCalls = Math.Max(0, number.CurrentActiveCalls - 1);
-                    await _context.SaveChangesAsync();
+                    await context.SaveChangesAsync();
                     
                     _logger.LogInformation($"Released phone number {number.Number} (ID: {phoneNumberId}). " +
                         $"Active calls: {previousCalls} -> {number.CurrentActiveCalls}");
@@ -94,13 +102,19 @@ namespace HooverCanvassingApi.Services
 
         public async Task<List<TwilioPhoneNumber>> GetAllNumbersAsync()
         {
-            return await _context.TwilioPhoneNumbers
+            using var scope = _scopeFactory.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            
+            return await context.TwilioPhoneNumbers
                 .OrderBy(n => n.CreatedAt)
                 .ToListAsync();
         }
 
         public async Task<List<TwilioPhoneNumber>> AddPhoneNumbersAsync(string phoneNumbers)
         {
+            using var scope = _scopeFactory.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            
             var addedNumbers = new List<TwilioPhoneNumber>();
             var numberList = phoneNumbers.Split(',', StringSplitOptions.RemoveEmptyEntries)
                 .Select(n => n.Trim())
@@ -110,7 +124,7 @@ namespace HooverCanvassingApi.Services
             foreach (var phoneNumber in numberList)
             {
                 // Check if number already exists
-                var exists = await _context.TwilioPhoneNumbers
+                var exists = await context.TwilioPhoneNumbers
                     .AnyAsync(n => n.Number == phoneNumber);
                 
                 if (!exists)
@@ -126,7 +140,7 @@ namespace HooverCanvassingApi.Services
                         CreatedAt = DateTime.UtcNow
                     };
 
-                    _context.TwilioPhoneNumbers.Add(twilioNumber);
+                    context.TwilioPhoneNumbers.Add(twilioNumber);
                     addedNumbers.Add(twilioNumber);
                     _logger.LogInformation($"Added new phone number to pool: {phoneNumber}");
                 }
@@ -136,18 +150,21 @@ namespace HooverCanvassingApi.Services
                 }
             }
             
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
             return addedNumbers;
         }
 
         public async Task<bool> RemovePhoneNumberAsync(int id)
         {
-            var number = await _context.TwilioPhoneNumbers.FindAsync(id);
+            using var scope = _scopeFactory.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            
+            var number = await context.TwilioPhoneNumbers.FindAsync(id);
             if (number == null)
                 return false;
 
-            _context.TwilioPhoneNumbers.Remove(number);
-            await _context.SaveChangesAsync();
+            context.TwilioPhoneNumbers.Remove(number);
+            await context.SaveChangesAsync();
             
             _logger.LogInformation($"Removed phone number from pool: {number.Number}");
             return true;
@@ -155,22 +172,27 @@ namespace HooverCanvassingApi.Services
 
         public async Task<bool> UpdatePhoneNumberAsync(int id, bool isActive, int maxConcurrentCalls)
         {
-            var number = await _context.TwilioPhoneNumbers.FindAsync(id);
+            using var scope = _scopeFactory.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            
+            var number = await context.TwilioPhoneNumbers.FindAsync(id);
             if (number == null)
                 return false;
 
             number.IsActive = isActive;
             number.MaxConcurrentCalls = maxConcurrentCalls;
-
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
             
-            _logger.LogInformation($"Updated phone number {number.Number}: Active={isActive}, MaxConcurrent={maxConcurrentCalls}");
+            _logger.LogInformation($"Updated phone number {number.Number}: IsActive={isActive}, MaxConcurrentCalls={maxConcurrentCalls}");
             return true;
         }
 
         public async Task IncrementCallCountAsync(int phoneNumberId, bool success)
         {
-            var number = await _context.TwilioPhoneNumbers.FindAsync(phoneNumberId);
+            using var scope = _scopeFactory.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            
+            var number = await context.TwilioPhoneNumbers.FindAsync(phoneNumberId);
             if (number != null)
             {
                 var previousTotal = number.TotalCallsMade;
@@ -181,7 +203,7 @@ namespace HooverCanvassingApi.Services
                 {
                     number.TotalCallsFailed++;
                 }
-                await _context.SaveChangesAsync();
+                await context.SaveChangesAsync();
                 
                 _logger.LogInformation($"Updated call stats for {number.Number} (ID: {phoneNumberId}). " +
                     $"Total calls: {previousTotal} -> {number.TotalCallsMade}. " +
