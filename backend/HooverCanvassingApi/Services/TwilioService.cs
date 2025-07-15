@@ -196,26 +196,58 @@ namespace HooverCanvassingApi.Services
                 
                 _logger.LogInformation($"Using phone number {phoneNumber.Number} from pool for call to {formattedNumber}");
                 
-                // Construct the status callback URL
-                var baseUrl = voiceUrl.Substring(0, voiceUrl.IndexOf("/api/"));
-                var statusCallbackUrl = $"{baseUrl}/api/TwilioWebhook/call-status";
-                _logger.LogInformation($"Setting status callback URL: {statusCallbackUrl}");
-                
-                var poolCall = await CallResource.CreateAsync(
-                    url: new Uri(voiceUrl),
-                    to: new Twilio.Types.PhoneNumber(formattedNumber),
-                    from: new Twilio.Types.PhoneNumber(phoneNumber.Number),
-                    timeout: 60,
-                    record: false,
-                    statusCallback: new Uri(statusCallbackUrl),
-                    statusCallbackEvent: new List<string> 
-                    { 
-                        "initiated",
-                        "ringing",
-                        "answered",
-                        "completed"
+                // Construct the status callback URL from the voice URL
+                // The voice URL format is: https://domain.com/api/TwilioWebhook/voice?...
+                string statusCallbackUrl;
+                try 
+                {
+                    var uri = new Uri(voiceUrl);
+                    var baseUrl = $"{uri.Scheme}://{uri.Host}";
+                    if (uri.Port != 80 && uri.Port != 443)
+                    {
+                        baseUrl += $":{uri.Port}";
                     }
-                );
+                    statusCallbackUrl = $"{baseUrl}/api/TwilioWebhook/call-status";
+                    _logger.LogInformation($"Setting status callback URL: {statusCallbackUrl}");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, $"Failed to construct status callback URL from voice URL: {voiceUrl}");
+                    // Fall back to not using status callback
+                    statusCallbackUrl = null;
+                }
+                
+                CallResource poolCall;
+                if (!string.IsNullOrEmpty(statusCallbackUrl))
+                {
+                    poolCall = await CallResource.CreateAsync(
+                        url: new Uri(voiceUrl),
+                        to: new Twilio.Types.PhoneNumber(formattedNumber),
+                        from: new Twilio.Types.PhoneNumber(phoneNumber.Number),
+                        timeout: 60,
+                        record: false,
+                        statusCallback: new Uri(statusCallbackUrl),
+                        statusCallbackEvent: new List<string> 
+                        { 
+                            "initiated",
+                            "ringing",
+                            "answered",
+                            "completed"
+                        }
+                    );
+                }
+                else
+                {
+                    // Create call without status callback
+                    _logger.LogWarning("Creating call without status callback - phone stats will not be updated");
+                    poolCall = await CallResource.CreateAsync(
+                        url: new Uri(voiceUrl),
+                        to: new Twilio.Types.PhoneNumber(formattedNumber),
+                        from: new Twilio.Types.PhoneNumber(phoneNumber.Number),
+                        timeout: 60,
+                        record: false
+                    );
+                }
 
                 await UpdateCampaignMessageWithCall(campaignMessageId, poolCall);
                 
