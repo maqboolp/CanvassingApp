@@ -202,7 +202,8 @@ namespace HooverCanvassingApi.Services
                 try 
                 {
                     var uri = new Uri(voiceUrl);
-                    var baseUrl = $"{uri.Scheme}://{uri.Host}";
+                    // Force HTTPS for the callback URL since Twilio requires it
+                    var baseUrl = $"https://{uri.Host}";
                     if (uri.Port != 80 && uri.Port != 443)
                     {
                         baseUrl += $":{uri.Port}";
