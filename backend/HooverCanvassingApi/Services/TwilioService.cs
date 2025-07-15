@@ -196,12 +196,25 @@ namespace HooverCanvassingApi.Services
                 
                 _logger.LogInformation($"Using phone number {phoneNumber.Number} from pool for call to {formattedNumber}");
                 
+                // Construct the status callback URL
+                var baseUrl = voiceUrl.Substring(0, voiceUrl.IndexOf("/api/"));
+                var statusCallbackUrl = $"{baseUrl}/api/TwilioWebhook/call-status";
+                _logger.LogInformation($"Setting status callback URL: {statusCallbackUrl}");
+                
                 var poolCall = await CallResource.CreateAsync(
                     url: new Uri(voiceUrl),
                     to: new Twilio.Types.PhoneNumber(formattedNumber),
                     from: new Twilio.Types.PhoneNumber(phoneNumber.Number),
                     timeout: 60,
-                    record: false
+                    record: false,
+                    statusCallback: new Uri(statusCallbackUrl),
+                    statusCallbackEvent: new List<string> 
+                    { 
+                        "initiated",
+                        "ringing",
+                        "answered",
+                        "completed"
+                    }
                 );
 
                 await UpdateCampaignMessageWithCall(campaignMessageId, poolCall);
