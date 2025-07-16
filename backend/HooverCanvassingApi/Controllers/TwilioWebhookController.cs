@@ -105,8 +105,13 @@ namespace HooverCanvassingApi.Controllers
                         campaignMessage.DeliveredAt = DateTime.UtcNow;
                     }
 
-                    // Track phone stats based on the From number
-                    if (!string.IsNullOrEmpty(fromNumber))
+                    // Track phone stats based on the From number - ONLY for final statuses
+                    if (!string.IsNullOrEmpty(fromNumber) && 
+                        (campaignMessage.Status == MessageStatus.Completed || 
+                         campaignMessage.Status == MessageStatus.Failed ||
+                         campaignMessage.Status == MessageStatus.Busy ||
+                         campaignMessage.Status == MessageStatus.NoAnswer ||
+                         campaignMessage.Status == MessageStatus.Cancelled))
                     {
                         // Look up the phone number in our pool
                         var phoneNumbers = await _phoneNumberPool.GetAllNumbersAsync();
@@ -115,7 +120,7 @@ namespace HooverCanvassingApi.Controllers
                         {
                             var success = campaignMessage.Status == MessageStatus.Completed;
                             await _phoneNumberPool.IncrementCallCountAsync(phoneNumber.Id, success);
-                            _logger.LogInformation($"Updated phone stats for {fromNumber} (ID: {phoneNumber.Id}), Success: {success}");
+                            _logger.LogInformation($"Updated phone stats for {fromNumber} (ID: {phoneNumber.Id}), Success: {success}, Final Status: {campaignMessage.Status}");
                         }
                     }
 

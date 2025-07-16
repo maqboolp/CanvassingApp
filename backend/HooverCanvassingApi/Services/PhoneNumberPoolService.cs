@@ -63,7 +63,6 @@ namespace HooverCanvassingApi.Services
             var selectedNumber = activeNumbers[currentIndex];
             
             // Update usage tracking
-            selectedNumber.CurrentActiveCalls++;
             selectedNumber.LastUsedAt = DateTime.UtcNow;
             await context.SaveChangesAsync();
             
@@ -74,30 +73,9 @@ namespace HooverCanvassingApi.Services
 
         public async Task ReleaseNumberAsync(int phoneNumberId)
         {
-            try
-            {
-                using var scope = _scopeFactory.CreateScope();
-                var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                
-                var number = await context.TwilioPhoneNumbers.FindAsync(phoneNumberId);
-                if (number != null)
-                {
-                    var previousCalls = number.CurrentActiveCalls;
-                    number.CurrentActiveCalls = Math.Max(0, number.CurrentActiveCalls - 1);
-                    await context.SaveChangesAsync();
-                    
-                    _logger.LogInformation($"Released phone number {number.Number} (ID: {phoneNumberId}). " +
-                        $"Active calls: {previousCalls} -> {number.CurrentActiveCalls}");
-                }
-                else
-                {
-                    _logger.LogWarning($"Attempted to release non-existent phone number ID: {phoneNumberId}");
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error releasing phone number {phoneNumberId}");
-            }
+            // This method is now a no-op since we don't track active calls
+            // Kept for backward compatibility
+            _logger.LogDebug($"ReleaseNumberAsync called for phone number ID: {phoneNumberId} (no-op)");
         }
 
         public async Task<List<TwilioPhoneNumber>> GetAllNumbersAsync()
