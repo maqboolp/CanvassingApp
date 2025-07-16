@@ -139,6 +139,32 @@ export const PhoneNumberManagement: React.FC = () => {
     }
   };
 
+  const handleToggleActive = async (number: TwilioPhoneNumber) => {
+    try {
+      const response = await ApiErrorHandler.makeAuthenticatedRequestRaw(
+        `${API_BASE_URL}/api/phonenumberpool/${number.id}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            isActive: !number.isActive,
+            maxConcurrentCalls: number.maxConcurrentCalls
+          })
+        }
+      );
+      
+      if (!response || !response.ok) {
+        const status = response?.status || 'Network error';
+        throw new Error(`HTTP error! status: ${status}`);
+      }
+      
+      fetchPhoneNumbers();
+    } catch (err) {
+      setError(`Failed to ${number.isActive ? 'disable' : 'enable'} phone number`);
+      console.error('Toggle phone number error:', err);
+    }
+  };
+
   const handleDeleteNumber = async (id: number) => {
     if (!window.confirm('Are you sure you want to remove this phone number?')) return;
 
@@ -240,7 +266,7 @@ export const PhoneNumberManagement: React.FC = () => {
                 <TableHead>
                   <TableRow>
                     <TableCell>Phone Number</TableCell>
-                    <TableCell>Status</TableCell>
+                    <TableCell>Enabled</TableCell>
                     <TableCell align="center">Active Calls</TableCell>
                     <TableCell align="center">Max Concurrent</TableCell>
                     <TableCell align="center">Total Calls</TableCell>
@@ -265,11 +291,14 @@ export const PhoneNumberManagement: React.FC = () => {
                         </Box>
                       </TableCell>
                       <TableCell>
-                        <Chip
-                          label={number.isActive ? 'Active' : 'Inactive'}
-                          color={number.isActive ? 'success' : 'default'}
-                          size="small"
-                        />
+                        <Tooltip title={number.isActive ? 'Click to disable this number for calls' : 'Click to enable this number for calls'}>
+                          <Switch
+                            checked={number.isActive}
+                            onChange={() => handleToggleActive(number)}
+                            color="success"
+                            size="small"
+                          />
+                        </Tooltip>
                       </TableCell>
                       <TableCell align="center">
                         <Box display="flex" alignItems="center" justifyContent="center" gap={1}>
