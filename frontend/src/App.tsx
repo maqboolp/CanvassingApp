@@ -15,6 +15,8 @@ import SelfRegistration from './components/SelfRegistration';
 import OptInForm from './components/OptInForm';
 import PrivacyPolicy from './components/PrivacyPolicy';
 import TermsOfService from './components/TermsOfService';
+import PhoneBanking from './components/PhoneBanking';
+import PhoneContactsList from './components/PhoneContactsList';
 import ErrorBoundary from './components/ErrorBoundary';
 import ErrorNotification from './components/ErrorNotification';
 import ErrorDebugPanel from './components/ErrorDebugPanel';
@@ -277,6 +279,28 @@ function App() {
                 <AdminDashboard user={user} onLogout={handleLogout} />
               ) : (
                 <Navigate to="/" replace />
+              )
+            }
+          />
+
+          <Route
+            path="/phone-banking"
+            element={
+              user ? (
+                <PhoneBanking user={user} />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+
+          <Route
+            path="/phone-contacts"
+            element={
+              user ? (
+                <PhoneContactsList />
+              ) : (
+                <Navigate to="/login" replace />
               )
             }
           />

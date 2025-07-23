@@ -12,6 +12,7 @@ namespace HooverCanvassingApi.Data
 
         public DbSet<Voter> Voters { get; set; }
         public DbSet<Contact> Contacts { get; set; }
+        public DbSet<PhoneContact> PhoneContacts { get; set; }
         public DbSet<Volunteer> Volunteers => Set<Volunteer>();
         public DbSet<InvitationToken> InvitationTokens { get; set; }
         public DbSet<PendingVolunteer> PendingVolunteers { get; set; }
@@ -87,6 +88,30 @@ namespace HooverCanvassingApi.Data
                 .HasOne(c => c.Volunteer)
                 .WithMany(v => v.Contacts)
                 .HasForeignKey(c => c.VolunteerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Configure PhoneContact entity
+            builder.Entity<PhoneContact>(entity =>
+            {
+                entity.HasKey(pc => pc.Id);
+                entity.Property(pc => pc.Status).HasConversion<string>();
+                entity.Property(pc => pc.VoterSupport).HasConversion<string>();
+                entity.Property(pc => pc.PhoneNumberUsed).HasMaxLength(20);
+                entity.HasIndex(pc => pc.Timestamp);
+                entity.HasIndex(pc => pc.VolunteerId);
+                entity.HasIndex(pc => pc.VoterId);
+            });
+
+            builder.Entity<PhoneContact>()
+                .HasOne(pc => pc.Voter)
+                .WithMany()
+                .HasForeignKey(pc => pc.VoterId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<PhoneContact>()
+                .HasOne(pc => pc.Volunteer)
+                .WithMany()
+                .HasForeignKey(pc => pc.VolunteerId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             // Configure InvitationToken entity

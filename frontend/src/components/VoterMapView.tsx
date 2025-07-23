@@ -219,19 +219,19 @@ const VoterMapView: React.FC<VoterMapViewProps> = ({
     if (!voter.voterSupport) return null;
     
     const supportColors = {
-      'strongyes': 'success',
-      'leaningyes': 'primary',
-      'undecided': 'warning',
-      'leaningno': 'error',
-      'strongno': 'error'
+      'StrongYes': 'success',
+      'LeaningYes': 'primary',
+      'Undecided': 'warning',
+      'LeaningNo': 'error',
+      'StrongNo': 'error'
     } as const;
 
     const supportLabels = {
-      'strongyes': 'Strong Yes',
-      'leaningyes': 'Leaning Yes',
-      'undecided': 'Undecided',
-      'leaningno': 'Leaning No',
-      'strongno': 'Strong No'
+      'StrongYes': 'Strong Yes',
+      'LeaningYes': 'Leaning Yes',
+      'Undecided': 'Undecided',
+      'LeaningNo': 'Leaning No',
+      'StrongNo': 'Strong No'
     };
 
     return (

@@ -172,22 +172,22 @@ const VoterContactHistory: React.FC<VoterContactHistoryProps> = ({ user }) => {
 
   const getSupportColor = (support: VoterSupport) => {
     switch (support) {
-      case 'strongyes': return '#2e7d32';
-      case 'leaningyes': return '#66bb6a';
-      case 'undecided': return '#ffa726';
-      case 'leaningno': return '#ef5350';
-      case 'strongno': return '#c62828';
+      case 'StrongYes': return '#2e7d32';
+      case 'LeaningYes': return '#66bb6a';
+      case 'Undecided': return '#ffa726';
+      case 'LeaningNo': return '#ef5350';
+      case 'StrongNo': return '#c62828';
       default: return '#757575';
     }
   };
 
   const formatSupportText = (support: VoterSupport) => {
     switch (support) {
-      case 'strongyes': return 'Strong Yes';
-      case 'leaningyes': return 'Leaning Yes';
-      case 'undecided': return 'Undecided';
-      case 'leaningno': return 'Leaning No';
-      case 'strongno': return 'Strong No';
+      case 'StrongYes': return 'Strong Yes';
+      case 'LeaningYes': return 'Leaning Yes';
+      case 'Undecided': return 'Undecided';
+      case 'LeaningNo': return 'Leaning No';
+      case 'StrongNo': return 'Strong No';
       default: return support;
     }
   };

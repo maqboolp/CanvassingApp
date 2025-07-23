@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import QRCode from 'react-qr-code';
 import VersionInfo from './VersionInfo';
 import ResourceLinksSection from './ResourceLinksSection';
@@ -11,6 +12,7 @@ import {
   Container,
   Card,
   CardContent,
+  CardActionArea,
   IconButton,
   Menu,
   MenuItem,
@@ -46,7 +48,9 @@ import {
   HowToReg,
   Phone,
   Help,
-  OpenInNew
+  OpenInNew,
+  PhoneInTalk,
+  History
 } from '@mui/icons-material';
 import { AuthUser, Voter, ContactStatus, VoterSupport } from '../types';
 import VoterList from './VoterList';
@@ -97,6 +101,7 @@ function TabPanel(props: TabPanelProps) {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
+  const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [stats, setStats] = useState({
     totalAssigned: 0,
@@ -912,8 +917,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         {/* Tabs */}
         <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
           <Tabs value={currentTab} onChange={(e, newValue) => setCurrentTab(newValue)}>
-            <Tab label="Voters" />
-            <Tab label="Resources" />
+            <Tab label="Voters" icon={<LocationOn />} />
+            <Tab label="Phone Banking" icon={<PhoneInTalk />} />
+            <Tab label="Phone History" icon={<History />} />
+            <Tab label="Resources" icon={<Help />} />
           </Tabs>
         </Box>
 
@@ -922,8 +929,58 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
           <VoterList onContactVoter={handleContactVoter} user={user} />
         </TabPanel>
 
-        {/* Resources Tab */}
+        {/* Phone Banking Tab */}
         <TabPanel value={currentTab} index={1}>
+          <Box textAlign="center" py={4}>
+            <PhoneInTalk sx={{ fontSize: 80, color: 'primary.main', mb: 2 }} />
+            <Typography variant="h5" gutterBottom>
+              Start Phone Banking
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              Make phone calls to voters from the comfort of your home
+            </Typography>
+            <Button
+              variant="contained"
+              size="large"
+              startIcon={<Phone />}
+              onClick={() => navigate('/phone-banking')}
+              sx={{ mb: 2 }}
+            >
+              Start Making Calls
+            </Button>
+            <br />
+            <Button
+              variant="outlined"
+              startIcon={<History />}
+              onClick={() => navigate('/phone-contacts')}
+            >
+              View Call History
+            </Button>
+          </Box>
+        </TabPanel>
+
+        {/* Phone History Tab */}
+        <TabPanel value={currentTab} index={2}>
+          <Box textAlign="center" py={4}>
+            <History sx={{ fontSize: 80, color: 'primary.main', mb: 2 }} />
+            <Typography variant="h5" gutterBottom>
+              Phone Contact History
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              View all your phone contact history and statistics
+            </Typography>
+            <Button
+              variant="contained"
+              startIcon={<History />}
+              onClick={() => navigate('/phone-contacts')}
+            >
+              View Full History
+            </Button>
+          </Box>
+        </TabPanel>
+
+        {/* Resources Tab */}
+        <TabPanel value={currentTab} index={3}>
           <Typography variant="h5" gutterBottom>
             Volunteer Resources
           </Typography>

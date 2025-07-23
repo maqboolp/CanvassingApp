@@ -665,27 +665,27 @@ const ContactModal: React.FC<ContactModalProps> = ({
               onChange={(e) => setVoterSupport(e.target.value as VoterSupport || undefined)}
             >
               <FormControlLabel
-                value="strongyes"
+                value="StrongYes"
                 control={<Radio />}
                 label={`Strong Yes - Will vote for ${campaignConfig.candidateName}`}
               />
               <FormControlLabel
-                value="leaningyes"
+                value="LeaningYes"
                 control={<Radio />}
                 label={`Leaning Yes - May vote for ${campaignConfig.candidateName}`}
               />
               <FormControlLabel
-                value="undecided"
+                value="Undecided"
                 control={<Radio />}
                 label="Undecided - Need to do research"
               />
               <FormControlLabel
-                value="leaningno"
+                value="LeaningNo"
                 control={<Radio />}
                 label={`Leaning No - Not into ${campaignConfig.candidateName}`}
               />
               <FormControlLabel
-                value="strongno"
+                value="StrongNo"
                 control={<Radio />}
                 label={`Strong No - Definitely not voting for ${campaignConfig.candidateName}`}
               />

@@ -458,6 +458,70 @@ namespace HooverCanvassingApi.Controllers
             return Ok(voterDto);
         }
 
+        [HttpGet("next-to-call")]
+        public async Task<ActionResult<VoterDto>> GetNextVoterToCall([FromQuery] string? zip = null)
+        {
+            var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            _logger.LogInformation("Getting next voter to call for user {UserId}, ZIP: {Zip}", currentUserId, zip);
+
+            try
+            {
+                // Get voters with phone numbers who haven't been called yet
+                var query = _context.Voters
+                    .Where(v => !string.IsNullOrEmpty(v.CellPhone))
+                    .Where(v => !v.IsContacted || v.LastContactStatus == ContactStatus.NotHome);
+
+                // Filter by ZIP if provided
+                if (!string.IsNullOrEmpty(zip))
+                {
+                    query = query.Where(v => v.Zip == zip);
+                }
+
+                // Order by those who have never been contacted first, then by age (older first)
+                var voter = await query
+                    .OrderBy(v => v.IsContacted ? 1 : 0)
+                    .ThenByDescending(v => v.Age)
+                    .FirstOrDefaultAsync();
+
+                if (voter == null)
+                {
+                    _logger.LogInformation("No voters available to call");
+                    return NotFound(new { message = "No voters available to call" });
+                }
+
+                var voterDto = new VoterDto
+                {
+                    LalVoterId = voter.LalVoterId,
+                    FirstName = voter.FirstName,
+                    MiddleName = voter.MiddleName,
+                    LastName = voter.LastName,
+                    AddressLine = voter.AddressLine,
+                    City = voter.City,
+                    State = voter.State,
+                    Zip = voter.Zip,
+                    Age = voter.Age,
+                    Ethnicity = voter.Ethnicity,
+                    Gender = voter.Gender,
+                    VoteFrequency = voter.VoteFrequency.ToString().ToLower(),
+                    PartyAffiliation = voter.PartyAffiliation,
+                    CellPhone = voter.CellPhone,
+                    Email = voter.Email,
+                    Latitude = voter.Latitude,
+                    Longitude = voter.Longitude,
+                    IsContacted = voter.IsContacted,
+                    LastContactStatus = voter.LastContactStatus?.ToString().ToLower(),
+                    VoterSupport = voter.VoterSupport?.ToString()
+                };
+
+                return Ok(voterDto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting next voter to call");
+                return StatusCode(500, "An error occurred while fetching the next voter");
+            }
+        }
+
         [HttpGet("nearest")]
         public async Task<ActionResult<VoterDto>> GetNearestVoter(
             [FromQuery] double latitude,

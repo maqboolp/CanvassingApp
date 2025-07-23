@@ -37,7 +37,7 @@ export interface Volunteer {
 
 export type ContactStatus = 'reached' | 'not-home' | 'refused' | 'needs-follow-up';
 
-export type VoterSupport = 'strongyes' | 'leaningyes' | 'undecided' | 'leaningno' | 'strongno';
+export type VoterSupport = 'StrongYes' | 'LeaningYes' | 'Undecided' | 'LeaningNo' | 'StrongNo';
 
 export interface Contact {
   id: string;
