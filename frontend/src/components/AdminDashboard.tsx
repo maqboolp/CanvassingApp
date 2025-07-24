@@ -133,7 +133,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
       'analytics',
       'users', 
       'pending',
-      'voters',
+      'doorToDoor',
       'phoneBanking',
       'history',
       ...(user.role === 'admin' || user.role === 'superadmin' ? ['campaigns'] : []),
@@ -1558,9 +1558,9 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
           <Tab label="Analytics" icon={<Analytics />} />
           <Tab label="Users" icon={<People />} />
           <Tab label="Pending" icon={<Schedule />} />
-          <Tab label="Voters" icon={<HowToVote />} />
+          <Tab label="Door to Door" icon={<LocationOn />} />
           <Tab label="Phone Banking" icon={<PhoneInTalk />} />
-          <Tab label="History" icon={<History />} />
+          <Tab label="Phone History" icon={<History />} />
           {(user.role === 'admin' || user.role === 'superadmin') && (
             <Tab label="Campaigns" icon={<Campaign />} />
           )}
@@ -1621,7 +1621,7 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
         )}
 
         {/* Nearest Voter Card - Only show in Voters tab */}
-        {currentTab === getTabIndex('voters') && nearestVoter && (
+        {currentTab === getTabIndex('doorToDoor') && nearestVoter && (
           <Alert 
             severity="info" 
             sx={{ mb: 3 }}
@@ -1717,7 +1717,7 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
         )}
 
         {/* Location Enable Card - Only show in Voters tab */}
-        {currentTab === getTabIndex('voters') && !nearestVoter && !location && (
+        {currentTab === getTabIndex('doorToDoor') && !nearestVoter && !location && (
           <Alert severity={locationError ? "error" : "warning"} sx={{ mb: 3 }}>
             <Typography variant="subtitle2" gutterBottom>
               📍 Location needed for nearest voter
@@ -2318,7 +2318,7 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
         </TabPanel>
 
         {/* Voters Tab */}
-        <TabPanel value={currentTab} index={getTabIndex('voters')}>
+        <TabPanel value={currentTab} index={getTabIndex('doorToDoor')}>
           {/* Leaderboard & Achievements */}
           {leaderboard && (
             <Card sx={{ mb: 3 }}>
@@ -2453,62 +2453,15 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
             </Card>
           )}
 
-          {/* Door to Door and Phone Bank Options */}
-          <Box sx={{ mb: 3 }}>
+          {/* Door to Door Content */}
+          <Box sx={{ mb: 2 }}>
             <Typography variant="h5" gutterBottom>
-              Voter Outreach
+              Door to Door Canvassing
             </Typography>
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2, mb: 3 }}>
-              {/* Door to Door Card */}
-              <Card>
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <LocationOn sx={{ fontSize: 40, color: 'primary.main', mr: 2 }} />
-                    <Box>
-                      <Typography variant="h6">Door to Door</Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Canvass voters in person
-                      </Typography>
-                    </Box>
-                  </Box>
-                  <Typography variant="body2" sx={{ mb: 2 }}>
-                    View and manage voter lists for in-person canvassing. Track visits and voter responses.
-                  </Typography>
-                </CardContent>
-              </Card>
-
-              {/* Phone Bank Card */}
-              <Card>
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <Phone sx={{ fontSize: 40, color: 'primary.main', mr: 2 }} />
-                    <Box>
-                      <Typography variant="h6">Phone Bank</Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Call voters remotely
-                      </Typography>
-                    </Box>
-                  </Box>
-                  <Typography variant="body2" sx={{ mb: 2 }}>
-                    Make phone calls to voters from anywhere. Access scripts and track call outcomes.
-                  </Typography>
-                  <Button
-                    variant="contained"
-                    startIcon={<Phone />}
-                    onClick={() => setCurrentTab(getTabIndex('phoneBanking'))}
-                    fullWidth
-                  >
-                    Start Phone Banking
-                  </Button>
-                </CardContent>
-              </Card>
-            </Box>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              View voters in your area and track door-to-door visits
+            </Typography>
           </Box>
-
-          {/* Voter List for Door to Door */}
-          <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
-            Door to Door Voter List
-          </Typography>
           <VoterList onContactVoter={handleContactVoter} user={user} />
         </TabPanel>
 
@@ -2525,105 +2478,23 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
           <VoterList onContactVoter={handleContactVoter} user={user} mode="phone-banking" />
         </TabPanel>
 
-        {/* Contact History Tab */}
+        {/* Phone History Tab */}
         <TabPanel value={currentTab} index={getTabIndex('history')}>
-          <Box sx={{ mb: 3 }}>
+          <Box textAlign="center" py={4}>
+            <History sx={{ fontSize: 80, color: 'primary.main', mb: 2 }} />
             <Typography variant="h5" gutterBottom>
-              Contact History & Statistics
+              Phone Contact History
             </Typography>
-            
-            {/* Statistics Cards */}
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 2, mb: 3 }}>
-              {/* Door to Door Stats */}
-              <Card>
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Box>
-                      <Typography color="textSecondary" gutterBottom variant="body2">
-                        Door to Door
-                      </Typography>
-                      <Typography variant="h5">
-                        {analytics?.totalContacts || 0}
-                      </Typography>
-                    </Box>
-                    <LocationOn sx={{ fontSize: 40, color: '#00b090' }} />
-                  </Box>
-                </CardContent>
-              </Card>
-              
-              {/* Phone Bank Stats */}
-              <Card>
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Box>
-                      <Typography color="textSecondary" gutterBottom variant="body2">
-                        Phone Calls
-                      </Typography>
-                      <Typography variant="h5">
-                        {analytics?.totalPhoneCalls || 0}
-                      </Typography>
-                    </Box>
-                    <Phone sx={{ fontSize: 40, color: '#1976d2' }} />
-                  </Box>
-                </CardContent>
-              </Card>
-              
-              {/* Total Contacts */}
-              <Card>
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Box>
-                      <Typography color="textSecondary" gutterBottom variant="body2">
-                        Total Contacts
-                      </Typography>
-                      <Typography variant="h5">
-                        {(analytics?.totalContacts || 0) + (analytics?.totalPhoneCalls || 0)}
-                      </Typography>
-                    </Box>
-                    <ContactPhone sx={{ fontSize: 40, color: '#ffcd35' }} />
-                  </Box>
-                </CardContent>
-              </Card>
-              
-              {/* Today's Activity */}
-              <Card>
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Box>
-                      <Typography color="textSecondary" gutterBottom variant="body2">
-                        Today's Activity
-                      </Typography>
-                      <Typography variant="h5">
-                        {analytics?.todayContacts || 0}
-                      </Typography>
-                    </Box>
-                    <History sx={{ fontSize: 40, color: '#ff6b35' }} />
-                  </Box>
-                </CardContent>
-              </Card>
-            </Box>
-            
-            {/* Navigation Buttons */}
-            <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
-              <Button
-                variant="outlined"
-                startIcon={<LocationOn />}
-                onClick={() => setCurrentTab(getTabIndex('voters'))}
-              >
-                View Door to Door
-              </Button>
-              <Button
-                variant="outlined"
-                startIcon={<Phone />}
-                onClick={() => navigate('/phone-contacts')}
-              >
-                View Phone History
-              </Button>
-            </Box>
-          </Box>
-          
-          {/* Combined Contact History */}
-          <VoterContactHistory user={user} />
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              View all your phone contact history and statistics
+            </Typography>
+            <Button
+              variant="contained"
+              startIcon={<History />}
+              onClick={() => navigate('/phone-contacts')}
+            >
+              View Full History
+            </Button>
         </TabPanel>
 
         {/* Campaigns Tab - For Admins and SuperAdmins */}
