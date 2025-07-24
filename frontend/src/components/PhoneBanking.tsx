@@ -310,16 +310,31 @@ const PhoneBanking: React.FC<PhoneBankingProps> = ({ user }) => {
                     variant="contained"
                     size="large"
                     startIcon={<Phone />}
-                    onClick={() => setContactModalOpen(true)}
+                    onClick={() => {
+                      // Initiate phone call
+                      if (currentVoter.cellPhone) {
+                        window.location.href = `tel:${currentVoter.cellPhone}`;
+                      }
+                    }}
                     fullWidth
                     sx={{ py: 2 }}
                     disabled={!currentVoter.cellPhone}
                   >
-                    Start Call
+                    Call {formatPhoneNumber(currentVoter.cellPhone)}
                   </Button>
                   
                   <Button
                     variant="outlined"
+                    size="large"
+                    onClick={() => setContactModalOpen(true)}
+                    fullWidth
+                    sx={{ py: 1 }}
+                  >
+                    Record Contact
+                  </Button>
+                  
+                  <Button
+                    variant="text"
                     startIcon={<NavigateNext />}
                     onClick={skipVoter}
                     fullWidth

@@ -252,7 +252,7 @@ const PhoneContactModal: React.FC<PhoneContactModalProps> = ({
       <DialogTitle>
         <Box display="flex" alignItems="center" gap={1}>
           <Phone color="primary" />
-          <Typography variant="h6">Phone Contact</Typography>
+          <Typography variant="h6">Record Call Results</Typography>
           <Box flex={1} />
           <Chip 
             icon={<Timer />}
