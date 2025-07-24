@@ -1221,7 +1221,7 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user, mode = 'doo
                           <Button
                             variant="outlined"
                             size="small"
-                            onClick={() => handleContactClick(voter)}
+                            onClick={() => onContactVoter(voter)}
                             disabled={loading}
                             sx={{ minWidth: isMobile ? '60px' : 'auto' }}
                           >
