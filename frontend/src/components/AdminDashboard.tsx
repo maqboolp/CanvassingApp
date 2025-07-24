@@ -2495,6 +2495,7 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
             >
               View Full History
             </Button>
+          </Box>
         </TabPanel>
 
         {/* Campaigns Tab - For Admins and SuperAdmins */}
