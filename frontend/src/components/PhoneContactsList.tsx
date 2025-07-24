@@ -308,7 +308,7 @@ const PhoneContactsList: React.FC = () => {
                     Support Rate
                   </Typography>
                   <Typography variant="h4">
-                    {summary?.contactsBySupport['StrongYes'] || 0} / {summary?.contactsBySupport['LeanYes'] || 0}
+                    {summary?.contactsBySupport['StrongYes'] || 0} / {summary?.contactsBySupport['LeaningYes'] || 0}
                   </Typography>
                   <Typography variant="caption" color="textSecondary">
                     Strong / Lean Yes
