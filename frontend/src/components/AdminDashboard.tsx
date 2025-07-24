@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import VersionInfo from './VersionInfo';
 import CampaignDashboard from './CampaignDashboard';
 import ResourceLinksSection from './ResourceLinksSection';
@@ -118,6 +119,7 @@ function TabPanel(props: TabPanelProps) {
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
+  const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -2383,14 +2385,163 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
             </Card>
           )}
 
-          <Typography variant="h5" gutterBottom>
-            Voter Management
+          {/* Door to Door and Phone Bank Options */}
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="h5" gutterBottom>
+              Voter Outreach
+            </Typography>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2, mb: 3 }}>
+              {/* Door to Door Card */}
+              <Card>
+                <CardContent>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    <LocationOn sx={{ fontSize: 40, color: 'primary.main', mr: 2 }} />
+                    <Box>
+                      <Typography variant="h6">Door to Door</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Canvass voters in person
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <Typography variant="body2" sx={{ mb: 2 }}>
+                    View and manage voter lists for in-person canvassing. Track visits and voter responses.
+                  </Typography>
+                </CardContent>
+              </Card>
+
+              {/* Phone Bank Card */}
+              <Card>
+                <CardContent>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    <Phone sx={{ fontSize: 40, color: 'primary.main', mr: 2 }} />
+                    <Box>
+                      <Typography variant="h6">Phone Bank</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Call voters remotely
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <Typography variant="body2" sx={{ mb: 2 }}>
+                    Make phone calls to voters from anywhere. Access scripts and track call outcomes.
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    startIcon={<Phone />}
+                    onClick={() => navigate('/phone-banking')}
+                    fullWidth
+                  >
+                    Start Phone Banking
+                  </Button>
+                </CardContent>
+              </Card>
+            </Box>
+          </Box>
+
+          {/* Voter List for Door to Door */}
+          <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
+            Door to Door Voter List
           </Typography>
           <VoterList onContactVoter={() => {}} user={user} />
         </TabPanel>
 
         {/* Contact History Tab */}
         <TabPanel value={currentTab} index={getTabIndex('history')}>
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="h5" gutterBottom>
+              Contact History & Statistics
+            </Typography>
+            
+            {/* Statistics Cards */}
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 2, mb: 3 }}>
+              {/* Door to Door Stats */}
+              <Card>
+                <CardContent>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Box>
+                      <Typography color="textSecondary" gutterBottom variant="body2">
+                        Door to Door
+                      </Typography>
+                      <Typography variant="h5">
+                        {analytics?.totalContacts || 0}
+                      </Typography>
+                    </Box>
+                    <LocationOn sx={{ fontSize: 40, color: '#00b090' }} />
+                  </Box>
+                </CardContent>
+              </Card>
+              
+              {/* Phone Bank Stats */}
+              <Card>
+                <CardContent>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Box>
+                      <Typography color="textSecondary" gutterBottom variant="body2">
+                        Phone Calls
+                      </Typography>
+                      <Typography variant="h5">
+                        {analytics?.totalPhoneCalls || 0}
+                      </Typography>
+                    </Box>
+                    <Phone sx={{ fontSize: 40, color: '#1976d2' }} />
+                  </Box>
+                </CardContent>
+              </Card>
+              
+              {/* Total Contacts */}
+              <Card>
+                <CardContent>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Box>
+                      <Typography color="textSecondary" gutterBottom variant="body2">
+                        Total Contacts
+                      </Typography>
+                      <Typography variant="h5">
+                        {(analytics?.totalContacts || 0) + (analytics?.totalPhoneCalls || 0)}
+                      </Typography>
+                    </Box>
+                    <ContactPhone sx={{ fontSize: 40, color: '#ffcd35' }} />
+                  </Box>
+                </CardContent>
+              </Card>
+              
+              {/* Today's Activity */}
+              <Card>
+                <CardContent>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Box>
+                      <Typography color="textSecondary" gutterBottom variant="body2">
+                        Today's Activity
+                      </Typography>
+                      <Typography variant="h5">
+                        {analytics?.todayContacts || 0}
+                      </Typography>
+                    </Box>
+                    <History sx={{ fontSize: 40, color: '#ff6b35' }} />
+                  </Box>
+                </CardContent>
+              </Card>
+            </Box>
+            
+            {/* Navigation Buttons */}
+            <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+              <Button
+                variant="outlined"
+                startIcon={<LocationOn />}
+                onClick={() => setCurrentTab(getTabIndex('voters'))}
+              >
+                View Door to Door
+              </Button>
+              <Button
+                variant="outlined"
+                startIcon={<Phone />}
+                onClick={() => navigate('/phone-contacts')}
+              >
+                View Phone History
+              </Button>
+            </Box>
+          </Box>
+          
+          {/* Combined Contact History */}
           <VoterContactHistory user={user} />
         </TabPanel>
 

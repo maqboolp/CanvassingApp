@@ -926,6 +926,14 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 
         {/* Voters Tab */}
         <TabPanel value={currentTab} index={0}>
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="h5" gutterBottom>
+              Door to Door Canvassing
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              View voters in your area and track door-to-door visits
+            </Typography>
+          </Box>
           <VoterList onContactVoter={handleContactVoter} user={user} />
         </TabPanel>
 
