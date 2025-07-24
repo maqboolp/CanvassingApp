@@ -22,7 +22,10 @@ import {
   Select,
   MenuItem,
   CircularProgress,
-  Alert
+  Alert,
+  AppBar,
+  Toolbar,
+  Container
 } from '@mui/material';
 import {
   Phone,
@@ -39,13 +42,18 @@ import {
   Block,
   CallReceived,
   RemoveCircle,
-  Refresh
+  Refresh,
+  ArrowBack,
+  Dashboard as DashboardIcon
 } from '@mui/icons-material';
 import { PhoneContactStatus } from './PhoneContactModal';
 import { VoterSupport } from '../types';
 import { API_BASE_URL } from '../config';
 import { ApiErrorHandler } from '../utils/apiErrorHandler';
+import { customerConfig } from '../config/customerConfig';
 import dayjs from 'dayjs';
+import { useNavigate } from 'react-router-dom';
+import { authService } from '../services/authService';
 
 interface PhoneContactDetail {
   id: string;
@@ -72,6 +80,8 @@ interface PhoneContactsSummary {
 }
 
 const PhoneContactsList: React.FC = () => {
+  const navigate = useNavigate();
+  const user = authService.getCurrentUser();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [summary, setSummary] = useState<PhoneContactsSummary | null>(null);
@@ -193,10 +203,45 @@ const PhoneContactsList: React.FC = () => {
   }
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom>
-        Phone Contacts
-      </Typography>
+    <Box sx={{ flexGrow: 1 }}>
+      {/* App Bar */}
+      <AppBar position="static">
+        <Toolbar>
+          <IconButton
+            edge="start"
+            color="inherit"
+            onClick={() => navigate('/')}
+            sx={{ mr: 2 }}
+          >
+            <ArrowBack />
+          </IconButton>
+          <img 
+            src={customerConfig.logoUrl} 
+            alt={customerConfig.logoAlt} 
+            style={{ 
+              height: '40px', 
+              marginRight: '16px'
+            }} 
+          />
+          <Box sx={{ flexGrow: 1 }}>
+            <Typography variant="h6" component="div" sx={{ color: 'white' }}>
+              Phone Contact History
+            </Typography>
+            <Typography variant="body2" sx={{ opacity: 0.8, color: 'white' }}>
+              {user?.firstName} {user?.lastName} - Viewing call history
+            </Typography>
+          </Box>
+          <Button
+            color="inherit"
+            onClick={() => navigate('/dashboard')}
+            startIcon={<DashboardIcon />}
+          >
+            Dashboard
+          </Button>
+        </Toolbar>
+      </AppBar>
+      
+      <Container maxWidth="xl" sx={{ mt: 3 }}>
 
       {/* Summary Cards */}
       <Box sx={{ display: 'flex', gap: 3, mb: 3, flexWrap: 'wrap' }}>
@@ -431,6 +476,7 @@ const PhoneContactsList: React.FC = () => {
           </TableBody>
         </Table>
       </TableContainer>
+      </Container>
     </Box>
   );
 };

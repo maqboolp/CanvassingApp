@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Container,
@@ -14,7 +15,9 @@ import {
   CircularProgress,
   Tooltip,
   Paper,
-  Divider
+  Divider,
+  AppBar,
+  Toolbar
 } from '@mui/material';
 import {
   Phone,
@@ -27,19 +30,23 @@ import {
   Cancel,
   PhoneInTalk,
   History,
-  Refresh
+  Refresh,
+  ArrowBack,
+  Dashboard as DashboardIcon
 } from '@mui/icons-material';
 import { Voter, AuthUser } from '../types';
 import { API_BASE_URL } from '../config';
 import { ApiErrorHandler } from '../utils/apiErrorHandler';
 import PhoneContactModal, { PhoneContactStatus } from './PhoneContactModal';
 import dayjs from 'dayjs';
+import { customerConfig } from '../config/customerConfig';
 
 interface PhoneBankingProps {
   user: AuthUser;
 }
 
 const PhoneBanking: React.FC<PhoneBankingProps> = ({ user }) => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentVoter, setCurrentVoter] = useState<Voter | null>(null);
@@ -159,11 +166,55 @@ const PhoneBanking: React.FC<PhoneBankingProps> = ({ user }) => {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ py: 3 }}>
-      <Typography variant="h4" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Phone color="primary" />
-        Phone Banking
-      </Typography>
+    <Box sx={{ flexGrow: 1 }}>
+      {/* App Bar */}
+      <AppBar position="static">
+        <Toolbar>
+          <IconButton
+            size="large"
+            edge="start"
+            color="inherit"
+            aria-label="back to dashboard"
+            onClick={() => navigate('/')}
+            sx={{ mr: 2 }}
+          >
+            <ArrowBack />
+          </IconButton>
+          
+          <img 
+            src={customerConfig.logoUrl} 
+            alt={customerConfig.logoAlt} 
+            style={{ 
+              height: '40px', 
+              marginRight: '16px'
+            }} 
+          />
+          
+          <Box sx={{ flexGrow: 1 }}>
+            <Typography variant="h6" component="div" sx={{ color: 'white' }}>
+              Phone Banking
+            </Typography>
+            <Typography variant="body2" sx={{ opacity: 0.8, color: 'white' }}>
+              {user.firstName} {user.lastName} - Making calls
+            </Typography>
+          </Box>
+          
+          <Button
+            color="inherit"
+            startIcon={<DashboardIcon />}
+            onClick={() => navigate('/dashboard')}
+            sx={{ mr: 2 }}
+          >
+            Dashboard
+          </Button>
+        </Toolbar>
+      </AppBar>
+
+      <Container maxWidth="lg" sx={{ py: 3 }}>
+        <Typography variant="h4" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Phone color="primary" />
+          Phone Banking
+        </Typography>
 
       {/* Stats Cards */}
       <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
@@ -399,15 +450,16 @@ const PhoneBanking: React.FC<PhoneBankingProps> = ({ user }) => {
         </Paper>
       )}
 
-      {/* Phone Contact Modal */}
-      <PhoneContactModal
-        open={contactModalOpen}
-        voter={currentVoter}
-        onClose={() => setContactModalOpen(false)}
-        onSubmit={handleContactSubmit}
-        user={user}
-      />
-    </Container>
+        {/* Phone Contact Modal */}
+        <PhoneContactModal
+          open={contactModalOpen}
+          voter={currentVoter}
+          onClose={() => setContactModalOpen(false)}
+          onSubmit={handleContactSubmit}
+          user={user}
+        />
+      </Container>
+    </Box>
   );
 };
 

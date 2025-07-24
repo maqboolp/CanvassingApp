@@ -917,7 +917,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         {/* Tabs */}
         <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
           <Tabs value={currentTab} onChange={(e, newValue) => setCurrentTab(newValue)}>
-            <Tab label="Voters" icon={<LocationOn />} />
+            <Tab label="Door to Door" icon={<LocationOn />} />
             <Tab label="Phone Banking" icon={<PhoneInTalk />} />
             <Tab label="Phone History" icon={<History />} />
             <Tab label="Resources" icon={<Help />} />
