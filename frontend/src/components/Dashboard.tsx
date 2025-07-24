@@ -809,19 +809,18 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
               >
                 Contact Voter
               </Button>
-              {nearestVoter.voter.cellPhone && (
-                <Button
-                  variant="outlined"
-                  startIcon={<Phone />}
-                  onClick={() => {
-                    setSelectedVoterForContact(nearestVoter.voter);
-                    setPhoneContactModalOpen(true);
-                  }}
-                  fullWidth
-                >
-                  Call Voter
-                </Button>
-              )}
+              <Button
+                variant="outlined"
+                startIcon={<Phone />}
+                onClick={() => {
+                  setSelectedVoterForContact(nearestVoter.voter);
+                  setPhoneContactModalOpen(true);
+                }}
+                disabled={!nearestVoter.voter.cellPhone}
+                fullWidth
+              >
+                {nearestVoter.voter.cellPhone ? 'Call Voter' : 'No Phone Number'}
+              </Button>
             </Box>
           </Alert>
         )}
