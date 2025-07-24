@@ -59,9 +59,10 @@ import { API_BASE_URL } from '../config';
 interface VoterListProps {
   onContactVoter: (voter: Voter) => void;
   user?: AuthUser;
+  mode?: 'door-to-door' | 'phone-banking';
 }
 
-const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
+const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user, mode = 'door-to-door' }) => {
   const isMobile = useMediaQuery('(max-width:480px)');
   
   const [voters, setVoters] = useState<Voter[]>([]);
@@ -212,6 +213,8 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
         ...(filters.contactStatus && { contactStatus: filters.contactStatus }),
         ...(filters.searchName && { searchName: filters.searchName }),
         ...(filters.partyAffiliation && { partyAffiliation: filters.partyAffiliation }),
+        // Filter by phone numbers for phone banking mode
+        ...(mode === 'phone-banking' && { hasPhoneNumber: 'true' }),
         // Only use distance sorting if we have a location, otherwise fallback to zip
         ...(filters.sortBy && { 
           sortBy: (filters.sortBy === 'distance' && (!useLocation || !location)) ? 'zip' : filters.sortBy 
@@ -1199,16 +1202,44 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user }) => {
                   
                   <TableCell>
                     <Box sx={{ display: 'flex', gap: 0.5, flexDirection: isMobile ? 'column' : 'row' }}>
-                      <Button
-                        variant="contained"
-                        size="small"
-                        startIcon={isMobile ? undefined : <ContactPhone />}
-                        onClick={() => handleContactClick(voter)}
-                        disabled={loading}
-                        sx={{ minWidth: isMobile ? '60px' : 'auto' }}
-                      >
-                        Contact
-                      </Button>
+                      {mode === 'phone-banking' ? (
+                        <>
+                          <Button
+                            variant="contained"
+                            size="small"
+                            startIcon={isMobile ? undefined : <Phone />}
+                            onClick={() => {
+                              if (voter.cellPhone) {
+                                window.location.href = `tel:${voter.cellPhone}`;
+                              }
+                            }}
+                            disabled={loading || !voter.cellPhone}
+                            sx={{ minWidth: isMobile ? '60px' : 'auto' }}
+                          >
+                            {isMobile ? 'Call' : `Call ${voter.cellPhone || 'No Phone'}`}
+                          </Button>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            onClick={() => handleContactClick(voter)}
+                            disabled={loading}
+                            sx={{ minWidth: isMobile ? '60px' : 'auto' }}
+                          >
+                            Record
+                          </Button>
+                        </>
+                      ) : (
+                        <Button
+                          variant="contained"
+                          size="small"
+                          startIcon={isMobile ? undefined : <ContactPhone />}
+                          onClick={() => handleContactClick(voter)}
+                          disabled={loading}
+                          sx={{ minWidth: isMobile ? '60px' : 'auto' }}
+                        >
+                          Contact
+                        </Button>
+                      )}
                       
                       {user?.role === 'superadmin' && voter.isContacted && (
                         <Button

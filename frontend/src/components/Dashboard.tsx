@@ -55,10 +55,12 @@ import {
 import { AuthUser, Voter, ContactStatus, VoterSupport } from '../types';
 import VoterList from './VoterList';
 import ContactModal from './ContactModal';
+import PhoneContactModal, { PhoneContactStatus } from './PhoneContactModal';
 import VolunteerResourcesSection from './VolunteerResourcesSection';
 import { API_BASE_URL } from '../config';
 import { customerConfig, campaignConfig } from '../config/customerConfig';
 import { validatePassword, getPasswordHelperText, PASSWORD_REQUIREMENTS } from '../utils/passwordValidation';
+import { ApiErrorHandler } from '../utils/apiErrorHandler';
 
 // Get customer-specific campaign info
 const campaignWebsite = process.env.REACT_APP_CAMPAIGN_WEBSITE;
@@ -124,6 +126,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const [passwordChangeLoading, setPasswordChangeLoading] = useState(false);
   const [passwordResult, setPasswordResult] = useState<any>(null);
   const [contactModalOpen, setContactModalOpen] = useState(false);
+  const [phoneContactModalOpen, setPhoneContactModalOpen] = useState(false);
   const [selectedVoterForContact, setSelectedVoterForContact] = useState<Voter | null>(null);
   const [leaderboard, setLeaderboard] = useState<any>(null);
   const [leaderboardTab, setLeaderboardTab] = useState(0);
@@ -377,12 +380,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   };
 
   const handleContactVoter = (voter: Voter) => {
-    // Refresh stats after contact is logged
-    fetchStats();
-    
-    // If this was the nearest voter, find a new one
-    if (nearestVoter && voter.lalVoterId === nearestVoter.voter.lalVoterId && location) {
-      findNearestVoter(location);
+    setSelectedVoterForContact(voter);
+    if (currentTab === 1) { // Phone Banking tab
+      setPhoneContactModalOpen(true);
+    } else {
+      setContactModalOpen(true);
     }
   };
 
@@ -431,7 +433,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 
   const handleNearestVoterContact = (voter: Voter) => {
     setSelectedVoterForContact(voter);
-    setContactModalOpen(true);
+    if (currentTab === 1) { // Phone Banking tab
+      setPhoneContactModalOpen(true);
+    } else {
+      setContactModalOpen(true);
+    }
   };
 
   const fetchAvatarInfo = async () => {
@@ -455,6 +461,41 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     fetchAvatarInfo();
     setAvatarInfoDialog(true);
     handleMenuClose();
+  };
+
+  const handlePhoneContactSubmit = async (
+    status: PhoneContactStatus, 
+    notes: string, 
+    voterSupport?: VoterSupport, 
+    callDuration?: number,
+    audioUrl?: string, 
+    audioDuration?: number
+  ) => {
+    if (!selectedVoterForContact) return;
+
+    try {
+      await ApiErrorHandler.makeAuthenticatedRequest(`${API_BASE_URL}/api/phonecontacts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          voterId: selectedVoterForContact.lalVoterId,
+          status,
+          voterSupport,
+          notes,
+          audioFileUrl: audioUrl,
+          audioDurationSeconds: audioDuration,
+          callDurationSeconds: callDuration
+        })
+      });
+
+      setPhoneContactModalOpen(false);
+      setSelectedVoterForContact(null);
+      
+      // Refresh stats
+      fetchStats();
+    } catch (err) {
+      console.error('Failed to save phone contact:', err);
+    }
   };
 
   const handleContactSubmit = async (status: ContactStatus, notes: string, voterSupport?: VoterSupport, audioUrl?: string, audioDuration?: number, photoUrl?: string) => {
@@ -939,32 +980,15 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 
         {/* Phone Banking Tab */}
         <TabPanel value={currentTab} index={1}>
-          <Box textAlign="center" py={4}>
-            <PhoneInTalk sx={{ fontSize: 80, color: 'primary.main', mb: 2 }} />
+          <Box sx={{ mb: 2 }}>
             <Typography variant="h5" gutterBottom>
-              Start Phone Banking
+              Phone Banking
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              Make phone calls to voters from the comfort of your home
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Call voters with phone numbers and record the results
             </Typography>
-            <Button
-              variant="contained"
-              size="large"
-              startIcon={<Phone />}
-              onClick={() => navigate('/phone-banking')}
-              sx={{ mb: 2 }}
-            >
-              Start Making Calls
-            </Button>
-            <br />
-            <Button
-              variant="outlined"
-              startIcon={<History />}
-              onClick={() => navigate('/phone-contacts')}
-            >
-              View Call History
-            </Button>
           </Box>
+          <VoterList onContactVoter={handleContactVoter} user={user} mode="phone-banking" />
         </TabPanel>
 
         {/* Phone History Tab */}
@@ -1220,6 +1244,18 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
           setSelectedVoterForContact(null);
         }}
         onSubmit={handleContactSubmit}
+        user={user}
+      />
+
+      {/* Phone Contact Modal */}
+      <PhoneContactModal
+        open={phoneContactModalOpen}
+        voter={selectedVoterForContact}
+        onClose={() => {
+          setPhoneContactModalOpen(false);
+          setSelectedVoterForContact(null);
+        }}
+        onSubmit={handlePhoneContactSubmit}
         user={user}
       />
 

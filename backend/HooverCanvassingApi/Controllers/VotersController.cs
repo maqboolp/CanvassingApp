@@ -43,6 +43,7 @@ namespace HooverCanvassingApi.Controllers
             [FromQuery] double radiusKm = 3.2, // Default 2 miles
             [FromQuery] string? partyAffiliation = null,
             [FromQuery] List<int>? tagIds = null,
+            [FromQuery] bool hasPhoneNumber = false,
             [FromQuery] bool useTravelDistance = false,
             [FromQuery] string travelMode = "driving")
         {
@@ -121,6 +122,12 @@ namespace HooverCanvassingApi.Controllers
                 if (!string.IsNullOrEmpty(partyAffiliation))
                 {
                     query = query.Where(v => v.PartyAffiliation == partyAffiliation);
+                }
+
+                // Filter by phone number
+                if (hasPhoneNumber)
+                {
+                    query = query.Where(v => !string.IsNullOrEmpty(v.CellPhone));
                 }
 
                 // Filter by tags
