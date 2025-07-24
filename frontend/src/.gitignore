@@ -1,0 +1,6 @@
+
+# Test files
+test-hash.cs
+create-admin-user.sql
+generate-password-hash.csx
+*.csx
