@@ -62,6 +62,7 @@ import {
   SwapHoriz,
   Campaign,
   Phone,
+  PhoneInTalk,
   MenuBook,
   Visibility,
   VisibilityOff,
@@ -79,6 +80,7 @@ import { AuthUser, Voter, ContactStatus, VoterSupport, VoterTagDetail } from '..
 import VoterList from './VoterList';
 import VoterContactHistory from './VoterContactHistory';
 import ContactModal from './ContactModal';
+import PhoneContactModal, { PhoneContactStatus } from './PhoneContactModal';
 import VoiceRecordings from './VoiceRecordings';
 import VoterStagingImport from './VoterStagingImport';
 import AnalyticsComponent from './Analytics';
@@ -132,6 +134,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
       'users', 
       'pending',
       'voters',
+      'phoneBanking',
       'history',
       ...(user.role === 'admin' || user.role === 'superadmin' ? ['campaigns'] : []),
       ...(user.role === 'admin' || user.role === 'superadmin' ? ['voiceRecordings'] : []),
@@ -211,6 +214,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
   const [nearestVoter, setNearestVoter] = useState<{ voter: Voter; distance: number } | null>(null);
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [contactModalOpen, setContactModalOpen] = useState(false);
+  const [phoneContactModalOpen, setPhoneContactModalOpen] = useState(false);
   const [selectedVoterForContact, setSelectedVoterForContact] = useState<Voter | null>(null);
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
@@ -1131,9 +1135,22 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
     window.open(mapUrl, '_blank');
   };
 
+  const handleContactVoter = (voter: Voter) => {
+    setSelectedVoterForContact(voter);
+    if (currentTab === getTabIndex('phoneBanking')) {
+      setPhoneContactModalOpen(true);
+    } else {
+      setContactModalOpen(true);
+    }
+  };
+
   const handleNearestVoterContact = (voter: Voter) => {
     setSelectedVoterForContact(voter);
-    setContactModalOpen(true);
+    if (currentTab === getTabIndex('phoneBanking')) {
+      setPhoneContactModalOpen(true);
+    } else {
+      setContactModalOpen(true);
+    }
   };
 
   const handleContactSubmit = async (status: ContactStatus, notes: string, voterSupport?: VoterSupport, audioUrl?: string, audioDuration?: number, photoUrl?: string) => {
@@ -1172,6 +1189,41 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
       }
     } catch (err) {
       console.error('Failed to log contact:', err);
+    }
+  };
+
+  const handlePhoneContactSubmit = async (
+    status: PhoneContactStatus, 
+    notes: string, 
+    voterSupport?: VoterSupport, 
+    callDuration?: number,
+    audioUrl?: string, 
+    audioDuration?: number
+  ) => {
+    if (!selectedVoterForContact) return;
+
+    try {
+      await ApiErrorHandler.makeAuthenticatedRequest(`${API_BASE_URL}/api/phonecontacts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          voterId: selectedVoterForContact.lalVoterId,
+          status,
+          voterSupport,
+          notes,
+          audioFileUrl: audioUrl,
+          audioDurationSeconds: audioDuration,
+          callDurationSeconds: callDuration
+        })
+      });
+
+      setPhoneContactModalOpen(false);
+      setSelectedVoterForContact(null);
+      
+      // Refresh stats
+      fetchAnalytics();
+    } catch (err) {
+      console.error('Failed to save phone contact:', err);
     }
   };
 
@@ -1507,6 +1559,7 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
           <Tab label="Users" icon={<People />} />
           <Tab label="Pending" icon={<Schedule />} />
           <Tab label="Voters" icon={<HowToVote />} />
+          <Tab label="Phone Banking" icon={<PhoneInTalk />} />
           <Tab label="History" icon={<History />} />
           {(user.role === 'admin' || user.role === 'superadmin') && (
             <Tab label="Campaigns" icon={<Campaign />} />
@@ -1635,14 +1688,29 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
                 />
               )}
             </Box>
-            <Box sx={{ mt: 2 }}>
+            <Box sx={{ mt: 2, display: 'flex', gap: 1, flexDirection: 'column' }}>
               <Button
                 variant="contained"
                 startIcon={<ContactPhone />}
-                onClick={() => handleNearestVoterContact(nearestVoter.voter)}
+                onClick={() => {
+                  setSelectedVoterForContact(nearestVoter.voter);
+                  setContactModalOpen(true);
+                }}
                 fullWidth
               >
                 Contact Voter
+              </Button>
+              <Button
+                variant="outlined"
+                startIcon={<Phone />}
+                onClick={() => {
+                  setSelectedVoterForContact(nearestVoter.voter);
+                  setPhoneContactModalOpen(true);
+                }}
+                disabled={!nearestVoter.voter.cellPhone}
+                fullWidth
+              >
+                {nearestVoter.voter.cellPhone ? 'Call Voter' : 'No Phone Number'}
               </Button>
             </Box>
           </Alert>
@@ -2427,7 +2495,7 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
                   <Button
                     variant="contained"
                     startIcon={<Phone />}
-                    onClick={() => navigate('/phone-banking')}
+                    onClick={() => setCurrentTab(getTabIndex('phoneBanking'))}
                     fullWidth
                   >
                     Start Phone Banking
@@ -2441,7 +2509,20 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
           <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
             Door to Door Voter List
           </Typography>
-          <VoterList onContactVoter={() => {}} user={user} />
+          <VoterList onContactVoter={handleContactVoter} user={user} />
+        </TabPanel>
+
+        {/* Phone Banking Tab */}
+        <TabPanel value={currentTab} index={getTabIndex('phoneBanking')}>
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="h5" gutterBottom>
+              Phone Banking
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Call voters with phone numbers and record the results
+            </Typography>
+          </Box>
+          <VoterList onContactVoter={handleContactVoter} user={user} mode="phone-banking" />
         </TabPanel>
 
         {/* Contact History Tab */}
@@ -3719,6 +3800,18 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
           setSelectedVoterForContact(null);
         }}
         onSubmit={handleContactSubmit}
+        user={user}
+      />
+
+      {/* Phone Contact Modal */}
+      <PhoneContactModal
+        open={phoneContactModalOpen}
+        voter={selectedVoterForContact}
+        onClose={() => {
+          setPhoneContactModalOpen(false);
+          setSelectedVoterForContact(null);
+        }}
+        onSubmit={handlePhoneContactSubmit}
         user={user}
       />
 
