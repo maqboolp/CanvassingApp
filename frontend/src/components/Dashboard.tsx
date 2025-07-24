@@ -797,15 +797,31 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                 />
               )}
             </Box>
-            <Box sx={{ mt: 2 }}>
+            <Box sx={{ mt: 2, display: 'flex', gap: 1, flexDirection: 'column' }}>
               <Button
                 variant="contained"
                 startIcon={<ContactPhone />}
-                onClick={() => handleNearestVoterContact(nearestVoter.voter)}
+                onClick={() => {
+                  setSelectedVoterForContact(nearestVoter.voter);
+                  setContactModalOpen(true);
+                }}
                 fullWidth
               >
                 Contact Voter
               </Button>
+              {nearestVoter.voter.cellPhone && (
+                <Button
+                  variant="outlined"
+                  startIcon={<Phone />}
+                  onClick={() => {
+                    setSelectedVoterForContact(nearestVoter.voter);
+                    setPhoneContactModalOpen(true);
+                  }}
+                  fullWidth
+                >
+                  Call Voter
+                </Button>
+              )}
             </Box>
           </Alert>
         )}
