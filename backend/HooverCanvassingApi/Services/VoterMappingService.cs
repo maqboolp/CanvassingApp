@@ -82,6 +82,13 @@ namespace HooverCanvassingApi.Services
                             await _context.Voters.AddRangeAsync(voters);
                             await _context.SaveChangesAsync();
                             result.ImportedCount += voters.Count;
+                            
+                            // Apply tags to imported voters if any were specified
+                            if (mapping.TagIds != null && mapping.TagIds.Any())
+                            {
+                                await ApplyTagsToVoters(voters, mapping.TagIds);
+                            }
+                            
                             voters.Clear();
                         }
                     }
@@ -99,6 +106,14 @@ namespace HooverCanvassingApi.Services
                     await _context.Voters.AddRangeAsync(voters);
                     await _context.SaveChangesAsync();
                     result.ImportedCount += voters.Count;
+                    
+                    // Apply tags to imported voters if any were specified
+                    if (mapping.TagIds != null && mapping.TagIds.Any())
+                    {
+                        await ApplyTagsToVoters(voters, mapping.TagIds);
+                    }
+                    
+                    voters.Clear();
                 }
 
                 result.Success = true;
@@ -385,6 +400,45 @@ namespace HooverCanvassingApi.Services
             return phone.Trim();
         }
 
+        private async Task ApplyTagsToVoters(List<Voter> voters, List<int> tagIds)
+        {
+            try
+            {
+                var voterTagAssignments = new List<VoterTagAssignment>();
+                
+                foreach (var voter in voters)
+                {
+                    foreach (var tagId in tagIds)
+                    {
+                        // Check if tag exists
+                        var tagExists = await _context.VoterTags.AnyAsync(t => t.Id == tagId);
+                        if (tagExists)
+                        {
+                            voterTagAssignments.Add(new VoterTagAssignment
+                            {
+                                VoterId = voter.LalVoterId,
+                                TagId = tagId,
+                                AssignedAt = DateTime.UtcNow
+                            });
+                        }
+                    }
+                }
+                
+                if (voterTagAssignments.Any())
+                {
+                    await _context.VoterTagAssignments.AddRangeAsync(voterTagAssignments);
+                    await _context.SaveChangesAsync();
+                    _logger.LogInformation("Applied {TagCount} tags to {VoterCount} imported voters", 
+                        tagIds.Count, voters.Count);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error applying tags to imported voters");
+                // Don't fail the import if tag assignment fails
+            }
+        }
+
         public async Task<List<string>> GetAvailableColumnsAsync(string stagingTableName)
         {
             var sql = @"
@@ -434,6 +488,9 @@ namespace HooverCanvassingApi.Services
         public string? VoterSupportColumn { get; set; }
         public string? LastContactStatusColumn { get; set; }
         public string? SmsConsentStatusColumn { get; set; }
+        
+        // Tag support for import - voters with these tags will be assigned during import
+        public List<int>? TagIds { get; set; } = new List<int>();
     }
 
     public class MappingResult

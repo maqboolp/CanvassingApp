@@ -27,6 +27,8 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Checkbox,
+  ListItemText,
 } from '@mui/material';
 import {
   CloudUpload as UploadIcon,
@@ -73,6 +75,7 @@ interface ColumnMapping {
   voterSupportColumn?: string;
   lastContactStatusColumn?: string;
   smsConsentStatusColumn?: string;
+  tagIds?: number[];
 }
 
 const VoterStagingImport: React.FC<VoterStagingImportProps> = ({ onComplete, existingStagingTable }) => {
@@ -88,6 +91,8 @@ const VoterStagingImport: React.FC<VoterStagingImportProps> = ({ onComplete, exi
   // Step 2: Column mapping
   const [tableInfo, setTableInfo] = useState<StagingTableInfo | null>(null);
   const [columnMapping, setColumnMapping] = useState<ColumnMapping>({});
+  const [availableTags, setAvailableTags] = useState<any[]>([]);
+  const [selectedTags, setSelectedTags] = useState<number[]>([]);
   
   // Step 3: Import progress
   const [importResult, setImportResult] = useState<any>(null);
@@ -101,6 +106,28 @@ const VoterStagingImport: React.FC<VoterStagingImportProps> = ({ onComplete, exi
       fetchTableInfo();
     }
   }, [existingStagingTable, uploadResult]);
+
+  // Fetch available tags
+  useEffect(() => {
+    fetchAvailableTags();
+  }, []);
+
+  const fetchAvailableTags = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/votertags`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+      
+      if (response.ok) {
+        const tags = await response.json();
+        setAvailableTags(tags);
+      }
+    } catch (err) {
+      console.error('Failed to fetch tags:', err);
+    }
+  };
   
   const fetchTableInfo = async () => {
     if (!uploadResult?.stagingTableName) return;
@@ -280,7 +307,10 @@ const VoterStagingImport: React.FC<VoterStagingImportProps> = ({ onComplete, exi
           method: 'POST',
           body: JSON.stringify({
             stagingTableName: uploadResult.stagingTableName,
-            mapping: columnMapping,
+            mapping: {
+              ...columnMapping,
+              tagIds: selectedTags
+            },
           })
         }
       );
@@ -460,6 +490,53 @@ const VoterStagingImport: React.FC<VoterStagingImportProps> = ({ onComplete, exi
                         </Select>
                       </FormControl>
                     ))}
+                  </Box>
+                  
+                  {/* Tag Selection */}
+                  <Box sx={{ mt: 3 }}>
+                    <Typography variant="h6" gutterBottom>
+                      Apply Tags to Imported Voters (Optional)
+                    </Typography>
+                    <FormControl fullWidth>
+                      <InputLabel>Select Tags</InputLabel>
+                      <Select
+                        multiple
+                        value={selectedTags}
+                        onChange={(e) => setSelectedTags(e.target.value as number[])}
+                        renderValue={(selected) => (
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                            {selected.map((value) => {
+                              const tag = availableTags.find(t => t.id === value);
+                              return (
+                                <Chip 
+                                  key={value} 
+                                  label={tag?.tagName || value}
+                                  size="small"
+                                  style={{ backgroundColor: tag?.color }}
+                                />
+                              );
+                            })}
+                          </Box>
+                        )}
+                      >
+                        {availableTags.map((tag) => (
+                          <MenuItem key={tag.id} value={tag.id}>
+                            <Checkbox checked={selectedTags.indexOf(tag.id) > -1} />
+                            <ListItemText primary={tag.tagName} />
+                            <Chip 
+                              size="small" 
+                              style={{ 
+                                backgroundColor: tag.color,
+                                marginLeft: 'auto'
+                              }}
+                            />
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                      Selected tags will be applied to all imported voters
+                    </Typography>
                   </Box>
                   
                   <Button
