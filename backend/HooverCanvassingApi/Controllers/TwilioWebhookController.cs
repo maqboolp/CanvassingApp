@@ -77,7 +77,7 @@ namespace HooverCanvassingApi.Controllers
                 var recordingUrl = Request.Form["RecordingUrl"].ToString();
                 var fromNumber = Request.Form["From"].ToString();
 
-                _logger.LogInformation($"Call Status callback: SID={callSid}, Status={callStatus}");
+                _logger.LogInformation($"Call Status callback: SID={callSid}, Status={callStatus}, From={fromNumber}");
 
                 var campaignMessage = await _context.CampaignMessages
                     .FirstOrDefaultAsync(cm => cm.TwilioSid == callSid);
@@ -113,14 +113,26 @@ namespace HooverCanvassingApi.Controllers
                          campaignMessage.Status == MessageStatus.NoAnswer ||
                          campaignMessage.Status == MessageStatus.Cancelled))
                     {
+                        // Normalize the phone number for comparison
+                        var normalizedFromNumber = NormalizePhoneNumber(fromNumber);
+                        _logger.LogInformation($"Looking up phone number: Original={fromNumber}, Normalized={normalizedFromNumber}");
+                        
                         // Look up the phone number in our pool
                         var phoneNumbers = await _phoneNumberPool.GetAllNumbersAsync();
-                        var phoneNumber = phoneNumbers.FirstOrDefault(p => p.Number == fromNumber);
+                        var phoneNumber = phoneNumbers.FirstOrDefault(p => 
+                            NormalizePhoneNumber(p.Number) == normalizedFromNumber ||
+                            p.Number == fromNumber);
+                            
                         if (phoneNumber != null)
                         {
                             var success = campaignMessage.Status == MessageStatus.Completed;
                             await _phoneNumberPool.IncrementCallCountAsync(phoneNumber.Id, success);
                             _logger.LogInformation($"Updated phone stats for {fromNumber} (ID: {phoneNumber.Id}), Success: {success}, Final Status: {campaignMessage.Status}");
+                        }
+                        else
+                        {
+                            _logger.LogWarning($"Phone number not found in pool: {fromNumber} (normalized: {normalizedFromNumber})");
+                            _logger.LogInformation($"Available numbers in pool: {string.Join(", ", phoneNumbers.Select(p => p.Number))}");
                         }
                     }
 
@@ -276,6 +288,24 @@ namespace HooverCanvassingApi.Controllers
                 "canceled" => MessageStatus.Cancelled,
                 _ => MessageStatus.Pending
             };
+        }
+
+        private string NormalizePhoneNumber(string phoneNumber)
+        {
+            if (string.IsNullOrEmpty(phoneNumber))
+                return phoneNumber;
+                
+            // Remove all non-numeric characters
+            var digitsOnly = new string(phoneNumber.Where(char.IsDigit).ToArray());
+            
+            // If it's 11 digits and starts with 1, remove the 1
+            if (digitsOnly.Length == 11 && digitsOnly.StartsWith("1"))
+            {
+                digitsOnly = digitsOnly.Substring(1);
+            }
+            
+            // Return just the 10-digit number for consistent comparison
+            return digitsOnly;
         }
     }
 }
