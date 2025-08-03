@@ -114,18 +114,16 @@ const VoterStagingImport: React.FC<VoterStagingImportProps> = ({ onComplete, exi
 
   const fetchAvailableTags = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/votertags`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-      
-      if (response.ok) {
-        const tags = await response.json();
-        setAvailableTags(tags);
-      }
+      const tags = await ApiErrorHandler.makeAuthenticatedRequest(
+        `${API_BASE_URL}/api/votertags`,
+        {
+          method: 'GET'
+        }
+      );
+      setAvailableTags(tags);
     } catch (err) {
       console.error('Failed to fetch tags:', err);
+      // Don't show error to user since tags are optional
     }
   };
   
