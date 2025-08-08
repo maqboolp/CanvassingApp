@@ -66,6 +66,6 @@ static_sites:
   envs:
   - key: REACT_APP_API_URL
     scope: BUILD_TIME
-    value: ${APP_URL}/api
+    value: https://robin-litaker-png8l.ondigitalocean.app/api
   routes:
   - path: /
