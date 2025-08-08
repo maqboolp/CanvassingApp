@@ -1,0 +1,61 @@
+alerts:
+- rule: DEPLOYMENT_FAILED
+- rule: DOMAIN_FAILED
+databases:
+- cluster_name: t4h-db
+  db_name: Robin_Litaker
+  db_user: doadmin
+  engine: PG
+  name: t4h-db
+  production: true
+  version: "17"
+features:
+- buildpack-stack=ubuntu-22
+ingress:
+  rules:
+  - component:
+      name: robin-litaker-frontend
+    match:
+      path:
+        prefix: /
+  - component:
+      name: robin-litaker-backend
+    match:
+      path:
+        prefix: /api
+name: robin-litaker
+region: nyc
+services:
+- dockerfile_path: /Dockerfile
+  envs:
+  - key: DATABASE_URL
+    scope: RUN_TIME
+    value: ${t4h-db.DATABASE_URL}
+  - key: ConnectionStrings__DefaultConnection
+    scope: RUN_AND_BUILD_TIME
+    value: postgresql://doadmin:AVNS_2MqoRv18YSrH0UHlFMJ@t4h-db-do-user-155941-0.i.db.ondigitalocean.com:25060/Robin_Litaker?sslmode=require
+  github:
+    branch: robin-litaker-app
+    deploy_on_push: true
+    repo: maqboolp/CanvassingApp
+  http_port: 8080
+  instance_count: 1
+  instance_size_slug: apps-s-1vcpu-2gb
+  name: robin-litaker-backend
+  source_dir: /
+  routes:
+  - path: /api
+static_sites:
+- dockerfile_path: /Dockerfile.frontend
+  github:
+    branch: robin-litaker-app
+    deploy_on_push: true
+    repo: maqboolp/CanvassingApp
+  name: robin-litaker-frontend
+  source_dir: /
+  envs:
+  - key: REACT_APP_API_URL
+    scope: BUILD_TIME
+    value: ${APP_URL}/api
+  routes:
+  - path: /
