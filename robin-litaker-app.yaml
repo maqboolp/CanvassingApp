@@ -22,6 +22,27 @@ services:
   - key: ConnectionStrings__DefaultConnection
     scope: RUN_AND_BUILD_TIME
     value: postgresql://doadmin:AVNS_2MqoRv18YSrH0UHlFMJ@t4h-db-do-user-155941-0.i.db.ondigitalocean.com:25060/Robin_Litaker?sslmode=require
+  - key: JwtSettings__Secret
+    scope: RUN_TIME
+    value: robin-litaker-super-secret-jwt-key-must-be-at-least-32-characters-long
+  - key: JwtSettings__Issuer
+    scope: RUN_TIME
+    value: ${APP_URL}
+  - key: JwtSettings__Audience
+    scope: RUN_TIME
+    value: ${APP_URL}
+  - key: Frontend__BaseUrl
+    scope: RUN_TIME
+    value: ${APP_URL}
+  - key: Backend__BaseUrl
+    scope: RUN_TIME
+    value: ${APP_URL}/api
+  - key: EmailSettings__FromEmail
+    scope: RUN_TIME
+    value: noreply@robinlitaker.com
+  - key: EmailSettings__FromName
+    scope: RUN_TIME
+    value: Robin Litaker Campaign
   github:
     branch: robin-litaker-app
     deploy_on_push: true
