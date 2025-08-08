@@ -11,18 +11,6 @@ databases:
   version: "17"
 features:
 - buildpack-stack=ubuntu-22
-ingress:
-  rules:
-  - component:
-      name: robin-litaker-frontend
-    match:
-      path:
-        prefix: /
-  - component:
-      name: robin-litaker-backend
-    match:
-      path:
-        prefix: /api
 name: robin-litaker
 region: nyc
 services:
@@ -47,6 +35,7 @@ services:
   - path: /api
 static_sites:
 - dockerfile_path: /Dockerfile.frontend
+  output_dir: /usr/share/nginx/html
   github:
     branch: robin-litaker-app
     deploy_on_push: true
