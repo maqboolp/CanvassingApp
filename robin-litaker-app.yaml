@@ -16,7 +16,6 @@ ingress:
   - component:
       name: robin-litaker
     match:
-      authority: {}
       path:
         prefix: /
 name: robin-litaker
