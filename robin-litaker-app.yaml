@@ -11,6 +11,14 @@ databases:
   version: "17"
 features:
 - buildpack-stack=ubuntu-22
+ingress:
+  rules:
+  - component:
+      name: robin-litaker
+    match:
+      authority: {}
+      path:
+        prefix: /
 name: robin-litaker
 region: nyc
 services:
@@ -36,7 +44,7 @@ services:
     value: ${APP_URL}
   - key: Backend__BaseUrl
     scope: RUN_TIME
-    value: ${APP_URL}/api
+    value: ${APP_URL}
   - key: EmailSettings__FromEmail
     scope: RUN_TIME
     value: noreply@robinlitaker.com
@@ -50,22 +58,5 @@ services:
   http_port: 8080
   instance_count: 1
   instance_size_slug: apps-s-1vcpu-2gb
-  name: robin-litaker-backend
+  name: robin-litaker
   source_dir: /
-  routes:
-  - path: /api
-static_sites:
-- dockerfile_path: /Dockerfile.frontend
-  output_dir: /usr/share/nginx/html
-  github:
-    branch: robin-litaker-app
-    deploy_on_push: true
-    repo: maqboolp/CanvassingApp
-  name: robin-litaker-frontend
-  source_dir: /
-  envs:
-  - key: REACT_APP_API_URL
-    scope: BUILD_TIME
-    value: https://robin-litaker-png8l.ondigitalocean.app/api
-  routes:
-  - path: /
