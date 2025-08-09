@@ -226,8 +226,9 @@ namespace HooverCanvassingApi.Controllers
             }
         }
 
-        // Self-registration (public endpoint)
+        // Self-registration (Admin/SuperAdmin only - secured to prevent unauthorized registrations)
         [HttpPost("self-register")]
+        [Authorize(Roles = "Admin,SuperAdmin")]
         public async Task<ActionResult> SelfRegister([FromBody] SelfRegistrationRequest request)
         {
             try

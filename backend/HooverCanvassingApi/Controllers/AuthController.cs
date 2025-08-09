@@ -140,6 +140,7 @@ namespace HooverCanvassingApi.Controllers
         }
 
         [HttpPost("register")]
+        [Authorize(Roles = "Admin,SuperAdmin")]
         public async Task<ActionResult<ApiResponse<AuthUserDto>>> Register([FromBody] RegisterRequest request)
         {
             try
