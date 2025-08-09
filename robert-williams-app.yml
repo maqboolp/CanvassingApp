@@ -1,0 +1,227 @@
+# DigitalOcean App Platform Deployment Template
+# This is the master template for deploying canvassing apps
+# 
+# USAGE:
+# 1. Copy this file and rename it to [candidate-name]-app.yaml
+# 2. Replace all placeholders marked with ${REPLACE_...}
+# 3. Create database: doctl databases db create [cluster-id] ${REPLACE_DB_NAME}
+# 4. Deploy: doctl apps create --spec [candidate-name]-app.yaml
+#
+# PLACEHOLDERS TO REPLACE:
+# - ${REPLACE_APP_NAME} - e.g., "robin-litaker"
+# - ${REPLACE_DB_NAME} - e.g., "Robin_Litaker" 
+# - ${REPLACE_BRANCH} - Git branch name (usually same as app name + "-app")
+# - ${REPLACE_JWT_SECRET} - Generate a secure 32+ character secret
+# - ${Robert Williams} - e.g., "Robin Litaker"
+# - ${REPLACE_CAMPAIGN_NAME} - e.g., "Robin for Alabama House"
+# - ${REPLACE_CAMPAIGN_EMAIL} - e.g., "info@robinlitaker.com"
+# - ${REPLACE_OFFICE} - e.g., "Alabama House District 12"
+# - ${REPLACE_JURISDICTION} - e.g., "Alabama"
+# - ${REPLACE_ELECTION_DATE} - e.g., "November 5, 2026"
+# - ${REPLACE_LOGO_FILE} - Logo filename in /frontend/public/ (or use t4h-logo.png)
+#
+# IMPORTANT SECURITY NOTE:
+# Database credentials are automatically injected via ${t4h-db.DATABASE_URL}
+# NEVER hardcode database passwords in these files!
+
+# Database binding - securely connects to existing cluster
+databases:
+- cluster_name: t4h-db
+  db_name: robertwilliams
+  db_user: doadmin
+  engine: PG
+  name: t4h-db
+  production: true
+  version: "17"
+
+ingress:
+  rules:
+  - component:
+      name: api
+      preserve_path_prefix: true
+    match:
+      path:
+        prefix: /api
+  - component:
+      name: frontend
+    match:
+      path:
+        prefix: /
+name: robert-williams
+region: nyc
+services:
+- dockerfile_path: /Dockerfile
+  envs:
+  # ASP.NET Core Settings
+  - key: ASPNETCORE_ENVIRONMENT
+    scope: RUN_TIME
+    value: Production
+  - key: ASPNETCORE_URLS
+    scope: RUN_TIME
+    value: http://+:8080
+    
+  # Database Connection - Uses DigitalOcean's secure connection binding with .NET format
+  - key: ConnectionStrings__DefaultConnection
+    scope: RUN_TIME
+    value: Host=${t4h-db.HOSTNAME};Port=${t4h-db.PORT};Username=${t4h-db.USERNAME};Password=${t4h-db.PASSWORD};Database=${t4h-db.DATABASE};SSL Mode=Require;Trust Server Certificate=true;
+    
+  # JWT Authentication
+  - key: JwtSettings__Secret
+    scope: RUN_TIME
+    value: 4OlmIkGMuiYjxJGK+Cc5dvwHxCqlu1MvQOiGY9UdKho=
+  - key: JwtSettings__Issuer
+    scope: RUN_TIME
+    value: ${APP_URL}
+  - key: JwtSettings__Audience
+    scope: RUN_TIME
+    value: ${APP_URL}
+  - key: JwtSettings__ExpirationMinutes
+    scope: RUN_TIME
+    value: "480"
+    
+  # Email Settings
+  - key: EmailSettings__FromEmail
+    scope: RUN_TIME
+    value: info@robertwilliams.com
+  - key: EmailSettings__FromName
+    scope: RUN_TIME
+    value: Robert Williams
+    
+  # Frontend URL
+  - key: FRONTEND_URL
+    scope: RUN_TIME
+    value: ${APP_URL}
+    
+  # Campaign Configuration
+  - key: CAMPAIGN__CANDIDATENAME
+    scope: RUN_TIME
+    value: Robert Williams
+  - key: CAMPAIGN__CAMPAIGNNAME
+    scope: RUN_TIME
+    value: Robert Williams for place 
+  - key: CAMPAIGN__OFFICE
+    scope: RUN_TIME
+    value: Hoover City Council
+  - key: CAMPAIGN__JURISDICTION
+    scope: RUN_TIME
+    value: Place 3
+  - key: CAMPAIGN__PAIDFORBY
+    scope: RUN_TIME
+    value: Paid for by Robert Williams
+  - key: CAMPAIGN__ELECTIONDATE
+    scope: RUN_TIME
+    value: August 26th, 2025
+  - key: Campaign__DefaultCanvassingScript
+    scope: RUN_TIME
+    value: "Hi, my name is [Volunteer Name] and I'm a volunteer for ${Robert Williams}'s campaign. I'd like to take just a moment to talk to you about the upcoming election. ${Robert Williams} is running to bring fresh perspectives and innovative solutions to our community. Are you planning to vote in the upcoming election?"
+    
+  # Email Configuration
+  - key: EMAIL_FROM_ADDRESS
+    scope: RUN_TIME
+    value: info@robertwilliams.com
+  - key: SENDGRID_API_KEY
+    scope: RUN_TIME
+    value: ""  # Add SendGrid API key if using email features
+    
+  # Twilio Configuration (for SMS and Voice)
+  - key: TWILIO__ACCOUNTSID
+    scope: RUN_TIME
+    value: ""  # Add Twilio Account SID if using SMS/Voice features
+  - key: TWILIO__AUTHTOKEN
+    scope: RUN_TIME
+    value: ""  # Add Twilio Auth Token if using SMS/Voice features
+  - key: TWILIO__MESSAGINGSERVICESID
+    scope: RUN_TIME
+    value: ""  # Add Twilio Messaging Service ID if using SMS
+  - key: Twilio__FromPhoneNumber
+    scope: RUN_TIME
+    value: ""  # Add Twilio phone number if using voice calls
+    
+  # Opt-In Settings (for SMS campaigns)
+  - key: OPTINSETTINGS__CAMPAIGNPHONE
+    scope: RUN_TIME
+    value: ""  # Add campaign phone number for SMS opt-in
+  - key: OPTINSETTINGS__OPTINWEBSITEURL
+    scope: RUN_TIME
+    value: ${APP_URL}/opt-in
+  - key: OPTINSETTINGS__CAMPAIGNNAME
+    scope: RUN_TIME
+    value: Robert Williams
+  - key: OPTINSETTINGS__DEFAULTINVITATIONMESSAGE
+    scope: RUN_TIME
+    value: "Robert Williams: Want campaign updates? Text JOIN to reply or visit ${APP_URL}/opt-in. Reply STOP to opt out."
+  - key: OPTINSETTINGS__WELCOMEMESSAGE
+    scope: RUN_TIME
+    value: "Welcome to Robert Williams's campaign! You've successfully opted in to receive updates. Reply STOP to opt out at any time."
+  - key: OPTINSETTINGS__OPTOUTMESSAGE
+    scope: RUN_TIME
+    value: "You have been unsubscribed from Robert Williams messages. Reply JOIN to resubscribe."
+  - key: OPTINSETTINGS__HELPMESSAGE
+    scope: RUN_TIME
+    value: "Robert Williams: Reply STOP to unsubscribe. For support, visit our website. Msg&data rates may apply."
+    
+  # AWS S3/DigitalOcean Spaces (for file storage)
+  - key: AWS__S3__UseS3
+    scope: RUN_TIME
+    value: "true"  # Enable if using file storage
+  - key: AWS__S3__AccessKey
+    scope: RUN_TIME
+    value: ""  # Add DigitalOcean Spaces access key
+  - key: AWS__S3__SecretKey
+    scope: RUN_TIME
+    value: ""  # Add DigitalOcean Spaces secret key
+  - key: AWS__S3__ServiceUrl
+    scope: RUN_TIME
+    value: "https://nyc3.digitaloceanspaces.com"
+  - key: AWS__S3__PublicUrl
+    scope: RUN_TIME
+    value: "https://hoover-canvassing-audio.nyc3.cdn.digitaloceanspaces.com"
+  - key: AWS__S3__BucketName
+    scope: RUN_TIME
+    value: "hoover-canvassing-audio"
+    
+  # Google Maps Configuration
+  - key: GOOGLE_GEOCODING_API_KEY
+    scope: RUN_TIME
+    value: ""  # Add Google Maps API key for geocoding
+    
+  github:
+    branch: robert-williams-app
+    deploy_on_push: true
+    repo: maqboolp/CanvassingApp
+  http_port: 8080
+  instance_count: 1
+  instance_size_slug: apps-s-1vcpu-1gb
+  name: api
+  source_dir: /
+  
+static_sites:
+- build_command: npm run build
+  envs:
+  - key: REACT_APP_API_URL
+    scope: BUILD_TIME
+    value: ${APP_URL}
+  - key: REACT_APP_LOGO_URL
+    scope: BUILD_TIME
+    value: /t4h-logo.png
+  - key: REACT_APP_LOGO_ALT
+    scope: BUILD_TIME
+    value: Robert Williams
+  - key: REACT_APP_TITLE
+    scope: BUILD_TIME
+    value: Robert Williams Portal
+  - key: REACT_APP_CANDIDATE_NAME
+    scope: BUILD_TIME
+    value: ${Robert Williams}
+  - key: REACT_APP_CAMPAIGN_NAME
+    scope: BUILD_TIME
+    value: ${REPLACE_CAMPAIGN_NAME}
+  - key: REACT_APP_CAMPAIGN_TITLE
+    scope: BUILD_TIME
+    value: Robert Williams for place 3
+  github:
+    branch: robert-williams-app
+    repo: maqboolp/CanvassingApp
+  name: frontend
+  output_dir: build
+  source_dir: /frontend
