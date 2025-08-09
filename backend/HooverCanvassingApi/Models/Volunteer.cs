@@ -16,6 +16,9 @@ namespace HooverCanvassingApi.Models
         public DateTime? LastLoginAt { get; set; }
         public DateTime? LastActivity { get; set; }
         
+        // Password management
+        public bool ForcePasswordChange { get; set; } = false;
+        
         public ICollection<Contact> Contacts { get; set; } = new List<Contact>();
     }
 

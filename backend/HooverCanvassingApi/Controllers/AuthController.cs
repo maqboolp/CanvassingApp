@@ -116,7 +116,8 @@ namespace HooverCanvassingApi.Controllers
                     LastName = user.LastName,
                     Role = user.Role.ToString().ToLower(),
                     Token = token,
-                    AvatarUrl = GetGravatarUrl(user.Email!)
+                    AvatarUrl = GetGravatarUrl(user.Email!),
+                    ForcePasswordChange = user.ForcePasswordChange
                 };
 
                 _logger.LogInformation("User {Email} logged in successfully", request.Email);
@@ -488,6 +489,14 @@ namespace HooverCanvassingApi.Controllers
                     });
                 }
 
+                // Reset force password change flag if it was set
+                if (user.ForcePasswordChange)
+                {
+                    user.ForcePasswordChange = false;
+                    await _userManager.UpdateAsync(user);
+                    _logger.LogInformation("Force password change flag reset for user {Email}", user.Email);
+                }
+
                 _logger.LogInformation("Password changed successfully for user {Email}", user.Email);
 
                 return Ok(new ApiResponse<string>
@@ -796,6 +805,7 @@ Time sent: " + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss UTC");
         public string Role { get; set; } = string.Empty;
         public string Token { get; set; } = string.Empty;
         public string AvatarUrl { get; set; } = string.Empty;
+        public bool ForcePasswordChange { get; set; } = false;
     }
 
     public class ChangePasswordRequest

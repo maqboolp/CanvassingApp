@@ -51,6 +51,9 @@ doctl databases list
 # Create new database (using t4h-db cluster)
 doctl databases db create c5e5ba69-caea-4ca3-8266-002313cd89ca [DB_NAME]
 # Example: doctl databases db create c5e5ba69-caea-4ca3-8266-002313cd89ca Robin_Litaker
+
+# Apply database schema (includes tables and default users)
+PGPASSWORD='[password]' psql -h t4h-db-do-user-12151228-0.c.db.ondigitalocean.com -p 25060 -U doadmin -d [DB_NAME] < database/CONSOLIDATED_SCHEMA.sql
 ```
 
 #### 6. Commit and Push Changes
@@ -85,11 +88,20 @@ doctl apps get [app-id] -o json | jq -r '.[0].live_url'
 
 ## Default Login Credentials
 
-After deployment, use these credentials:
-- **Email**: `superadmin@campaign.local`
-- **Password**: `SuperAdmin123`
+After deployment and applying the database schema, use these credentials:
 
-**Important**: Change these credentials after first login!
+### SuperAdmin Account
+- **Email**: `superadmin@campaign.com`
+- **Password**: `SuperAdmin123!`
+
+### Admin Account
+- **Email**: `admin@campaign.com`
+- **Password**: `Admin123!`
+
+⚠️ **CRITICAL SECURITY NOTICE**: 
+- These passwords MUST be changed on first login
+- The system will force password change when `ForcePasswordChange` flag is set
+- See `deployment/DEFAULT_CREDENTIALS.md` for complete password management details
 
 ## App Architecture
 

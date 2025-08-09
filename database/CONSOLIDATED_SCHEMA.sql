@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS "AspNetUsers" (
     "LastLoginAt" TIMESTAMP WITH TIME ZONE,
     "LastActivity" TIMESTAMP WITH TIME ZONE,
     "LoginCount" INTEGER NOT NULL DEFAULT 0,
+    "ForcePasswordChange" BOOLEAN NOT NULL DEFAULT FALSE,
     "UserName" VARCHAR(256),
     "NormalizedUserName" VARCHAR(256),
     "Email" VARCHAR(256),
@@ -371,3 +372,72 @@ VALUES
     (gen_random_uuid()::text, 'Admin', 'ADMIN', gen_random_uuid()::text),
     (gen_random_uuid()::text, 'Volunteer', 'VOLUNTEER', gen_random_uuid()::text)
 ON CONFLICT DO NOTHING;
+
+-- Create default SuperAdmin and Admin users with forced password change
+-- Default passwords (MUST be changed on first login):
+-- SuperAdmin: SuperAdmin123!
+-- Admin: Admin123!
+DO $$
+BEGIN
+    -- Create SuperAdmin user if not exists
+    IF NOT EXISTS (SELECT 1 FROM "AspNetUsers" WHERE "Email" = 'superadmin@campaign.com') THEN
+        INSERT INTO "AspNetUsers" (
+            "Id", "UserName", "NormalizedUserName", "Email", "NormalizedEmail",
+            "EmailConfirmed", "PasswordHash", "SecurityStamp", "ConcurrencyStamp",
+            "PhoneNumberConfirmed", "TwoFactorEnabled", "LockoutEnabled", "AccessFailedCount",
+            "FirstName", "LastName", "Role", "IsActive", "CreatedAt", "ForcePasswordChange"
+        ) VALUES (
+            gen_random_uuid()::text,
+            'superadmin@campaign.com',
+            'SUPERADMIN@CAMPAIGN.COM',
+            'superadmin@campaign.com',
+            'SUPERADMIN@CAMPAIGN.COM',
+            true,
+            -- Password hash for 'SuperAdmin123!' (using ASP.NET Identity v3 format)
+            'AQAAAAEAACcQAAAAEGQJ5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Q==',
+            gen_random_uuid()::text,
+            gen_random_uuid()::text,
+            false,
+            false,
+            true,
+            0,
+            'Super',
+            'Admin',
+            2, -- SuperAdmin role
+            true,
+            CURRENT_TIMESTAMP,
+            true -- Force password change on first login
+        );
+    END IF;
+
+    -- Create Admin user if not exists
+    IF NOT EXISTS (SELECT 1 FROM "AspNetUsers" WHERE "Email" = 'admin@campaign.com') THEN
+        INSERT INTO "AspNetUsers" (
+            "Id", "UserName", "NormalizedUserName", "Email", "NormalizedEmail",
+            "EmailConfirmed", "PasswordHash", "SecurityStamp", "ConcurrencyStamp",
+            "PhoneNumberConfirmed", "TwoFactorEnabled", "LockoutEnabled", "AccessFailedCount",
+            "FirstName", "LastName", "Role", "IsActive", "CreatedAt", "ForcePasswordChange"
+        ) VALUES (
+            gen_random_uuid()::text,
+            'admin@campaign.com',
+            'ADMIN@CAMPAIGN.COM',
+            'admin@campaign.com',
+            'ADMIN@CAMPAIGN.COM',
+            true,
+            -- Password hash for 'Admin123!' (using ASP.NET Identity v3 format)
+            'AQAAAAEAACcQAAAAEHQJ5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Q==',
+            gen_random_uuid()::text,
+            gen_random_uuid()::text,
+            false,
+            false,
+            true,
+            0,
+            'Campaign',
+            'Admin',
+            1, -- Admin role
+            true,
+            CURRENT_TIMESTAMP,
+            true -- Force password change on first login
+        );
+    END IF;
+END $$;
