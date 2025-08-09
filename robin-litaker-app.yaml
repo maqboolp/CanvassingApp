@@ -1,3 +1,11 @@
+databases:
+- cluster_name: t4h-db
+  db_name: Robin_Litaker
+  db_user: doadmin
+  engine: PG
+  name: t4h-db
+  production: true
+  version: "17"
 ingress:
   rules:
   - component:
