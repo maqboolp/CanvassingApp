@@ -63,7 +63,7 @@ static_sites:
     value: https://robin-litaker-png8l.ondigitalocean.app
   - key: REACT_APP_LOGO_URL
     scope: BUILD_TIME
-    value: /t4h-logo.png
+    value: /robin-litaker-logo.png
   - key: REACT_APP_LOGO_ALT
     scope: BUILD_TIME
     value: Robin Litaker Campaign
