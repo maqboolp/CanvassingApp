@@ -126,7 +126,7 @@ services:
   # AWS S3/DigitalOcean Spaces (for file storage)
   - key: AWS__S3__UseS3
     scope: RUN_TIME
-    value: "false"
+    value: "true"
   - key: AWS__S3__AccessKey
     scope: RUN_TIME
     value: ""
@@ -135,13 +135,13 @@ services:
     value: ""
   - key: AWS__S3__ServiceUrl
     scope: RUN_TIME
-    value: ""
+    value: "https://nyc3.digitaloceanspaces.com"
   - key: AWS__S3__PublicUrl
     scope: RUN_TIME
-    value: ""
+    value: "https://hoover-canvassing-audio.nyc3.cdn.digitaloceanspaces.com"
   - key: AWS__S3__BucketName
     scope: RUN_TIME
-    value: ""
+    value: "hoover-canvassing-audio"
   
   # Google Maps Configuration
   - key: GOOGLE_GEOCODING_API_KEY
