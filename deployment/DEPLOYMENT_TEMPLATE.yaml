@@ -59,10 +59,10 @@ services:
     scope: RUN_TIME
     value: http://+:8080
     
-  # Database Connection - Uses DigitalOcean's secure connection binding
+  # Database Connection - Uses DigitalOcean's secure connection binding with .NET format
   - key: ConnectionStrings__DefaultConnection
     scope: RUN_TIME
-    value: ${t4h-db.DATABASE_URL}
+    value: Host=${t4h-db.HOSTNAME};Port=${t4h-db.PORT};Username=${t4h-db.USERNAME};Password=${t4h-db.PASSWORD};Database=${t4h-db.DATABASE};SSL Mode=Require;Trust Server Certificate=true;
     
   # JWT Authentication
   - key: JwtSettings__Secret
