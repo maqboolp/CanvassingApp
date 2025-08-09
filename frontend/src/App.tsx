@@ -17,6 +17,7 @@ import PrivacyPolicy from './components/PrivacyPolicy';
 import TermsOfService from './components/TermsOfService';
 import PhoneBanking from './components/PhoneBanking';
 import PhoneContactsList from './components/PhoneContactsList';
+import ChangePassword from './components/ChangePassword';
 import ErrorBoundary from './components/ErrorBoundary';
 import ErrorNotification from './components/ErrorNotification';
 import ErrorDebugPanel from './components/ErrorDebugPanel';
@@ -117,6 +118,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [requiresPasswordChange, setRequiresPasswordChange] = useState(false);
 
   useEffect(() => {
     // Set document title based on customer configuration
@@ -127,6 +129,10 @@ function App() {
     if (currentUser) {
       setUser(currentUser);
       errorLoggingService.setUserId(currentUser.id);
+      // Check if user needs to change password
+      if (currentUser.forcePasswordChange) {
+        setRequiresPasswordChange(true);
+      }
     }
     setLoading(false);
   }, []);
@@ -139,6 +145,11 @@ function App() {
       const user = await authService.login(credentials);
       setUser(user);
       errorLoggingService.setUserId(user.id);
+      
+      // Check if user needs to change password
+      if (user.forcePasswordChange) {
+        setRequiresPasswordChange(true);
+      }
     } catch (error) {
       setLoginError(error instanceof Error ? error.message : 'Login failed');
     } finally {
@@ -146,9 +157,22 @@ function App() {
     }
   };
 
+  const handlePasswordChanged = () => {
+    // Reset the force password change flag
+    setRequiresPasswordChange(false);
+    if (user) {
+      // Update the user object to reflect that password change is no longer required
+      const updatedUser = { ...user, forcePasswordChange: false };
+      setUser(updatedUser);
+      // Update stored user data
+      localStorage.setItem('auth_user', JSON.stringify(updatedUser));
+    }
+  };
+
   const handleLogout = () => {
     authService.logout();
     setUser(null);
+    setRequiresPasswordChange(false);
     errorLoggingService.setUserId(undefined);
   };
 
@@ -245,12 +269,29 @@ function App() {
             element={<TermsOfService />}
           />
 
+          {/* Password Change Route - Must be before protected routes */}
+          <Route
+            path="/change-password"
+            element={
+              user ? (
+                <ChangePassword 
+                  onPasswordChanged={handlePasswordChanged}
+                  isForced={requiresPasswordChange}
+                />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+
           {/* Protected routes */}
           <Route
             path="/"
             element={
               user ? (
-                user.role === 'admin' || user.role === 'superadmin' ? (
+                requiresPasswordChange ? (
+                  <Navigate to="/change-password" replace />
+                ) : user.role === 'admin' || user.role === 'superadmin' ? (
                   <AdminDashboard user={user} onLogout={handleLogout} />
                 ) : (
                   <Dashboard user={user} onLogout={handleLogout} />
@@ -265,7 +306,11 @@ function App() {
             path="/dashboard"
             element={
               user ? (
-                <Dashboard user={user} onLogout={handleLogout} />
+                requiresPasswordChange ? (
+                  <Navigate to="/change-password" replace />
+                ) : (
+                  <Dashboard user={user} onLogout={handleLogout} />
+                )
               ) : (
                 <Navigate to="/login" replace />
               )
@@ -276,7 +321,11 @@ function App() {
             path="/admin"
             element={
               user && (user.role === 'admin' || user.role === 'superadmin') ? (
-                <AdminDashboard user={user} onLogout={handleLogout} />
+                requiresPasswordChange ? (
+                  <Navigate to="/change-password" replace />
+                ) : (
+                  <AdminDashboard user={user} onLogout={handleLogout} />
+                )
               ) : (
                 <Navigate to="/" replace />
               )
@@ -287,7 +336,11 @@ function App() {
             path="/phone-banking"
             element={
               user ? (
-                <PhoneBanking user={user} />
+                requiresPasswordChange ? (
+                  <Navigate to="/change-password" replace />
+                ) : (
+                  <PhoneBanking user={user} />
+                )
               ) : (
                 <Navigate to="/login" replace />
               )
@@ -298,7 +351,11 @@ function App() {
             path="/phone-contacts"
             element={
               user ? (
-                <PhoneContactsList />
+                requiresPasswordChange ? (
+                  <Navigate to="/change-password" replace />
+                ) : (
+                  <PhoneContactsList />
+                )
               ) : (
                 <Navigate to="/login" replace />
               )

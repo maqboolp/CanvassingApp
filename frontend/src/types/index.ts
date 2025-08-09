@@ -164,6 +164,7 @@ export interface AuthUser {
   role: 'volunteer' | 'admin' | 'superadmin';
   token: string;
   avatarUrl: string;
+  forcePasswordChange?: boolean;
 }
 
 export interface LoginRequest {
