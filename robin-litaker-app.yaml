@@ -54,6 +54,100 @@ services:
   - key: FRONTEND_URL
     scope: RUN_TIME
     value: https://robin-litaker-png8l.ondigitalocean.app
+  
+  # Campaign Configuration
+  - key: CAMPAIGN__CANDIDATENAME
+    scope: RUN_TIME
+    value: Robin Litaker
+  - key: CAMPAIGN__CAMPAIGNNAME
+    scope: RUN_TIME
+    value: Robin Litaker for Office
+  - key: CAMPAIGN__OFFICE
+    scope: RUN_TIME
+    value: Alabama House District
+  - key: CAMPAIGN__JURISDICTION
+    scope: RUN_TIME
+    value: Alabama
+  - key: CAMPAIGN__PAIDFORBY
+    scope: RUN_TIME
+    value: Paid for by Robin Litaker Campaign
+  - key: CAMPAIGN__ELECTIONDATE
+    scope: RUN_TIME
+    value: November 5, 2026
+  - key: Campaign__DefaultCanvassingScript
+    scope: RUN_TIME
+    value: "Hi, my name is [Volunteer Name] and I'm a volunteer for Robin Litaker's campaign. I'd like to take just a moment to talk to you about the upcoming election. Robin is running to bring fresh perspectives and innovative solutions to our community. Are you planning to vote in the upcoming election?"
+  
+  # Email Configuration
+  - key: EMAIL_FROM_ADDRESS
+    scope: RUN_TIME
+    value: info@robinlitaker.com
+  - key: SENDGRID_API_KEY
+    scope: RUN_TIME
+    value: ""
+  
+  # Twilio Configuration (leave empty if not using)
+  - key: TWILIO__ACCOUNTSID
+    scope: RUN_TIME
+    value: ""
+  - key: TWILIO__AUTHTOKEN
+    scope: RUN_TIME
+    value: ""
+  - key: TWILIO__MESSAGINGSERVICESID
+    scope: RUN_TIME
+    value: ""
+  - key: Twilio__FromPhoneNumber
+    scope: RUN_TIME
+    value: ""
+  
+  # Opt-In Settings (for SMS campaigns)
+  - key: OPTINSETTINGS__CAMPAIGNPHONE
+    scope: RUN_TIME
+    value: ""
+  - key: OPTINSETTINGS__OPTINWEBSITEURL
+    scope: RUN_TIME
+    value: ${APP_URL}/opt-in
+  - key: OPTINSETTINGS__CAMPAIGNNAME
+    scope: RUN_TIME
+    value: Robin Litaker Campaign
+  - key: OPTINSETTINGS__DEFAULTINVITATIONMESSAGE
+    scope: RUN_TIME
+    value: "Robin Litaker Campaign: Want campaign updates? Text JOIN to reply or visit ${APP_URL}/opt-in. Reply STOP to opt out."
+  - key: OPTINSETTINGS__WELCOMEMESSAGE
+    scope: RUN_TIME
+    value: "Welcome to Robin Litaker's campaign! You've successfully opted in to receive updates. Reply STOP to opt out at any time."
+  - key: OPTINSETTINGS__OPTOUTMESSAGE
+    scope: RUN_TIME
+    value: "You have been unsubscribed from Robin Litaker messages. Reply JOIN to resubscribe."
+  - key: OPTINSETTINGS__HELPMESSAGE
+    scope: RUN_TIME
+    value: "Robin Litaker Campaign: Reply STOP to unsubscribe. For support, visit our website. Msg&data rates may apply."
+  
+  # AWS S3/DigitalOcean Spaces (for file storage)
+  - key: AWS__S3__UseS3
+    scope: RUN_TIME
+    value: "false"
+  - key: AWS__S3__AccessKey
+    scope: RUN_TIME
+    value: ""
+  - key: AWS__S3__SecretKey
+    scope: RUN_TIME
+    value: ""
+  - key: AWS__S3__ServiceUrl
+    scope: RUN_TIME
+    value: ""
+  - key: AWS__S3__PublicUrl
+    scope: RUN_TIME
+    value: ""
+  - key: AWS__S3__BucketName
+    scope: RUN_TIME
+    value: ""
+  
+  # Google Maps Configuration
+  - key: GOOGLE_GEOCODING_API_KEY
+    scope: RUN_TIME
+    value: ""
+  
   github:
     branch: robin-litaker-app
     deploy_on_push: true
