@@ -239,7 +239,6 @@ npm start
 ## 📚 Documentation
 
 - [Deployment Guide](deployment/DEPLOYMENT_GUIDE.md)
-- [Default Credentials](deployment/DEFAULT_CREDENTIALS.md)
 - [Deployment Template](deployment/DEPLOYMENT_TEMPLATE.yaml)
 
 ## 🤝 Support
