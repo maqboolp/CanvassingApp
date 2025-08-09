@@ -1,20 +1,13 @@
-alerts:
-- rule: DEPLOYMENT_FAILED
-- rule: DOMAIN_FAILED
-databases:
-- cluster_name: t4h-db
-  db_name: Robin_Litaker
-  db_user: doadmin
-  engine: PG
-  name: t4h-db
-  production: true
-  version: "17"
-features:
-- buildpack-stack=ubuntu-22
 ingress:
   rules:
   - component:
-      name: robin-litaker
+      name: api
+      preserve_path_prefix: true
+    match:
+      path:
+        prefix: /api
+  - component:
+      name: frontend
     match:
       path:
         prefix: /
@@ -23,39 +16,72 @@ region: nyc
 services:
 - dockerfile_path: /Dockerfile
   envs:
-  - key: DATABASE_URL
+  - key: ASPNETCORE_ENVIRONMENT
     scope: RUN_TIME
-    value: ${t4h-db.DATABASE_URL}
+    value: Production
+  - key: ASPNETCORE_URLS
+    scope: RUN_TIME
+    value: http://+:8080
   - key: ConnectionStrings__DefaultConnection
-    scope: RUN_AND_BUILD_TIME
-    value: postgresql://doadmin:AVNS_2MqoRv18YSrH0UHlFMJ@t4h-db-do-user-155941-0.i.db.ondigitalocean.com:25060/Robin_Litaker?sslmode=require
+    scope: RUN_TIME
+    value: Host=t4h-db-do-user-155941-0.i.db.ondigitalocean.com;Port=25060;Username=doadmin;Password=AVNS_2MqoRv18YSrH0UHlFMJ;Database=Robin_Litaker;SSL Mode=Require;Trust Server Certificate=true;
   - key: JwtSettings__Secret
     scope: RUN_TIME
     value: robin-litaker-super-secret-jwt-key-must-be-at-least-32-characters-long
   - key: JwtSettings__Issuer
     scope: RUN_TIME
-    value: ${APP_URL}
+    value: https://robin-litaker-png8l.ondigitalocean.app
   - key: JwtSettings__Audience
     scope: RUN_TIME
-    value: ${APP_URL}
-  - key: Frontend__BaseUrl
+    value: https://robin-litaker-png8l.ondigitalocean.app
+  - key: JwtSettings__ExpirationMinutes
     scope: RUN_TIME
-    value: ${APP_URL}
-  - key: Backend__BaseUrl
-    scope: RUN_TIME
-    value: ${APP_URL}
+    value: "480"
   - key: EmailSettings__FromEmail
     scope: RUN_TIME
     value: noreply@robinlitaker.com
   - key: EmailSettings__FromName
     scope: RUN_TIME
     value: Robin Litaker Campaign
+  - key: FRONTEND_URL
+    scope: RUN_TIME
+    value: https://robin-litaker-png8l.ondigitalocean.app
   github:
     branch: robin-litaker-app
     deploy_on_push: true
     repo: maqboolp/CanvassingApp
   http_port: 8080
   instance_count: 1
-  instance_size_slug: apps-s-1vcpu-2gb
-  name: robin-litaker
+  instance_size_slug: apps-s-1vcpu-1gb
+  name: api
   source_dir: /
+static_sites:
+- build_command: npm run build
+  envs:
+  - key: REACT_APP_API_URL
+    scope: BUILD_TIME
+    value: https://robin-litaker-png8l.ondigitalocean.app
+  - key: REACT_APP_LOGO_URL
+    scope: BUILD_TIME
+    value: /t4h-logo.png
+  - key: REACT_APP_LOGO_ALT
+    scope: BUILD_TIME
+    value: Robin Litaker Campaign
+  - key: REACT_APP_TITLE
+    scope: BUILD_TIME
+    value: Robin Litaker Campaign Portal
+  - key: REACT_APP_CANDIDATE_NAME
+    scope: BUILD_TIME
+    value: Robin Litaker
+  - key: REACT_APP_CAMPAIGN_NAME
+    scope: BUILD_TIME
+    value: Robin Litaker Campaign
+  - key: REACT_APP_CAMPAIGN_TITLE
+    scope: BUILD_TIME
+    value: Robin Litaker for Office
+  github:
+    branch: robin-litaker-app
+    repo: maqboolp/CanvassingApp
+  name: frontend
+  output_dir: build
+  source_dir: /frontend
