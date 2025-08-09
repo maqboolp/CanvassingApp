@@ -234,6 +234,35 @@ namespace HooverCanvassingApi.Controllers
             return NoContent();
         }
 
+        [HttpGet("{id}/campaigns")]
+        public async Task<ActionResult<IEnumerable<object>>> GetCampaignsUsingRecording(int id)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
+
+            var recording = await _context.VoiceRecordings
+                .Include(vr => vr.Campaigns)
+                .FirstOrDefaultAsync(vr => vr.Id == id);
+
+            if (recording == null)
+                return NotFound();
+
+            // Check access permissions
+            if (userRole != "SuperAdmin" && recording.CreatedById != userId)
+                return Forbid();
+
+            var campaigns = recording.Campaigns.Select(c => new
+            {
+                c.Id,
+                c.Name,
+                c.Status,
+                c.CreatedAt,
+                c.SentAt
+            }).ToList();
+
+            return Ok(campaigns);
+        }
+
         [HttpDelete("{id}")]
         public async Task<ActionResult> DeleteVoiceRecording(int id)
         {
@@ -251,9 +280,16 @@ namespace HooverCanvassingApi.Controllers
             if (userRole != "SuperAdmin" && recording.CreatedById != userId)
                 return Forbid();
 
-            // Check if recording is in use
+            // Check if recording is in use and return detailed error
             if (recording.Campaigns.Any())
-                return BadRequest("Cannot delete recording that is used in campaigns");
+            {
+                var campaignNames = recording.Campaigns.Select(c => c.Name).ToList();
+                var errorMessage = $"Cannot delete recording. It is being used by {campaignNames.Count} campaign(s): {string.Join(", ", campaignNames.Take(3))}";
+                if (campaignNames.Count > 3)
+                    errorMessage += $" and {campaignNames.Count - 3} more";
+                
+                return BadRequest(new { message = errorMessage, campaigns = campaignNames });
+            }
 
             try
             {
