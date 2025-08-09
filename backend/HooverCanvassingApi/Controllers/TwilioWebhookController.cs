@@ -180,11 +180,14 @@ namespace HooverCanvassingApi.Controllers
                         _logger.LogInformation($"Fallback encoded URL: {audioUrl}");
                     }
                     
-                    // Add a fallback message in case the audio fails to play
+                    // Play the audio file with repeat option
                     twiml = $@"<?xml version=""1.0"" encoding=""UTF-8""?>
 <Response>
-    <Play loop=""1"">{System.Security.SecurityElement.Escape(audioUrl)}</Play>
-    <Say voice=""alice"">If you did not hear the message, please contact us. Thank you.</Say>
+    <Gather numDigits=""1"" action=""/api/twiliowebook/handle-playback-input"" method=""POST"" timeout=""3"">
+        <Play loop=""1"">{System.Security.SecurityElement.Escape(audioUrl)}</Play>
+        <Say voice=""alice"">Press 1 to listen again, Press 9 to hang up.</Say>
+    </Gather>
+    <Hangup/>
 </Response>";
                 }
                 else
@@ -198,12 +201,14 @@ namespace HooverCanvassingApi.Controllers
                     // Escape XML special characters
                     message = System.Security.SecurityElement.Escape(message);
 
-                    // Generate TwiML for the robo call with text-to-speech
+                    // Generate TwiML for the robo call with text-to-speech and repeat option
                     twiml = $@"<?xml version=""1.0"" encoding=""UTF-8""?>
 <Response>
-    <Say voice=""alice"">{message}</Say>
-    <Pause length=""1""/>
-    <Say voice=""alice"">Thank you for your time. Goodbye.</Say>
+    <Gather numDigits=""1"" action=""/api/twiliowebook/handle-playback-input"" method=""POST"" timeout=""3"">
+        <Say voice=""alice"">{message}</Say>
+        <Say voice=""alice"">Press 1 to listen again, Press 9 to hang up.</Say>
+    </Gather>
+    <Hangup/>
 </Response>";
 
                     _logger.LogInformation($"Voice response generated for message: {message}");
@@ -306,6 +311,265 @@ namespace HooverCanvassingApi.Controllers
             
             // Return just the 10-digit number for consistent comparison
             return digitsOnly;
+        }
+
+        [HttpPost("incoming-call")]
+        [HttpGet("incoming-call")]
+        public IActionResult IncomingCall()
+        {
+            try
+            {
+                var fromNumber = Request.Form["From"].ToString();
+                if (string.IsNullOrEmpty(fromNumber) && Request.Query.ContainsKey("From"))
+                {
+                    fromNumber = Request.Query["From"].ToString();
+                }
+
+                _logger.LogInformation($"Incoming call from: {fromNumber}");
+
+                // Generate TwiML for IVR menu
+                var twiml = @"<?xml version=""1.0"" encoding=""UTF-8""?>
+<Response>
+    <Gather numDigits=""1"" action=""/api/twiliowebook/handle-ivr-input"" method=""POST"" timeout=""10"">
+        <Say voice=""alice"">Thank you for calling. Press 1 to be removed from our calling list.</Say>
+    </Gather>
+    <Say voice=""alice"">Goodbye.</Say>
+</Response>";
+
+                return Content(twiml, "application/xml");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error handling incoming call");
+                
+                var errorTwiml = @"<?xml version=""1.0"" encoding=""UTF-8""?>
+<Response>
+    <Say voice=""alice"">We're sorry, but we cannot process your request at this time. Please try again later.</Say>
+</Response>";
+                
+                return Content(errorTwiml, "application/xml");
+            }
+        }
+
+        [HttpPost("handle-playback-input")]
+        [HttpGet("handle-playback-input")]
+        public IActionResult HandlePlaybackInput([FromQuery] string message = "", [FromQuery] string audioUrl = "")
+        {
+            try
+            {
+                var digits = Request.Form["Digits"].ToString();
+                if (string.IsNullOrEmpty(digits) && Request.Query.ContainsKey("Digits"))
+                {
+                    digits = Request.Query["Digits"].ToString();
+                }
+                
+                // Get the original message or audio URL from the query parameters
+                if (string.IsNullOrEmpty(message) && Request.Form.ContainsKey("message"))
+                {
+                    message = Request.Form["message"].ToString();
+                }
+                if (string.IsNullOrEmpty(audioUrl) && Request.Form.ContainsKey("audioUrl"))
+                {
+                    audioUrl = Request.Form["audioUrl"].ToString();
+                }
+                
+                _logger.LogInformation($"Playback input received: {digits}");
+
+                string twiml;
+
+                if (digits == "1")
+                {
+                    // Repeat the message
+                    return VoiceResponse(message, audioUrl);
+                }
+                else if (digits == "9")
+                {
+                    // Hang up
+                    twiml = @"<?xml version=""1.0"" encoding=""UTF-8""?>
+<Response>
+    <Say voice=""alice"">Goodbye.</Say>
+    <Hangup/>
+</Response>";
+                }
+                else
+                {
+                    // Invalid input, just hang up
+                    twiml = @"<?xml version=""1.0"" encoding=""UTF-8""?>
+<Response>
+    <Hangup/>
+</Response>";
+                }
+
+                return Content(twiml, "application/xml");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error handling playback input");
+                
+                var errorTwiml = @"<?xml version=""1.0"" encoding=""UTF-8""?>
+<Response>
+    <Hangup/>
+</Response>";
+                
+                return Content(errorTwiml, "application/xml");
+            }
+        }
+
+        [HttpPost("handle-ivr-input")]
+        public async Task<IActionResult> HandleIvrInput()
+        {
+            try
+            {
+                var digits = Request.Form["Digits"].ToString();
+                var fromNumber = Request.Form["From"].ToString();
+                
+                _logger.LogInformation($"IVR input from {fromNumber}: {digits}");
+
+                string twiml;
+
+                if (digits == "1")
+                {
+                    // Opt-out selected
+                    await ProcessOptOut(fromNumber, OptOutMethod.Phone);
+                    
+                    twiml = @"<?xml version=""1.0"" encoding=""UTF-8""?>
+<Response>
+    <Say voice=""alice"">You have been successfully removed from our calling list. You will not receive any more calls from us. Thank you and goodbye.</Say>
+</Response>";
+                }
+                else
+                {
+                    // Invalid selection or no selection
+                    twiml = @"<?xml version=""1.0"" encoding=""UTF-8""?>
+<Response>
+    <Say voice=""alice"">Goodbye.</Say>
+</Response>";
+                }
+
+                return Content(twiml, "application/xml");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error handling IVR input");
+                
+                var errorTwiml = @"<?xml version=""1.0"" encoding=""UTF-8""?>
+<Response>
+    <Say voice=""alice"">We're sorry, but we cannot process your request at this time.</Say>
+</Response>";
+                
+                return Content(errorTwiml, "application/xml");
+            }
+        }
+
+        [HttpPost("incoming-sms")]
+        public async Task<IActionResult> IncomingSms()
+        {
+            try
+            {
+                var fromNumber = Request.Form["From"].ToString();
+                var body = Request.Form["Body"].ToString().Trim().ToUpper();
+                
+                _logger.LogInformation($"Incoming SMS from {fromNumber}: {body}");
+
+                string responseMessage = null;
+
+                // Check for opt-out keywords
+                var optOutKeywords = new[] { "STOP", "UNSUBSCRIBE", "CANCEL", "END", "QUIT", "STOPALL", "STOP ALL" };
+                
+                if (optOutKeywords.Contains(body))
+                {
+                    await ProcessOptOut(fromNumber, OptOutMethod.SMS);
+                    responseMessage = "You have been unsubscribed and will no longer receive messages from us. Reply START to resubscribe.";
+                }
+                else if (body == "START" || body == "SUBSCRIBE")
+                {
+                    await RemoveOptOut(fromNumber);
+                    responseMessage = "You have been resubscribed to receive messages from us. Reply STOP to unsubscribe.";
+                }
+
+                // Generate TwiML response if we have a message to send back
+                if (!string.IsNullOrEmpty(responseMessage))
+                {
+                    var twiml = $@"<?xml version=""1.0"" encoding=""UTF-8""?>
+<Response>
+    <Message>{System.Security.SecurityElement.Escape(responseMessage)}</Message>
+</Response>";
+                    
+                    return Content(twiml, "application/xml");
+                }
+
+                // Empty response if we don't need to reply
+                return Content(@"<?xml version=""1.0"" encoding=""UTF-8""?><Response></Response>", "application/xml");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error handling incoming SMS");
+                return Content(@"<?xml version=""1.0"" encoding=""UTF-8""?><Response></Response>", "application/xml");
+            }
+        }
+
+        private async Task ProcessOptOut(string phoneNumber, OptOutMethod method)
+        {
+            try
+            {
+                var normalizedNumber = NormalizePhoneNumber(phoneNumber);
+                
+                // Check if already opted out
+                var existingOptOut = await _context.OptOutRecords
+                    .FirstOrDefaultAsync(o => o.PhoneNumber == normalizedNumber);
+                
+                if (existingOptOut == null)
+                {
+                    // Try to find the voter
+                    var voter = await _context.Voters
+                        .FirstOrDefaultAsync(v => NormalizePhoneNumber(v.CellPhone) == normalizedNumber);
+                    
+                    var optOut = new OptOutRecord
+                    {
+                        PhoneNumber = normalizedNumber,
+                        Type = method == OptOutMethod.SMS ? OptOutType.SMS : OptOutType.All,
+                        Method = method,
+                        OptedOutAt = DateTime.UtcNow,
+                        VoterId = voter?.LalVoterId
+                    };
+                    
+                    _context.OptOutRecords.Add(optOut);
+                    await _context.SaveChangesAsync();
+                    
+                    _logger.LogInformation($"Phone number {normalizedNumber} opted out via {method}");
+                }
+                else
+                {
+                    _logger.LogInformation($"Phone number {normalizedNumber} was already opted out");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error processing opt-out for {phoneNumber}");
+            }
+        }
+
+        private async Task RemoveOptOut(string phoneNumber)
+        {
+            try
+            {
+                var normalizedNumber = NormalizePhoneNumber(phoneNumber);
+                
+                var optOut = await _context.OptOutRecords
+                    .FirstOrDefaultAsync(o => o.PhoneNumber == normalizedNumber);
+                
+                if (optOut != null)
+                {
+                    _context.OptOutRecords.Remove(optOut);
+                    await _context.SaveChangesAsync();
+                    
+                    _logger.LogInformation($"Phone number {normalizedNumber} resubscribed");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error removing opt-out for {phoneNumber}");
+            }
         }
     }
 }

@@ -26,6 +26,7 @@ namespace HooverCanvassingApi.Data
         public DbSet<ResourceLink> ResourceLinks { get; set; }
         public DbSet<TwilioPhoneNumber> TwilioPhoneNumbers { get; set; }
         public DbSet<TwilioConfiguration> TwilioConfigurations { get; set; }
+        public DbSet<OptOutRecord> OptOutRecords { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

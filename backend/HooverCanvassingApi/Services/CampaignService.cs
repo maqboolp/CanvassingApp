@@ -464,7 +464,55 @@ namespace HooverCanvassingApi.Services
             // Only include voters with phone numbers
             query = query.Where(v => !string.IsNullOrEmpty(v.CellPhone));
 
-            return await query.ToListAsync();
+            // Get the initial list of voters
+            var voters = await query.ToListAsync();
+            
+            // Get opt-out records
+            var optOutType = campaign.Type == CampaignType.SMS ? OptOutType.SMS : OptOutType.RoboCalls;
+            var optedOutNumbers = await _context.OptOutRecords
+                .Where(o => o.Type == OptOutType.All || o.Type == optOutType)
+                .Select(o => o.PhoneNumber)
+                .ToListAsync();
+            
+            if (optedOutNumbers.Any())
+            {
+                // Convert to HashSet for O(1) lookup performance
+                var optedOutSet = new HashSet<string>(optedOutNumbers);
+                
+                // Filter out voters whose normalized phone numbers are in the opt-out list
+                voters = voters.Where(v => 
+                {
+                    var normalizedPhone = NormalizePhoneNumber(v.CellPhone);
+                    var isOptedOut = optedOutSet.Contains(normalizedPhone);
+                    if (isOptedOut)
+                    {
+                        _logger.LogDebug($"Excluding opted-out number: {v.CellPhone} (normalized: {normalizedPhone})");
+                    }
+                    return !isOptedOut;
+                }).ToList();
+                
+                _logger.LogInformation($"Filtered out {optedOutNumbers.Count} opted-out phone numbers from campaign");
+            }
+
+            return voters;
+        }
+        
+        private string NormalizePhoneNumber(string phoneNumber)
+        {
+            if (string.IsNullOrEmpty(phoneNumber))
+                return phoneNumber;
+                
+            // Remove all non-numeric characters
+            var digitsOnly = new string(phoneNumber.Where(char.IsDigit).ToArray());
+            
+            // If it's 11 digits and starts with 1, remove the 1
+            if (digitsOnly.Length == 11 && digitsOnly.StartsWith("1"))
+            {
+                digitsOnly = digitsOnly.Substring(1);
+            }
+            
+            // Return just the 10-digit number for consistent comparison
+            return digitsOnly;
         }
 
         private async Task ProcessCampaignMessagesAsync(int campaignId)
