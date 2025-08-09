@@ -118,6 +118,9 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ onPasswordChanged, isFo
 
       // Password changed successfully
       onPasswordChanged();
+      
+      // Redirect to home page after successful password change
+      window.location.href = '/';
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to change password');
     } finally {
