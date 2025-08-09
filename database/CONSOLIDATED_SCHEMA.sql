@@ -393,8 +393,8 @@ BEGIN
             'superadmin@campaign.com',
             'SUPERADMIN@CAMPAIGN.COM',
             true,
-            -- Password hash for 'SuperAdmin123!' (using ASP.NET Identity v3 format)
-            'AQAAAAEAACcQAAAAEGQJ5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Q==',
+            -- Password hash for 'SuperAdmin123!' (verified working hash from ASP.NET Core Identity)
+            'AQAAAAIAAYagAAAAEIKoydKjs8qSY0Or2y5QtyhgW6rulNmw05JmXeSYQsW5n/pBIAGiT1nQHuDl1/J95Q==',
             gen_random_uuid()::text,
             gen_random_uuid()::text,
             false,
@@ -424,8 +424,8 @@ BEGIN
             'admin@campaign.com',
             'ADMIN@CAMPAIGN.COM',
             true,
-            -- Password hash for 'Admin123!' (using ASP.NET Identity v3 format)
-            'AQAAAAEAACcQAAAAEHQJ5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Q==',
+            -- Password hash for 'Admin123!' (verified working hash from ASP.NET Core Identity)
+            'AQAAAAIAAYagAAAAEHfQZoQvi4AV6XxSjTGvWRNE0bdCOkUVGPFGAauNxXH83ss3CMr3CJsiAJiVQvBJdw==',
             gen_random_uuid()::text,
             gen_random_uuid()::text,
             false,
