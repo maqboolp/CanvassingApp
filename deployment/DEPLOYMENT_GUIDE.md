@@ -94,10 +94,12 @@ After deployment, use these credentials:
 ## App Architecture
 
 The deployment creates:
-1. **API Service**: .NET Core backend using Docker
-2. **Frontend**: React static site with build command
+1. **API Service**: .NET Core backend using Docker (`/Dockerfile`)
+2. **Frontend**: React static site using npm build command (no Docker needed)
 3. **Database**: PostgreSQL database in shared cluster
 4. **Ingress**: Routes `/api` to backend, `/` to frontend
+
+Note: Frontend uses `build_command: npm run build` instead of Docker for simpler deployment.
 
 ## Environment Variables
 
