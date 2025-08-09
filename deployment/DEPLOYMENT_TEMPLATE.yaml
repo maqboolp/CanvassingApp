@@ -17,6 +17,7 @@
 # - ${REPLACE_CAMPAIGN_EMAIL} - e.g., "info@robinlitaker.com"
 # - ${REPLACE_OFFICE} - e.g., "Alabama House District 12"
 # - ${REPLACE_JURISDICTION} - e.g., "Alabama"
+# - ${REPLACE_ELECTION_DATE} - e.g., "November 5, 2026"
 # - ${REPLACE_LOGO_FILE} - Logo filename in /frontend/public/ (or use t4h-logo.png)
 #
 # IMPORTANT SECURITY NOTE:
@@ -91,7 +92,7 @@ services:
     scope: RUN_TIME
     value: ${APP_URL}
     
-  # Campaign Settings
+  # Campaign Configuration
   - key: CAMPAIGN__CANDIDATENAME
     scope: RUN_TIME
     value: ${REPLACE_CANDIDATE_NAME}
@@ -107,39 +108,82 @@ services:
   - key: CAMPAIGN__PAIDFORBY
     scope: RUN_TIME
     value: Paid for by ${REPLACE_CAMPAIGN_NAME}
+  - key: CAMPAIGN__ELECTIONDATE
+    scope: RUN_TIME
+    value: ${REPLACE_ELECTION_DATE}
+  - key: Campaign__DefaultCanvassingScript
+    scope: RUN_TIME
+    value: "Hi, my name is [Volunteer Name] and I'm a volunteer for ${REPLACE_CANDIDATE_NAME}'s campaign. I'd like to take just a moment to talk to you about the upcoming election. ${REPLACE_CANDIDATE_NAME} is running to bring fresh perspectives and innovative solutions to our community. Are you planning to vote in the upcoming election?"
     
-  # Optional: SendGrid (uncomment if using)
-  # - key: SENDGRID_API_KEY
-  #   scope: RUN_TIME
-  #   value: ${REPLACE_SENDGRID_KEY}
+  # Email Configuration
+  - key: EMAIL_FROM_ADDRESS
+    scope: RUN_TIME
+    value: ${REPLACE_CAMPAIGN_EMAIL}
+  - key: SENDGRID_API_KEY
+    scope: RUN_TIME
+    value: ""  # Add SendGrid API key if using email features
     
-  # Optional: Twilio (uncomment if using)
-  # - key: TWILIO__ACCOUNTSID
-  #   scope: RUN_TIME
-  #   value: ${REPLACE_TWILIO_SID}
-  # - key: TWILIO__AUTHTOKEN
-  #   scope: RUN_TIME
-  #   value: ${REPLACE_TWILIO_TOKEN}
-  # - key: TWILIO__MESSAGINGSERVICESID
-  #   scope: RUN_TIME
-  #   value: ${REPLACE_MESSAGING_SERVICE_ID}
+  # Twilio Configuration (for SMS and Voice)
+  - key: TWILIO__ACCOUNTSID
+    scope: RUN_TIME
+    value: ""  # Add Twilio Account SID if using SMS/Voice features
+  - key: TWILIO__AUTHTOKEN
+    scope: RUN_TIME
+    value: ""  # Add Twilio Auth Token if using SMS/Voice features
+  - key: TWILIO__MESSAGINGSERVICESID
+    scope: RUN_TIME
+    value: ""  # Add Twilio Messaging Service ID if using SMS
+  - key: Twilio__FromPhoneNumber
+    scope: RUN_TIME
+    value: ""  # Add Twilio phone number if using voice calls
     
-  # Optional: AWS S3/DigitalOcean Spaces (uncomment if using)
-  # - key: AWS__S3__UseS3
-  #   scope: RUN_TIME
-  #   value: "true"
-  # - key: AWS__S3__AccessKey
-  #   scope: RUN_TIME
-  #   value: ${REPLACE_SPACES_ACCESS_KEY}
-  # - key: AWS__S3__SecretKey
-  #   scope: RUN_TIME
-  #   value: ${REPLACE_SPACES_SECRET_KEY}
-  # - key: AWS__S3__ServiceUrl
-  #   scope: RUN_TIME
-  #   value: https://nyc3.digitaloceanspaces.com
-  # - key: AWS__S3__BucketName
-  #   scope: RUN_TIME
-  #   value: ${REPLACE_BUCKET_NAME}
+  # Opt-In Settings (for SMS campaigns)
+  - key: OPTINSETTINGS__CAMPAIGNPHONE
+    scope: RUN_TIME
+    value: ""  # Add campaign phone number for SMS opt-in
+  - key: OPTINSETTINGS__OPTINWEBSITEURL
+    scope: RUN_TIME
+    value: ${APP_URL}/opt-in
+  - key: OPTINSETTINGS__CAMPAIGNNAME
+    scope: RUN_TIME
+    value: ${REPLACE_CAMPAIGN_NAME}
+  - key: OPTINSETTINGS__DEFAULTINVITATIONMESSAGE
+    scope: RUN_TIME
+    value: "${REPLACE_CAMPAIGN_NAME}: Want campaign updates? Text JOIN to reply or visit ${APP_URL}/opt-in. Reply STOP to opt out."
+  - key: OPTINSETTINGS__WELCOMEMESSAGE
+    scope: RUN_TIME
+    value: "Welcome to ${REPLACE_CANDIDATE_NAME}'s campaign! You've successfully opted in to receive updates. Reply STOP to opt out at any time."
+  - key: OPTINSETTINGS__OPTOUTMESSAGE
+    scope: RUN_TIME
+    value: "You have been unsubscribed from ${REPLACE_CANDIDATE_NAME} messages. Reply JOIN to resubscribe."
+  - key: OPTINSETTINGS__HELPMESSAGE
+    scope: RUN_TIME
+    value: "${REPLACE_CAMPAIGN_NAME}: Reply STOP to unsubscribe. For support, visit our website. Msg&data rates may apply."
+    
+  # AWS S3/DigitalOcean Spaces (for file storage)
+  - key: AWS__S3__UseS3
+    scope: RUN_TIME
+    value: "true"  # Enable if using file storage
+  - key: AWS__S3__AccessKey
+    scope: RUN_TIME
+    value: ""  # Add DigitalOcean Spaces access key
+  - key: AWS__S3__SecretKey
+    scope: RUN_TIME
+    value: ""  # Add DigitalOcean Spaces secret key
+  - key: AWS__S3__ServiceUrl
+    scope: RUN_TIME
+    value: "https://nyc3.digitaloceanspaces.com"
+  - key: AWS__S3__PublicUrl
+    scope: RUN_TIME
+    value: "https://hoover-canvassing-audio.nyc3.cdn.digitaloceanspaces.com"
+  - key: AWS__S3__BucketName
+    scope: RUN_TIME
+    value: "hoover-canvassing-audio"
+    
+  # Google Maps Configuration
+  - key: GOOGLE_GEOCODING_API_KEY
+    scope: RUN_TIME
+    value: ""  # Add Google Maps API key for geocoding
     
   github:
     branch: ${REPLACE_BRANCH}
