@@ -1,0 +1,169 @@
+# DigitalOcean App Platform Deployment Template
+# This is the master template for deploying canvassing apps
+# 
+# USAGE:
+# 1. Copy this file and rename it to [candidate-name]-app.yaml
+# 2. Replace all placeholders marked with ${REPLACE_...}
+# 3. Create database: doctl databases db create [cluster-id] ${REPLACE_DB_NAME}
+# 4. Deploy: doctl apps create --spec [candidate-name]-app.yaml
+#
+# PLACEHOLDERS TO REPLACE:
+# - ${REPLACE_APP_NAME} - e.g., "robin-litaker"
+# - ${REPLACE_DB_NAME} - e.g., "Robin_Litaker" 
+# - ${REPLACE_BRANCH} - Git branch name (usually same as app name + "-app")
+# - ${REPLACE_JWT_SECRET} - Generate a secure 32+ character secret
+# - ${REPLACE_CANDIDATE_NAME} - e.g., "Robin Litaker"
+# - ${REPLACE_CAMPAIGN_NAME} - e.g., "Robin for Alabama House"
+# - ${REPLACE_CAMPAIGN_EMAIL} - e.g., "info@robinlitaker.com"
+# - ${REPLACE_OFFICE} - e.g., "Alabama House District 12"
+# - ${REPLACE_JURISDICTION} - e.g., "Alabama"
+# - ${REPLACE_LOGO_FILE} - Logo filename in /frontend/public/ (or use t4h-logo.png)
+
+ingress:
+  rules:
+  - component:
+      name: api
+      preserve_path_prefix: true
+    match:
+      path:
+        prefix: /api
+  - component:
+      name: frontend
+    match:
+      path:
+        prefix: /
+name: ${REPLACE_APP_NAME}
+region: nyc
+services:
+- dockerfile_path: /Dockerfile
+  envs:
+  # ASP.NET Core Settings
+  - key: ASPNETCORE_ENVIRONMENT
+    scope: RUN_TIME
+    value: Production
+  - key: ASPNETCORE_URLS
+    scope: RUN_TIME
+    value: http://+:8080
+    
+  # Database Connection
+  - key: ConnectionStrings__DefaultConnection
+    scope: RUN_TIME
+    value: Host=t4h-db-do-user-155941-0.i.db.ondigitalocean.com;Port=25060;Username=doadmin;Password=AVNS_2MqoRv18YSrH0UHlFMJ;Database=${REPLACE_DB_NAME};SSL Mode=Require;Trust Server Certificate=true;
+    
+  # JWT Authentication
+  - key: JwtSettings__Secret
+    scope: RUN_TIME
+    value: ${REPLACE_JWT_SECRET}
+  - key: JwtSettings__Issuer
+    scope: RUN_TIME
+    value: ${APP_URL}
+  - key: JwtSettings__Audience
+    scope: RUN_TIME
+    value: ${APP_URL}
+  - key: JwtSettings__ExpirationMinutes
+    scope: RUN_TIME
+    value: "480"
+    
+  # Email Settings
+  - key: EmailSettings__FromEmail
+    scope: RUN_TIME
+    value: ${REPLACE_CAMPAIGN_EMAIL}
+  - key: EmailSettings__FromName
+    scope: RUN_TIME
+    value: ${REPLACE_CAMPAIGN_NAME}
+    
+  # Frontend URL
+  - key: FRONTEND_URL
+    scope: RUN_TIME
+    value: ${APP_URL}
+    
+  # Campaign Settings
+  - key: CAMPAIGN__CANDIDATENAME
+    scope: RUN_TIME
+    value: ${REPLACE_CANDIDATE_NAME}
+  - key: CAMPAIGN__CAMPAIGNNAME
+    scope: RUN_TIME
+    value: ${REPLACE_CAMPAIGN_NAME}
+  - key: CAMPAIGN__OFFICE
+    scope: RUN_TIME
+    value: ${REPLACE_OFFICE}
+  - key: CAMPAIGN__JURISDICTION
+    scope: RUN_TIME
+    value: ${REPLACE_JURISDICTION}
+  - key: CAMPAIGN__PAIDFORBY
+    scope: RUN_TIME
+    value: Paid for by ${REPLACE_CAMPAIGN_NAME}
+    
+  # Optional: SendGrid (uncomment if using)
+  # - key: SENDGRID_API_KEY
+  #   scope: RUN_TIME
+  #   value: ${REPLACE_SENDGRID_KEY}
+    
+  # Optional: Twilio (uncomment if using)
+  # - key: TWILIO__ACCOUNTSID
+  #   scope: RUN_TIME
+  #   value: ${REPLACE_TWILIO_SID}
+  # - key: TWILIO__AUTHTOKEN
+  #   scope: RUN_TIME
+  #   value: ${REPLACE_TWILIO_TOKEN}
+  # - key: TWILIO__MESSAGINGSERVICESID
+  #   scope: RUN_TIME
+  #   value: ${REPLACE_MESSAGING_SERVICE_ID}
+    
+  # Optional: AWS S3/DigitalOcean Spaces (uncomment if using)
+  # - key: AWS__S3__UseS3
+  #   scope: RUN_TIME
+  #   value: "true"
+  # - key: AWS__S3__AccessKey
+  #   scope: RUN_TIME
+  #   value: ${REPLACE_SPACES_ACCESS_KEY}
+  # - key: AWS__S3__SecretKey
+  #   scope: RUN_TIME
+  #   value: ${REPLACE_SPACES_SECRET_KEY}
+  # - key: AWS__S3__ServiceUrl
+  #   scope: RUN_TIME
+  #   value: https://nyc3.digitaloceanspaces.com
+  # - key: AWS__S3__BucketName
+  #   scope: RUN_TIME
+  #   value: ${REPLACE_BUCKET_NAME}
+    
+  github:
+    branch: ${REPLACE_BRANCH}
+    deploy_on_push: true
+    repo: maqboolp/CanvassingApp
+  http_port: 8080
+  instance_count: 1
+  instance_size_slug: apps-s-1vcpu-1gb
+  name: api
+  source_dir: /
+  
+static_sites:
+- build_command: npm run build
+  envs:
+  - key: REACT_APP_API_URL
+    scope: BUILD_TIME
+    value: ${APP_URL}
+  - key: REACT_APP_LOGO_URL
+    scope: BUILD_TIME
+    value: /${REPLACE_LOGO_FILE}
+  - key: REACT_APP_LOGO_ALT
+    scope: BUILD_TIME
+    value: ${REPLACE_CAMPAIGN_NAME}
+  - key: REACT_APP_TITLE
+    scope: BUILD_TIME
+    value: ${REPLACE_CAMPAIGN_NAME} Portal
+  - key: REACT_APP_CANDIDATE_NAME
+    scope: BUILD_TIME
+    value: ${REPLACE_CANDIDATE_NAME}
+  - key: REACT_APP_CAMPAIGN_NAME
+    scope: BUILD_TIME
+    value: ${REPLACE_CAMPAIGN_NAME}
+  - key: REACT_APP_CAMPAIGN_TITLE
+    scope: BUILD_TIME
+    value: ${REPLACE_CANDIDATE_NAME} for ${REPLACE_OFFICE}
+  github:
+    branch: ${REPLACE_BRANCH}
+    repo: maqboolp/CanvassingApp
+  name: frontend
+  output_dir: build
+  source_dir: /frontend
