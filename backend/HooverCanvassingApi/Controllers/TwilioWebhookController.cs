@@ -430,12 +430,22 @@ namespace HooverCanvassingApi.Controllers
                 if (digits == "1")
                 {
                     // Opt-out selected
-                    await ProcessOptOut(fromNumber, OptOutMethod.Phone);
+                    var isNewOptOut = await ProcessOptOut(fromNumber, OptOutMethod.Phone);
                     
-                    twiml = @"<?xml version=""1.0"" encoding=""UTF-8""?>
+                    if (isNewOptOut)
+                    {
+                        twiml = @"<?xml version=""1.0"" encoding=""UTF-8""?>
 <Response>
     <Say voice=""alice"">You have been successfully removed from our calling list. You will not receive any more calls from us. Thank you and goodbye.</Say>
 </Response>";
+                    }
+                    else
+                    {
+                        twiml = @"<?xml version=""1.0"" encoding=""UTF-8""?>
+<Response>
+    <Say voice=""alice"">You are already on our do not call list. Thank you and goodbye.</Say>
+</Response>";
+                    }
                 }
                 else
                 {
@@ -508,7 +518,7 @@ namespace HooverCanvassingApi.Controllers
             }
         }
 
-        private async Task ProcessOptOut(string phoneNumber, OptOutMethod method)
+        private async Task<bool> ProcessOptOut(string phoneNumber, OptOutMethod method)
         {
             try
             {
@@ -547,15 +557,18 @@ namespace HooverCanvassingApi.Controllers
                     await _context.SaveChangesAsync();
                     
                     _logger.LogInformation($"Phone number {normalizedNumber} opted out via {method}");
+                    return true; // New opt-out
                 }
                 else
                 {
                     _logger.LogInformation($"Phone number {normalizedNumber} was already opted out");
+                    return false; // Already opted out
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Error processing opt-out for {phoneNumber}");
+                return true; // Assume new opt-out on error to give success message
             }
         }
 
