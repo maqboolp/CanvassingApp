@@ -74,7 +74,8 @@ import {
   Schedule,
   TableChart as TableIcon,
   Close as CloseIcon,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  PhoneDisabled
 } from '@mui/icons-material';
 import { AuthUser, Voter, ContactStatus, VoterSupport, VoterTagDetail } from '../types';
 import VoterList from './VoterList';
@@ -87,6 +88,7 @@ import AnalyticsComponent from './Analytics';
 import VolunteerResourcesSection from './VolunteerResourcesSection';
 import { PhoneNumberManagement } from './PhoneNumberManagement';
 import { TwilioSettings } from './TwilioSettings';
+import OptOutManagement from './OptOutManagement';
 import { API_BASE_URL } from '../config';
 import { customerConfig } from '../config/customerConfig';
 import { ApiErrorHandler, ApiError } from '../utils/apiErrorHandler';
@@ -139,6 +141,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
       ...(user.role === 'admin' || user.role === 'superadmin' ? ['campaigns'] : []),
       ...(user.role === 'admin' || user.role === 'superadmin' ? ['voiceRecordings'] : []),
       ...(user.role === 'admin' || user.role === 'superadmin' ? ['tags'] : []),
+      ...(user.role === 'superadmin' ? ['optOuts'] : []),
       'resources',
       'engagement',
       ...(user.role === 'admin' || user.role === 'superadmin' ? ['dataManagement'] : []),
@@ -1570,6 +1573,9 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
           {(user.role === 'admin' || user.role === 'superadmin') && (
             <Tab label="Tags" icon={<LocalOffer />} />
           )}
+          {user.role === 'superadmin' && (
+            <Tab label="Opt-Outs" icon={<PhoneDisabled />} />
+          )}
           <Tab label="Resources" icon={<MenuBook />} />
           <Tab 
             label="Engagement" 
@@ -2635,6 +2641,13 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
                 </Table>
               </TableContainer>
             )}
+          </TabPanel>
+        )}
+
+        {/* Opt-Outs Tab - For SuperAdmins only */}
+        {user.role === 'superadmin' && (
+          <TabPanel value={currentTab} index={getTabIndex('optOuts')}>
+            <OptOutManagement />
           </TabPanel>
         )}
 
