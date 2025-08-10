@@ -11,7 +11,15 @@ namespace HooverCanvassingApi.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             // Reset all CurrentActiveCalls to 0 since we're no longer tracking this
-            migrationBuilder.Sql("UPDATE \"PhoneNumbers\" SET \"CurrentActiveCalls\" = 0");
+            // Check if table exists before updating (table is actually named TwilioPhoneNumbers)
+            migrationBuilder.Sql(@"
+                DO $$ 
+                BEGIN 
+                    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'TwilioPhoneNumbers') THEN
+                        UPDATE ""TwilioPhoneNumbers"" SET ""CurrentActiveCalls"" = 0;
+                    END IF;
+                END $$;
+            ");
         }
 
         /// <inheritdoc />
