@@ -52,6 +52,9 @@ export class ApiErrorHandler {
         if (Array.isArray(firstError) && firstError.length > 0) {
           errorMessage = firstError[0];
         }
+      } else if (errorData.message && errorData.campaigns) {
+        // Handle voice recording deletion error with campaign info
+        errorMessage = errorData.message;
       } else {
         // Handle legacy error format
         errorMessage = errorData.error || errorData.message || errorMessage;

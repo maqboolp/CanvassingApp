@@ -183,7 +183,7 @@ namespace HooverCanvassingApi.Controllers
                     // Play the audio file with repeat option
                     twiml = $@"<?xml version=""1.0"" encoding=""UTF-8""?>
 <Response>
-    <Gather numDigits=""1"" action=""/api/twiliowebook/handle-playback-input"" method=""POST"" timeout=""3"">
+    <Gather numDigits=""1"" action=""/api/TwilioWebhook/handle-playback-input"" method=""POST"" timeout=""3"">
         <Play loop=""1"">{System.Security.SecurityElement.Escape(audioUrl)}</Play>
         <Say voice=""alice"">Press 1 to listen again, Press 9 to hang up.</Say>
     </Gather>
@@ -204,7 +204,7 @@ namespace HooverCanvassingApi.Controllers
                     // Generate TwiML for the robo call with text-to-speech and repeat option
                     twiml = $@"<?xml version=""1.0"" encoding=""UTF-8""?>
 <Response>
-    <Gather numDigits=""1"" action=""/api/twiliowebook/handle-playback-input"" method=""POST"" timeout=""3"">
+    <Gather numDigits=""1"" action=""/api/TwilioWebhook/handle-playback-input"" method=""POST"" timeout=""3"">
         <Say voice=""alice"">{message}</Say>
         <Say voice=""alice"">Press 1 to listen again, Press 9 to hang up.</Say>
     </Gather>
@@ -330,7 +330,7 @@ namespace HooverCanvassingApi.Controllers
                 // Generate TwiML for IVR menu
                 var twiml = @"<?xml version=""1.0"" encoding=""UTF-8""?>
 <Response>
-    <Gather numDigits=""1"" action=""/api/twiliowebook/handle-ivr-input"" method=""POST"" timeout=""10"">
+    <Gather numDigits=""1"" action=""/api/TwilioWebhook/handle-ivr-input"" method=""POST"" timeout=""10"">
         <Say voice=""alice"">Thank you for calling. Press 1 to be removed from our calling list.</Say>
     </Gather>
     <Say voice=""alice"">Goodbye.</Say>
