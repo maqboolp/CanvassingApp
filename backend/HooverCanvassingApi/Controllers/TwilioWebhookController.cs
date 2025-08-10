@@ -520,9 +520,19 @@ namespace HooverCanvassingApi.Controllers
                 
                 if (existingOptOut == null)
                 {
-                    // Try to find the voter
+                    // Try to find the voter by matching different phone formats
+                    // normalizedNumber is just 10 digits, e.g., "2055551234"
+                    var phoneVariants = new List<string>
+                    {
+                        normalizedNumber,                                    // 2055551234
+                        $"1{normalizedNumber}",                             // 12055551234
+                        $"+1{normalizedNumber}",                            // +12055551234
+                        $"({normalizedNumber.Substring(0, 3)}) {normalizedNumber.Substring(3, 3)}-{normalizedNumber.Substring(6)}", // (205) 555-1234
+                        $"{normalizedNumber.Substring(0, 3)}-{normalizedNumber.Substring(3, 3)}-{normalizedNumber.Substring(6)}"    // 205-555-1234
+                    };
+                    
                     var voter = await _context.Voters
-                        .FirstOrDefaultAsync(v => NormalizePhoneNumber(v.CellPhone) == normalizedNumber);
+                        .FirstOrDefaultAsync(v => phoneVariants.Contains(v.CellPhone));
                     
                     var optOut = new OptOutRecord
                     {
