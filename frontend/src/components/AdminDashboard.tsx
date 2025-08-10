@@ -2647,7 +2647,7 @@ Robert,Johnson,789 Pine Rd,Birmingham,AL,35203,62,Male,,,NonVoter,Non-Partisan`;
         {/* Opt-Outs Tab - For SuperAdmins only */}
         {user.role === 'superadmin' && (
           <TabPanel value={currentTab} index={getTabIndex('optOuts')}>
-            <OptOutManagement />
+            <OptOutManagement user={user} />
           </TabPanel>
         )}
 

@@ -41,8 +41,9 @@ import {
   Phone as PhoneIcon,
   Block as BlockIcon
 } from '@mui/icons-material';
-import { apiCall } from '../utils/api';
 import { format } from 'date-fns';
+import { API_BASE_URL } from '../config';
+import { AuthUser } from '../types';
 
 interface OptOutRecord {
   id: number;
@@ -70,7 +71,11 @@ interface OptOutStats {
   today: number;
 }
 
-const OptOutManagement: React.FC = () => {
+interface OptOutManagementProps {
+  user?: AuthUser;
+}
+
+const OptOutManagement: React.FC<OptOutManagementProps> = ({ user: propUser }) => {
   const [optOuts, setOptOuts] = useState<OptOutRecord[]>([]);
   const [stats, setStats] = useState<OptOutStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -88,7 +93,7 @@ const OptOutManagement: React.FC = () => {
   });
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const user = propUser || JSON.parse(localStorage.getItem('user') || '{}');
   const isSuperAdmin = user.role === 'superadmin';
 
   useEffect(() => {
@@ -107,7 +112,11 @@ const OptOutManagement: React.FC = () => {
         ...(filterMethod && { method: filterMethod })
       });
 
-      const response = await apiCall(`/api/OptOut?${params}`, 'GET');
+      const response = await fetch(`${API_BASE_URL}/api/OptOut?${params}`, {
+        headers: {
+          'Authorization': `Bearer ${user.token}`
+        }
+      });
       
       if (response.ok) {
         const data = await response.json();
@@ -130,7 +139,11 @@ const OptOutManagement: React.FC = () => {
 
   const fetchStats = async () => {
     try {
-      const response = await apiCall('/api/OptOut/stats', 'GET');
+      const response = await fetch(`${API_BASE_URL}/api/OptOut/stats`, {
+        headers: {
+          'Authorization': `Bearer ${user.token}`
+        }
+      });
       if (response.ok) {
         const data = await response.json();
         setStats(data);
@@ -147,7 +160,11 @@ const OptOutManagement: React.FC = () => {
         ...(filterMethod && { method: filterMethod })
       });
 
-      const response = await apiCall(`/api/OptOut/export?${params}`, 'GET');
+      const response = await fetch(`${API_BASE_URL}/api/OptOut/export?${params}`, {
+        headers: {
+          'Authorization': `Bearer ${user.token}`
+        }
+      });
       
       if (response.ok) {
         const blob = await response.blob();
@@ -168,7 +185,14 @@ const OptOutManagement: React.FC = () => {
 
   const handleAddOptOut = async () => {
     try {
-      const response = await apiCall('/api/OptOut', 'POST', newOptOut);
+      const response = await fetch(`${API_BASE_URL}/api/OptOut`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${user.token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(newOptOut)
+      });
       
       if (response.ok) {
         setSuccess('Opt-out added successfully');
@@ -191,7 +215,12 @@ const OptOutManagement: React.FC = () => {
     }
 
     try {
-      const response = await apiCall(`/api/OptOut/${id}`, 'DELETE');
+      const response = await fetch(`${API_BASE_URL}/api/OptOut/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${user.token}`
+        }
+      });
       
       if (response.ok) {
         setSuccess('Opt-out removed successfully');
