@@ -16,7 +16,6 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
-  Grid,
   IconButton,
   Dialog,
   DialogTitle,
@@ -275,207 +274,187 @@ const OptOutManagement: React.FC<OptOutManagementProps> = ({ user: propUser }) =
     <Box>
       {/* Statistics Cards */}
       {stats && (
-        <Grid container spacing={2} sx={{ mb: 3 }}>
-          <Grid item xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent>
-                <Typography color="textSecondary" gutterBottom>
-                  Total Opt-Outs
-                </Typography>
-                <Typography variant="h4">
-                  {stats.totalOptOuts}
-                </Typography>
-                <Typography variant="body2" color="textSecondary">
-                  All time
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent>
-                <Typography color="textSecondary" gutterBottom>
-                  Last 30 Days
-                </Typography>
-                <Typography variant="h4">
-                  {stats.last30Days}
-                </Typography>
-                <Typography variant="body2" color="textSecondary">
-                  Recent opt-outs
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent>
-                <Typography color="textSecondary" gutterBottom>
-                  Last 7 Days
-                </Typography>
-                <Typography variant="h4">
-                  {stats.last7Days}
-                </Typography>
-                <Typography variant="body2" color="textSecondary">
-                  This week
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent>
-                <Typography color="textSecondary" gutterBottom>
-                  Today
-                </Typography>
-                <Typography variant="h4">
-                  {stats.today}
-                </Typography>
-                <Typography variant="body2" color="textSecondary">
-                  Opted out today
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
+        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 3 }}>
+          <Card sx={{ flex: '1 1 250px', minWidth: '250px' }}>
+            <CardContent>
+              <Typography color="textSecondary" gutterBottom>
+                Total Opt-Outs
+              </Typography>
+              <Typography variant="h4">
+                {stats.totalOptOuts}
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                All time
+              </Typography>
+            </CardContent>
+          </Card>
+          <Card sx={{ flex: '1 1 250px', minWidth: '250px' }}>
+            <CardContent>
+              <Typography color="textSecondary" gutterBottom>
+                Last 30 Days
+              </Typography>
+              <Typography variant="h4">
+                {stats.last30Days}
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                Recent opt-outs
+              </Typography>
+            </CardContent>
+          </Card>
+          <Card sx={{ flex: '1 1 250px', minWidth: '250px' }}>
+            <CardContent>
+              <Typography color="textSecondary" gutterBottom>
+                Last 7 Days
+              </Typography>
+              <Typography variant="h4">
+                {stats.last7Days}
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                This week
+              </Typography>
+            </CardContent>
+          </Card>
+          <Card sx={{ flex: '1 1 250px', minWidth: '250px' }}>
+            <CardContent>
+              <Typography color="textSecondary" gutterBottom>
+                Today
+              </Typography>
+              <Typography variant="h4">
+                {stats.today}
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                Opted out today
+              </Typography>
+            </CardContent>
+          </Card>
+        </Box>
       )}
 
       {/* Breakdown Cards */}
       {stats && (
-        <Grid container spacing={2} sx={{ mb: 3 }}>
-          <Grid item xs={12} md={6}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  By Type
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 2 }}>
-                  <Chip
-                    icon={<BlockIcon />}
-                    label={`All: ${stats.allOptOuts}`}
-                    color="error"
-                  />
-                  <Chip
-                    icon={<PhoneDisabledIcon />}
-                    label={`RoboCalls: ${stats.roboCallOptOuts}`}
-                    color="warning"
-                  />
-                  <Chip
-                    icon={<SmsIcon />}
-                    label={`SMS: ${stats.smsOptOuts}`}
-                    color="info"
-                  />
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  By Method
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 2 }}>
-                  <Chip
-                    icon={<PhoneIcon />}
-                    label={`Phone: ${stats.phoneOptOuts}`}
-                  />
-                  <Chip
-                    icon={<SmsIcon />}
-                    label={`SMS: ${stats.smsMethodOptOuts}`}
-                  />
-                  <Chip
-                    label={`Manual: ${stats.manualOptOuts}`}
-                  />
-                  <Chip
-                    label={`Web: ${stats.webOptOuts}`}
-                  />
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
+        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 3 }}>
+          <Card sx={{ flex: '1 1 400px' }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                By Type
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                <Chip
+                  icon={<BlockIcon />}
+                  label={`All: ${stats.allOptOuts}`}
+                  color="error"
+                />
+                <Chip
+                  icon={<PhoneDisabledIcon />}
+                  label={`RoboCalls: ${stats.roboCallOptOuts}`}
+                  color="warning"
+                />
+                <Chip
+                  icon={<SmsIcon />}
+                  label={`SMS: ${stats.smsOptOuts}`}
+                  color="info"
+                />
+              </Box>
+            </CardContent>
+          </Card>
+          <Card sx={{ flex: '1 1 400px' }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                By Method
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                <Chip
+                  icon={<PhoneIcon />}
+                  label={`Phone: ${stats.phoneOptOuts}`}
+                />
+                <Chip
+                  icon={<SmsIcon />}
+                  label={`SMS: ${stats.smsMethodOptOuts}`}
+                />
+                <Chip
+                  label={`Manual: ${stats.manualOptOuts}`}
+                />
+                <Chip
+                  label={`Web: ${stats.webOptOuts}`}
+                />
+              </Box>
+            </CardContent>
+          </Card>
+        </Box>
       )}
 
       {/* Filters and Actions */}
       <Paper sx={{ p: 2, mb: 3 }}>
-        <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} sm={6} md={3}>
-            <TextField
-              fullWidth
-              label="Search Phone Number"
-              value={searchPhone}
-              onChange={(e) => setSearchPhone(e.target.value)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon />
-                  </InputAdornment>
-                ),
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center' }}>
+          <TextField
+            sx={{ flex: '1 1 250px' }}
+            label="Search Phone Number"
+            value={searchPhone}
+            onChange={(e) => setSearchPhone(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon />
+                </InputAdornment>
+              ),
+            }}
+          />
+          <FormControl sx={{ flex: '1 1 200px' }}>
+            <InputLabel>Type</InputLabel>
+            <Select
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value)}
+              label="Type"
+            >
+              <MenuItem value="">All</MenuItem>
+              <MenuItem value="All">All Communications</MenuItem>
+              <MenuItem value="RoboCalls">RoboCalls Only</MenuItem>
+              <MenuItem value="SMS">SMS Only</MenuItem>
+            </Select>
+          </FormControl>
+          <FormControl sx={{ flex: '1 1 200px' }}>
+            <InputLabel>Method</InputLabel>
+            <Select
+              value={filterMethod}
+              onChange={(e) => setFilterMethod(e.target.value)}
+              label="Method"
+            >
+              <MenuItem value="">All</MenuItem>
+              <MenuItem value="Phone">Phone</MenuItem>
+              <MenuItem value="SMS">SMS</MenuItem>
+              <MenuItem value="Manual">Manual</MenuItem>
+              <MenuItem value="Web">Web</MenuItem>
+            </Select>
+          </FormControl>
+          <Box sx={{ flex: '1 1 auto', display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+            <Button
+              variant="outlined"
+              startIcon={<RefreshIcon />}
+              onClick={() => {
+                fetchOptOuts();
+                fetchStats();
               }}
-            />
-          </Grid>
-          <Grid item xs={12} sm={6} md={2}>
-            <FormControl fullWidth>
-              <InputLabel>Type</InputLabel>
-              <Select
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value)}
-                label="Type"
-              >
-                <MenuItem value="">All</MenuItem>
-                <MenuItem value="All">All Communications</MenuItem>
-                <MenuItem value="RoboCalls">RoboCalls Only</MenuItem>
-                <MenuItem value="SMS">SMS Only</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid item xs={12} sm={6} md={2}>
-            <FormControl fullWidth>
-              <InputLabel>Method</InputLabel>
-              <Select
-                value={filterMethod}
-                onChange={(e) => setFilterMethod(e.target.value)}
-                label="Method"
-              >
-                <MenuItem value="">All</MenuItem>
-                <MenuItem value="Phone">Phone</MenuItem>
-                <MenuItem value="SMS">SMS</MenuItem>
-                <MenuItem value="Manual">Manual</MenuItem>
-                <MenuItem value="Web">Web</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid item xs={12} sm={6} md={5}>
-            <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+            >
+              Refresh
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<DownloadIcon />}
+              onClick={handleExport}
+            >
+              Export CSV
+            </Button>
+            {isSuperAdmin && (
               <Button
-                variant="outlined"
-                startIcon={<RefreshIcon />}
-                onClick={() => {
-                  fetchOptOuts();
-                  fetchStats();
-                }}
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => setAddDialogOpen(true)}
               >
-                Refresh
+                Add Opt-Out
               </Button>
-              <Button
-                variant="outlined"
-                startIcon={<DownloadIcon />}
-                onClick={handleExport}
-              >
-                Export CSV
-              </Button>
-              {isSuperAdmin && (
-                <Button
-                  variant="contained"
-                  startIcon={<AddIcon />}
-                  onClick={() => setAddDialogOpen(true)}
-                >
-                  Add Opt-Out
-                </Button>
-              )}
-            </Box>
-          </Grid>
-        </Grid>
+            )}
+          </Box>
+        </Box>
       </Paper>
 
       {/* Success/Error Messages */}
