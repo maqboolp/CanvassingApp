@@ -185,7 +185,7 @@ namespace HooverCanvassingApi.Controllers
 <Response>
     <Gather numDigits=""1"" action=""/api/TwilioWebhook/handle-playback-input"" method=""POST"" timeout=""3"">
         <Play loop=""1"">{System.Security.SecurityElement.Escape(audioUrl)}</Play>
-        <Say voice=""alice"">Press 1 to listen again, Press 9 to hang up.</Say>
+        <Say voice=""alice"">Press 1 to listen again, Press 9 to hang up. To be removed from our calling list, please call this number back.</Say>
     </Gather>
     <Hangup/>
 </Response>";
@@ -206,7 +206,7 @@ namespace HooverCanvassingApi.Controllers
 <Response>
     <Gather numDigits=""1"" action=""/api/TwilioWebhook/handle-playback-input"" method=""POST"" timeout=""3"">
         <Say voice=""alice"">{message}</Say>
-        <Say voice=""alice"">Press 1 to listen again, Press 9 to hang up.</Say>
+        <Say voice=""alice"">Press 1 to listen again, Press 9 to hang up. To be removed from our calling list, please call this number back.</Say>
     </Gather>
     <Hangup/>
 </Response>";
