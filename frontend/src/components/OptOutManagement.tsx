@@ -242,7 +242,7 @@ const OptOutManagement: React.FC<OptOutManagementProps> = ({ user: propUser }) =
       case 'SMS':
         return <SmsIcon fontSize="small" />;
       default:
-        return null;
+        return undefined;
     }
   };
 
@@ -253,7 +253,7 @@ const OptOutManagement: React.FC<OptOutManagementProps> = ({ user: propUser }) =
       case 'SMS':
         return <SmsIcon fontSize="small" />;
       default:
-        return null;
+        return undefined;
     }
   };
 
