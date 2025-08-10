@@ -16,6 +16,7 @@ namespace HooverCanvassingApi.Services
         Task<CampaignStats> GetCampaignStatsAsync(int campaignId);
         Task<int> PreviewAudienceCountAsync(string? filterZipCodes);
         Task<int> GetRecipientCountAsync(string? filterZipCodes, VoteFrequency? filterVoteFrequency, int? filterMinAge, int? filterMaxAge, VoterSupport? filterVoterSupport, List<int>? filterTagIds = null);
+        Task<RecipientCountResult> GetRecipientCountWithOptOutsAsync(CampaignType campaignType, string? filterZipCodes, VoteFrequency? filterVoteFrequency, int? filterMinAge, int? filterMaxAge, VoterSupport? filterVoterSupport, List<int>? filterTagIds = null);
         Task<IEnumerable<string>> GetAvailableZipCodesAsync();
         Task ProcessScheduledCampaignsAsync();
         Task<bool> RetryFailedMessagesAsync(int campaignId, bool overrideOptIn = false);
@@ -36,5 +37,12 @@ namespace HooverCanvassingApi.Services
         public int Remaining { get; set; } // Messages not yet processed (pending/queued)
         public decimal TotalCost { get; set; }
         public Dictionary<string, int> StatusBreakdown { get; set; } = new();
+    }
+    
+    public class RecipientCountResult
+    {
+        public int TotalMatching { get; set; }  // Total voters matching filters
+        public int OptedOut { get; set; }        // Number opted out
+        public int Eligible { get; set; }        // Final eligible count (TotalMatching - OptedOut)
     }
 }

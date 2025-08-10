@@ -325,10 +325,26 @@ namespace HooverCanvassingApi.Controllers
         }
 
         [HttpGet("recipient-count")]
-        public async Task<ActionResult<int>> GetRecipientCount([FromQuery] RecipientCountRequest request)
+        public async Task<ActionResult<object>> GetRecipientCount([FromQuery] RecipientCountRequest request)
         {
             try
             {
+                // If campaign type is specified, return detailed count with opt-outs
+                if (request.CampaignType.HasValue)
+                {
+                    var detailedCount = await _campaignService.GetRecipientCountWithOptOutsAsync(
+                        request.CampaignType.Value,
+                        request.FilterZipCodes,
+                        request.FilterVoteFrequency,
+                        request.FilterMinAge,
+                        request.FilterMaxAge,
+                        request.FilterVoterSupport,
+                        request.FilterTagIds
+                    );
+                    return Ok(detailedCount);
+                }
+                
+                // Otherwise return simple count for backward compatibility
                 var count = await _campaignService.GetRecipientCountAsync(
                     request.FilterZipCodes,
                     request.FilterVoteFrequency,
@@ -500,5 +516,6 @@ namespace HooverCanvassingApi.Controllers
         public int? FilterMaxAge { get; set; }
         public VoterSupport? FilterVoterSupport { get; set; }
         public List<int>? FilterTagIds { get; set; }
+        public CampaignType? CampaignType { get; set; }
     }
 }

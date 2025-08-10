@@ -390,6 +390,86 @@ namespace HooverCanvassingApi.Services
             return await query.CountAsync();
         }
 
+        public async Task<RecipientCountResult> GetRecipientCountWithOptOutsAsync(CampaignType campaignType, string? filterZipCodes, VoteFrequency? filterVoteFrequency, int? filterMinAge, int? filterMaxAge, VoterSupport? filterVoterSupport, List<int>? filterTagIds = null)
+        {
+            var query = _context.Voters.AsQueryable();
+
+            // Filter by zip codes
+            if (!string.IsNullOrEmpty(filterZipCodes))
+            {
+                var zipCodes = JsonSerializer.Deserialize<string[]>(filterZipCodes);
+                if (zipCodes != null && zipCodes.Length > 0)
+                {
+                    query = query.Where(v => zipCodes.Contains(v.Zip));
+                }
+            }
+
+            // Filter by vote frequency
+            if (filterVoteFrequency.HasValue)
+            {
+                query = query.Where(v => v.VoteFrequency == filterVoteFrequency.Value);
+            }
+
+            // Filter by age range
+            if (filterMinAge.HasValue)
+            {
+                query = query.Where(v => v.Age >= filterMinAge.Value);
+            }
+
+            if (filterMaxAge.HasValue)
+            {
+                query = query.Where(v => v.Age <= filterMaxAge.Value);
+            }
+
+            // Filter by voter support
+            if (filterVoterSupport.HasValue)
+            {
+                query = query.Where(v => v.VoterSupport == filterVoterSupport.Value);
+            }
+
+            // Filter by tags
+            if (filterTagIds != null && filterTagIds.Any())
+            {
+                query = query.Where(v => v.TagAssignments.Any(ta => filterTagIds.Contains(ta.TagId)));
+            }
+
+            // Only count voters with valid cell phone numbers
+            query = query.Where(v => !string.IsNullOrEmpty(v.CellPhone));
+            
+            // Get total matching before opt-out filtering
+            var totalMatching = await query.CountAsync();
+            
+            // Get voters to check for opt-outs
+            var voters = await query.Select(v => v.CellPhone).ToListAsync();
+            
+            // Get opt-out records
+            var optOutType = campaignType == CampaignType.SMS ? OptOutType.SMS : OptOutType.RoboCalls;
+            var optedOutNumbers = await _context.OptOutRecords
+                .Where(o => o.Type == OptOutType.All || o.Type == optOutType)
+                .Select(o => o.PhoneNumber)
+                .ToListAsync();
+            
+            var optedOutSet = new HashSet<string>(optedOutNumbers);
+            var optedOutCount = 0;
+            
+            // Count how many of our matching voters are opted out
+            foreach (var phone in voters)
+            {
+                var normalizedPhone = NormalizePhoneNumber(phone);
+                if (optedOutSet.Contains(normalizedPhone))
+                {
+                    optedOutCount++;
+                }
+            }
+            
+            return new RecipientCountResult
+            {
+                TotalMatching = totalMatching,
+                OptedOut = optedOutCount,
+                Eligible = totalMatching - optedOutCount
+            };
+        }
+
         public async Task<IEnumerable<string>> GetAvailableZipCodesAsync()
         {
             return await _context.Voters
