@@ -314,7 +314,7 @@ namespace HooverCanvassingApi.Controllers
             return digitsOnly;
         }
 
-        private string FormatPhoneNumber(string phoneNumber)
+        private static string FormatPhoneNumber(string phoneNumber)
         {
             if (string.IsNullOrEmpty(phoneNumber) || phoneNumber.Length != 10)
                 return phoneNumber;
