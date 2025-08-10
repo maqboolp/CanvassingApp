@@ -15,7 +15,8 @@
       "Bash(doctl databases connection show:*)",
       "Bash(doctl databases:*)",
       "Bash(doctl apps:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(npm install:*)"
     ],
     "deny": []
   }
