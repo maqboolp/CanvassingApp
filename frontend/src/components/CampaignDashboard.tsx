@@ -718,7 +718,12 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
   const canEditCampaign = (campaign: Campaign): boolean => {
     // Can only edit campaigns that are "Ready to Send" (status 0) AND have no deliveries yet
     if (campaign.status !== 0) return false;
-    if (campaign.successfulDeliveries > 0 || campaign.failedDeliveries > 0) return false;
+    
+    // If campaign has recipients and any deliveries, it cannot be edited
+    // But if it has 0 recipients, it can still be edited (never actually sent)
+    if (campaign.totalRecipients > 0 && (campaign.successfulDeliveries > 0 || campaign.failedDeliveries > 0)) {
+      return false;
+    }
     
     // SuperAdmins can edit any campaign, Admins can only edit their own
     return user.role === 'superadmin' || campaign.createdById === user.id;
@@ -1061,7 +1066,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                 </Box>
               )}
               {/* Show a message for other non-editable campaigns */}
-              {campaign.status !== 0 && campaign.status !== 3 && campaign.status !== 6 && (
+              {!canEditCampaign(campaign) && campaign.status === 0 && campaign.totalRecipients > 0 && (
                 <Box sx={{ p: 1 }}>
                   <Typography variant="caption" color="text.secondary">
                     Campaign has been sent and cannot be edited
