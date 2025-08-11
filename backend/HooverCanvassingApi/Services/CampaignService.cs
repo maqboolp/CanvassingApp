@@ -1385,6 +1385,13 @@ namespace HooverCanvassingApi.Services
                 _logger.LogInformation($"Campaign {campaignId} duplicated as campaign {duplicatedCampaign.Id} by user {userId}");
                 _logger.LogInformation($"Duplicated campaign CreatedById after save: {duplicatedCampaign.CreatedById}");
 
+                // Calculate recipients for the duplicated campaign
+                var recipients = await GetFilteredVotersAsync(duplicatedCampaign);
+                duplicatedCampaign.TotalRecipients = recipients.Count(v => !string.IsNullOrEmpty(v.CellPhone));
+                _logger.LogInformation($"Calculated {duplicatedCampaign.TotalRecipients} recipients for duplicated campaign");
+                
+                await _context.SaveChangesAsync();
+
                 // Reload the campaign to ensure all fields are properly populated
                 await _context.Entry(duplicatedCampaign).ReloadAsync();
                 _logger.LogInformation($"Duplicated campaign CreatedById after reload: {duplicatedCampaign.CreatedById}");
