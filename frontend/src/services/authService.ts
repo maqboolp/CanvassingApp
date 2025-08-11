@@ -32,6 +32,9 @@ class AuthService {
       localStorage.setItem(this.TOKEN_KEY, user.token);
       localStorage.setItem(this.USER_KEY, JSON.stringify(user));
       
+      // Immediately refresh user data to ensure ID synchronization
+      await this.refreshUserData();
+      
       return user;
     } catch (error) {
       // Enhanced error handling to distinguish between different types of failures
@@ -131,6 +134,39 @@ class AuthService {
     } catch {
       this.logout();
       return null;
+    }
+  }
+
+  async refreshUserData(): Promise<void> {
+    const token = this.getToken();
+    if (!token) return;
+
+    try {
+      // Get current user data from the backend to ensure ID synchronization
+      const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data: ApiResponse<AuthUser> = await response.json();
+        
+        if (data.success && data.data) {
+          const currentUser = this.getCurrentUser();
+          if (currentUser) {
+            // Update user data while preserving the token
+            const updatedUser = { ...data.data, token: currentUser.token };
+            localStorage.setItem(this.USER_KEY, JSON.stringify(updatedUser));
+            console.log('User data refreshed successfully, ID:', updatedUser.id);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to refresh user data:', error);
+      // Don't logout on failure - this is just a sync operation
     }
   }
 
