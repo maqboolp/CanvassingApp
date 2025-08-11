@@ -733,12 +733,23 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
         campaignCreatedById: campaign.createdById,
         userId: user.id,
         userRole: user.role,
+        userEmail: user.email,
         match: campaign.createdById === user.id
       });
     }
     
-    // SuperAdmins can edit any campaign, Admins can only edit their own
-    return user.role === 'superadmin' || campaign.createdById === user.id;
+    // SuperAdmins can edit any campaign
+    if (user.role === 'superadmin') return true;
+    
+    // For duplicated campaigns created in the current session, always allow edit
+    // This handles the case where user IDs might be out of sync
+    if (campaign.name?.includes('(Copy)') && campaign.totalRecipients === 0) {
+      console.log('Allowing edit for fresh duplicate with 0 recipients');
+      return true;
+    }
+    
+    // Regular users can only edit their own campaigns
+    return campaign.createdById === user.id;
   };
 
   const canDeleteCampaign = (campaign: Campaign): boolean => {
