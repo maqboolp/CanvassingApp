@@ -88,27 +88,9 @@ namespace HooverCanvassingApi.Services
                 _logger.LogInformation($"Attempting to send SMS to {toPhoneNumber} for campaign message {campaignMessageId}");
                 var formattedNumber = FormatPhoneNumber(toPhoneNumber);
                 
-                // Check opt-in status unless override is specified
-                if (!overrideOptIn && !await CheckOptInStatusAsync(formattedNumber))
-                {
-                    _logger.LogWarning($"Cannot send SMS to {formattedNumber} - user is not opted in");
-                    
-                    // Update campaign message as failed due to opt-out
-                    using var optInScope = _serviceScopeFactory.CreateScope();
-                    var optInContext = optInScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                    var optInCampaignMessage = await optInContext.CampaignMessages
-                        .FirstOrDefaultAsync(cm => cm.Id == campaignMessageId);
-                    
-                    if (optInCampaignMessage != null)
-                    {
-                        optInCampaignMessage.Status = MessageStatus.Failed;
-                        optInCampaignMessage.ErrorMessage = "Recipient has not opted in to receive SMS messages";
-                        optInCampaignMessage.FailedAt = DateTime.UtcNow;
-                        await optInContext.SaveChangesAsync();
-                    }
-                    
-                    return false;
-                }
+                // Skip opt-in check - let Twilio handle compliance
+                // Twilio will manage opt-outs via STOP/START keywords
+                _logger.LogInformation($"Proceeding with SMS - Twilio will handle opt-out compliance");
                 _logger.LogInformation($"Formatted phone number: {formattedNumber}");
                 
                 MessageResource messageResource;
