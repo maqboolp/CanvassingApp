@@ -115,7 +115,14 @@ const getCampaignTypeString = (type: number): string => {
   }
 };
 
-const getCampaignStatusString = (status: number): string => {
+const getCampaignStatusString = (status: number, campaign?: Campaign): string => {
+  // Override status display if campaign has been sent but status not updated
+  if (campaign && status === 0) {
+    if (campaign.successfulDeliveries > 0 || campaign.failedDeliveries > 0) {
+      return 'Completed';
+    }
+  }
+  
   switch (status) {
     case 0: return 'Ready to Send';
     case 1: return 'Scheduled';
@@ -709,8 +716,9 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
   };
 
   const canEditCampaign = (campaign: Campaign): boolean => {
-    // Can only edit campaigns that are "Ready to Send" (status 0)
+    // Can only edit campaigns that are "Ready to Send" (status 0) AND have no deliveries yet
     if (campaign.status !== 0) return false;
+    if (campaign.successfulDeliveries > 0 || campaign.failedDeliveries > 0) return false;
     
     // SuperAdmins can edit any campaign, Admins can only edit their own
     return user.role === 'superadmin' || campaign.createdById === user.id;
@@ -850,7 +858,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                     fontSize: '0.75rem',
                     fontWeight: 500
                   }}>
-                    {getCampaignStatusString(campaign.status)}
+                    {getCampaignStatusString(campaign.status, campaign)}
                   </Box>
                 </Box>
               </Box>
@@ -1153,7 +1161,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                   </TableCell>
                   <TableCell>
                     <Chip 
-                      label={getCampaignStatusString(campaign.status)}
+                      label={getCampaignStatusString(campaign.status, campaign)}
                       size="small"
                       color={getStatusColor(campaign.status)}
                     />
