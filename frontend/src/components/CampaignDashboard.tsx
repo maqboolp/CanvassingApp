@@ -547,6 +547,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
         }
       );
 
+      console.log('Duplicated campaign response:', duplicatedCampaign);
       setSuccess(`Campaign duplicated as "${duplicatedCampaign.name}"`);
       fetchCampaigns();
     } catch (error) {
@@ -723,6 +724,17 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
     // But if it has 0 recipients, it can still be edited (never actually sent)
     if (campaign.totalRecipients > 0 && (campaign.successfulDeliveries > 0 || campaign.failedDeliveries > 0)) {
       return false;
+    }
+    
+    // Debug logging for permission issues
+    if (campaign.name?.includes('(Copy)')) {
+      console.log('Checking edit permission for duplicated campaign:', {
+        campaignName: campaign.name,
+        campaignCreatedById: campaign.createdById,
+        userId: user.id,
+        userRole: user.role,
+        match: campaign.createdById === user.id
+      });
     }
     
     // SuperAdmins can edit any campaign, Admins can only edit their own
