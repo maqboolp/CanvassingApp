@@ -192,6 +192,16 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
     fetchVoiceRecordings();
   }, []);
 
+  // Debug: Log when campaigns state actually changes
+  useEffect(() => {
+    console.log('Campaigns state updated:', campaigns.length, 'campaigns');
+    campaigns.forEach((campaign) => {
+      if (campaign.name?.includes('(Copy)')) {
+        console.log(`State update - ${campaign.name}: status=${campaign.status}, totalRecipients=${campaign.totalRecipients}, createdById=${campaign.createdById}, userId=${user.id}`);
+      }
+    });
+  }, [campaigns, user.id]);
+
   // Auto-refresh when there are campaigns in "Sending" state
   useEffect(() => {
     const hasSendingCampaigns = campaigns.some(c => c.status === 2); // 2 = Sending
@@ -240,7 +250,8 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
           });
         }
       });
-      setCampaigns(data);
+      // Force a complete state update by creating a new array
+      setCampaigns([...data]);
       
       if (isRefresh && showSuccess) {
         setSuccess('Campaigns refreshed');
