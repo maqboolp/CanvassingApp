@@ -549,7 +549,10 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
 
       console.log('Duplicated campaign response:', duplicatedCampaign);
       setSuccess(`Campaign duplicated as "${duplicatedCampaign.name}"`);
-      fetchCampaigns();
+      // Add a small delay to ensure backend has fully saved the campaign
+      setTimeout(() => {
+        fetchCampaigns();
+      }, 500);
     } catch (error) {
       if (error instanceof ApiError && error.isAuthError) {
         // Auth error is already handled by ApiErrorHandler (user redirected to login)
@@ -957,16 +960,22 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                       Send Now
                     </Button>
                   )}
-                  {canEditCampaign(campaign) && (
-                    <Button
-                      size="small"
-                      startIcon={<EditIcon />}
-                      onClick={() => editCampaign(campaign)}
-                      variant="outlined"
-                    >
-                      Edit
-                    </Button>
-                  )}
+                  {(() => {
+                    const canEdit = canEditCampaign(campaign);
+                    if (campaign.name?.includes('(Copy)')) {
+                      console.log(`Card view - Rendering edit button for ${campaign.name}: canEdit=${canEdit}`);
+                    }
+                    return canEdit ? (
+                      <Button
+                        size="small"
+                        startIcon={<EditIcon />}
+                        onClick={() => editCampaign(campaign)}
+                        variant="outlined"
+                      >
+                        Edit
+                      </Button>
+                    ) : null;
+                  })()}
                   <Button
                     size="small"
                     startIcon={<CopyIcon />}
@@ -1231,15 +1240,21 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                               <SendIcon />
                             </IconButton>
                           )}
-                          {canEditCampaign(campaign) && (
-                            <IconButton
-                              size="small"
-                              onClick={() => editCampaign(campaign)}
-                              title="Edit Campaign"
-                            >
-                              <EditIcon />
-                            </IconButton>
-                          )}
+                          {(() => {
+                            const canEdit = canEditCampaign(campaign);
+                            if (campaign.name?.includes('(Copy)')) {
+                              console.log(`Rendering edit button for ${campaign.name}: canEdit=${canEdit}`);
+                            }
+                            return canEdit ? (
+                              <IconButton
+                                size="small"
+                                onClick={() => editCampaign(campaign)}
+                                title="Edit Campaign"
+                              >
+                                <EditIcon />
+                              </IconButton>
+                            ) : null;
+                          })()}
                         </>
                       )}
                       {/* Resume button for stuck campaigns */}
