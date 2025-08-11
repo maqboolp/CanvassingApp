@@ -27,6 +27,8 @@ builder.Services.AddControllers(options =>
 {
     // Use camelCase for JSON property names to match JavaScript conventions
     options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+    // Convert enums to string values instead of numbers
+    options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
 });
 
 // Add memory cache
