@@ -109,7 +109,7 @@ namespace HooverCanvassingApi.Controllers
                 var inviterName = $"{inviter?.FirstName} {inviter?.LastName}";
                 
                 // Generate registration URL
-                var registrationUrl = $"https://t4h-canvas-2uwxt.ondigitalocean.app/complete-registration?token={token}";
+                var registrationUrl = $"https://robert-williams-sgvgy.ondigitalocean.app/complete-registration?token={token}";
                 
                 // Send invitation email
                 var emailSent = await _emailService.SendInvitationEmailAsync(
@@ -421,7 +421,7 @@ namespace HooverCanvassingApi.Controllers
                     : "System Administrator";
 
                 // Generate registration URL
-                var registrationUrl = $"https://t4h-canvas-2uwxt.ondigitalocean.app/complete-registration?token={invitation.Token}";
+                var registrationUrl = $"https://robert-williams-sgvgy.ondigitalocean.app/complete-registration?token={invitation.Token}";
 
                 // Resend invitation email
                 var emailSent = await _emailService.SendInvitationEmailAsync(
