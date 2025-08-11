@@ -477,7 +477,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
     try {
       // Check if this is a retry (campaign status is completed)
       const campaign = campaigns.find(c => c.id === sendDialog.campaignId);
-      const isRetry = campaign && campaign.status === 3; // Completed status
+      const isRetry = campaign && checkCampaignStatus(campaign, 3); // Completed status
       
       const endpoint = isRetry 
         ? `${API_BASE_URL}/api/campaigns/${sendDialog.campaignId}/retry-failed`
@@ -928,7 +928,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
               </Typography>
 
               {/* Show scheduled time for scheduled campaigns */}
-              {campaign.status === 1 && campaign.scheduledTime && (
+              {checkCampaignStatus(campaign, 1) && campaign.scheduledTime && (
                 <Alert severity="info" sx={{ mb: 2 }}>
                   <Typography variant="caption">
                     Scheduled to start: {new Date(campaign.scheduledTime).toLocaleString()}
@@ -970,7 +970,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
             </CardContent>
             
             <CardActions>
-              {campaign.status === 0 && ( // Ready to Send status
+              {checkCampaignStatus(campaign, 0) && ( // Ready to Send status
                 <>
                   {canSendCampaign() && (
                     <Button
@@ -1019,7 +1019,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                 </>
               )}
               {/* Show cancel button for scheduled campaigns */}
-              {campaign.status === 1 && canSendCampaign() && (
+              {checkCampaignStatus(campaign, 1) && canSendCampaign() && (
                 <Button
                   size="small"
                   variant="outlined"
@@ -1044,7 +1044,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                 </Button>
               )}
               {/* Show resume button for stuck campaigns in Sending status */}
-              {campaign.status === 2 && campaign.pendingDeliveries > 0 && canSendCampaign() && (
+              {checkCampaignStatus(campaign, 2) && campaign.pendingDeliveries > 0 && canSendCampaign() && (
                 <>
                   <Button
                     size="small"
@@ -1080,7 +1080,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                 </>
               )}
               {/* Force stop button for stuck campaigns (SuperAdmin only) */}
-              {campaign.status === 2 && user.role === 'superadmin' && (
+              {checkCampaignStatus(campaign, 2) && user.role === 'superadmin' && (
                 <Button
                   size="small"
                   startIcon={<StopCircleIcon />}
@@ -1092,7 +1092,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                 </Button>
               )}
               {/* Show retry button for completed campaigns with failed messages */}
-              {campaign.status === 3 && campaign.failedDeliveries > 0 && canSendCampaign() && (
+              {checkCampaignStatus(campaign, 3) && campaign.failedDeliveries > 0 && canSendCampaign() && (
                 <Button
                   size="small"
                   startIcon={<SendIcon />}
@@ -1108,7 +1108,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                 </Button>
               )}
               {/* Show a message for sealed campaigns */}
-              {campaign.status === 6 && (
+              {checkCampaignStatus(campaign, 6) && (
                 <Box sx={{ p: 1 }}>
                   <Chip 
                     label="✓ All Messages Delivered" 
@@ -1119,7 +1119,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                 </Box>
               )}
               {/* Show a message for other non-editable campaigns */}
-              {!canEditCampaign(campaign) && campaign.status === 0 && campaign.totalRecipients > 0 && (
+              {!canEditCampaign(campaign) && checkCampaignStatus(campaign, 0) && campaign.totalRecipients > 0 && (
                 <Box sx={{ p: 1 }}>
                   <Typography variant="caption" color="text.secondary">
                     Campaign has been sent and cannot be edited
@@ -1245,7 +1245,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                   </TableCell>
                   <TableCell>
                     <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
-                      {campaign.status === 0 && (
+                      {checkCampaignStatus(campaign, 0) && (
                         <>
                           {canSendCampaign() && (
                             <IconButton
@@ -1273,7 +1273,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                         </>
                       )}
                       {/* Resume button for stuck campaigns */}
-                      {campaign.status === 2 && campaign.pendingDeliveries > 0 && canSendCampaign() && (
+                      {checkCampaignStatus(campaign, 2) && campaign.pendingDeliveries > 0 && canSendCampaign() && (
                         <IconButton
                           size="small"
                           onClick={async () => {
@@ -1298,7 +1298,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                           <PlayIcon />
                         </IconButton>
                       )}
-                      {campaign.status === 3 && campaign.failedDeliveries > 0 && canSendCampaign() && (
+                      {checkCampaignStatus(campaign, 3) && campaign.failedDeliveries > 0 && canSendCampaign() && (
                         <Button
                           size="small"
                           startIcon={<SendIcon />}
@@ -1322,7 +1322,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                         <CopyIcon />
                       </IconButton>
                       {/* Force stop button for stuck campaigns (SuperAdmin only) */}
-                      {campaign.status === 2 && user.role === 'superadmin' && (
+                      {checkCampaignStatus(campaign, 2) && user.role === 'superadmin' && (
                         <IconButton
                           size="small"
                           onClick={() => forceStopCampaign(campaign.id)}
