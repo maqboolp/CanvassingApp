@@ -1352,6 +1352,9 @@ namespace HooverCanvassingApi.Services
                 if (originalCampaign == null)
                     return null;
 
+                _logger.LogInformation($"Duplicating campaign {campaignId} for user {userId}");
+                _logger.LogInformation($"Original campaign CreatedById: {originalCampaign.CreatedById}");
+                
                 // Create a copy of the campaign
                 var duplicatedCampaign = new Campaign
                 {
@@ -1380,7 +1383,12 @@ namespace HooverCanvassingApi.Services
                 await _context.SaveChangesAsync();
 
                 _logger.LogInformation($"Campaign {campaignId} duplicated as campaign {duplicatedCampaign.Id} by user {userId}");
+                _logger.LogInformation($"Duplicated campaign CreatedById after save: {duplicatedCampaign.CreatedById}");
 
+                // Reload the campaign to ensure all fields are properly populated
+                await _context.Entry(duplicatedCampaign).ReloadAsync();
+                _logger.LogInformation($"Duplicated campaign CreatedById after reload: {duplicatedCampaign.CreatedById}");
+                
                 return duplicatedCampaign;
             }
             catch (Exception ex)
