@@ -62,8 +62,8 @@ interface Campaign {
   id: number;
   name: string;
   message: string;
-  type: number; // 0 = SMS, 1 = RoboCall
-  status: number; // 0 = Draft, 1 = Scheduled, 2 = Sending, 3 = Completed, 4 = Failed, 5 = Cancelled, 6 = Sealed
+  type: number | string; // 0 = SMS, 1 = RoboCall (or 'SMS', 'RoboCall')
+  status: number | string; // 0 = Draft, 1 = Scheduled, etc. (or 'Draft', 'Scheduled', etc.)
   scheduledTime?: string;
   createdAt: string;
   sentAt?: string;
@@ -107,7 +107,8 @@ const getCampaignTypeEnum = (value: string): number => {
 
 
 // Convert enum numbers back to strings for display
-const getCampaignTypeString = (type: number): string => {
+const getCampaignTypeString = (type: number | string): string => {
+  if (typeof type === 'string') return type;
   switch (type) {
     case 0: return 'SMS';
     case 1: return 'RoboCall';
@@ -115,15 +116,21 @@ const getCampaignTypeString = (type: number): string => {
   }
 };
 
-const getCampaignStatusString = (status: number, campaign?: Campaign): string => {
+const getCampaignStatusString = (status: number | string, campaign?: Campaign): string => {
   // Override status display if campaign has been sent but status not updated
-  if (campaign && status === 0) {
+  const statusNum = typeof status === 'string' ? 
+    {'Draft': 0, 'Scheduled': 1, 'Sending': 2, 'Completed': 3, 'Failed': 4, 'Cancelled': 5, 'Sealed': 6}[status] || 0 
+    : status;
+  
+  if (campaign && statusNum === 0) {
     if (campaign.successfulDeliveries > 0 || campaign.failedDeliveries > 0) {
       return 'Completed';
     }
   }
   
-  switch (status) {
+  if (typeof status === 'string') return status;
+  
+  switch (statusNum) {
     case 0: return 'Ready to Send';
     case 1: return 'Scheduled';
     case 2: return 'Sending';
@@ -197,7 +204,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
     console.log('Campaigns state updated:', campaigns.length, 'campaigns');
     campaigns.forEach((campaign) => {
       if (campaign.name?.includes('(Copy)')) {
-        console.log(`State update - ${campaign.name}: status=${campaign.status}, totalRecipients=${campaign.totalRecipients}, createdById=${campaign.createdById}, userId=${user.id}`);
+        console.log(`State update - ${campaign.name}: status=${campaign.status} (type: ${typeof campaign.status}), totalRecipients=${campaign.totalRecipients}, createdById=${campaign.createdById}, userId=${user.id}`);
       }
     });
   }, [campaigns, user.id]);
@@ -728,8 +735,12 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
     }));
   };
 
-  const getStatusColor = (status: number): "default" | "primary" | "secondary" | "error" | "info" | "success" | "warning" => {
-    switch (status) {
+  const getStatusColor = (status: number | string): "default" | "primary" | "secondary" | "error" | "info" | "success" | "warning" => {
+    const statusNum = typeof status === 'string' ? 
+      {'Draft': 0, 'Scheduled': 1, 'Sending': 2, 'Completed': 3, 'Failed': 4, 'Cancelled': 5, 'Sealed': 6}[status] || 0 
+      : status;
+    
+    switch (statusNum) {
       case 0: return 'default'; // Draft
       case 1: return 'info';    // Scheduled
       case 2: return 'warning'; // Sending
@@ -740,13 +751,37 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
     }
   };
 
-  const getTypeColor = (type: number): "default" | "primary" | "secondary" | "error" | "info" | "success" | "warning" => {
-    return type === 0 ? 'primary' : 'secondary'; // SMS = primary, RoboCall = secondary
+  const getTypeColor = (type: number | string): "default" | "primary" | "secondary" | "error" | "info" | "success" | "warning" => {
+    const isSMS = type === 0 || type === 'SMS';
+    return isSMS ? 'primary' : 'secondary';
+  };
+
+  // Helper function to check campaign status regardless of whether it's a number or string
+  const checkCampaignStatus = (campaign: Campaign, expectedStatus: number): boolean => {
+    const statusMap: { [key: string]: number } = {
+      'Draft': 0,
+      'Scheduled': 1,
+      'Sending': 2,
+      'Completed': 3,
+      'Failed': 4,
+      'Cancelled': 5,
+      'Sealed': 6
+    };
+    
+    if (typeof campaign.status === 'number') {
+      return campaign.status === expectedStatus;
+    }
+    
+    if (typeof campaign.status === 'string') {
+      return statusMap[campaign.status] === expectedStatus;
+    }
+    
+    return false;
   };
 
   const canEditCampaign = (campaign: Campaign): boolean => {
-    // Can only edit campaigns that are "Ready to Send" (status 0) AND have no deliveries yet
-    if (campaign.status !== 0) return false;
+    // Can only edit campaigns that are "Ready to Send" (status 0 or 'Draft') AND have no deliveries yet
+    if (!checkCampaignStatus(campaign, 0)) return false;
     
     // If campaign has recipients and any deliveries, it cannot be edited
     // But if it has 0 recipients, it can still be edited (never actually sent)
