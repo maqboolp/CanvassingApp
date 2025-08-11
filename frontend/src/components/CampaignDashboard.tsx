@@ -226,6 +226,20 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
         `${API_BASE_URL}/api/campaigns`
       );
       console.log('Campaigns data from API:', data);
+      // Log details of any duplicated campaigns
+      data.forEach((campaign: Campaign) => {
+        if (campaign.name?.includes('(Copy)')) {
+          console.log('Duplicated campaign details:', {
+            id: campaign.id,
+            name: campaign.name,
+            createdById: campaign.createdById,
+            status: campaign.status,
+            totalRecipients: campaign.totalRecipients,
+            successfulDeliveries: campaign.successfulDeliveries,
+            failedDeliveries: campaign.failedDeliveries
+          });
+        }
+      });
       setCampaigns(data);
       
       if (isRefresh && showSuccess) {
