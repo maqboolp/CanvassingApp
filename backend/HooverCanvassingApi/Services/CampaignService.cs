@@ -39,7 +39,9 @@ namespace HooverCanvassingApi.Services
             
             // Calculate total recipients for draft campaigns
             var recipients = await GetFilteredVotersAsync(campaign);
-            campaign.TotalRecipients = recipients.Count(v => !string.IsNullOrEmpty(v.CellPhone));
+            campaign.TotalRecipients = campaign.Type == CampaignType.Email 
+                ? recipients.Count(v => !string.IsNullOrEmpty(v.Email))
+                : recipients.Count(v => !string.IsNullOrEmpty(v.CellPhone));
             
             _context.Campaigns.Add(campaign);
             await _context.SaveChangesAsync();
@@ -74,7 +76,9 @@ namespace HooverCanvassingApi.Services
             if (campaign.Status == CampaignStatus.Draft)
             {
                 var recipients = await GetFilteredVotersAsync(campaign);
-                campaign.TotalRecipients = recipients.Count(v => !string.IsNullOrEmpty(v.CellPhone));
+                campaign.TotalRecipients = campaign.Type == CampaignType.Email 
+                    ? recipients.Count(v => !string.IsNullOrEmpty(v.Email))
+                    : recipients.Count(v => !string.IsNullOrEmpty(v.CellPhone));
             }
             
             _context.Campaigns.Update(campaign);
@@ -206,22 +210,46 @@ namespace HooverCanvassingApi.Services
             
             foreach (var voter in recipients)
             {
-                if (!string.IsNullOrEmpty(voter.CellPhone))
+                // For email campaigns, check email field; otherwise check phone
+                if (campaign.Type == CampaignType.Email)
                 {
-                    // Skip if duplicate prevention is enabled and this voter already received the same message
-                    if (campaign.PreventDuplicateMessages && duplicateRecipients.Contains(voter.CellPhone))
+                    if (!string.IsNullOrEmpty(voter.Email))
                     {
-                        _logger.LogDebug($"Skipping duplicate recipient: {voter.CellPhone}");
-                        continue;
+                        // Skip if duplicate prevention is enabled and this voter already received the same message
+                        if (campaign.PreventDuplicateMessages && duplicateRecipients.Contains(voter.Email))
+                        {
+                            _logger.LogDebug($"Skipping duplicate recipient: {voter.Email}");
+                            continue;
+                        }
+                        
+                        campaignMessages.Add(new CampaignMessage
+                        {
+                            CampaignId = campaign.Id,
+                            VoterId = voter.LalVoterId,
+                            RecipientPhone = voter.Email, // Store email in RecipientPhone field for now
+                            Status = MessageStatus.Pending
+                        });
                     }
-                    
-                    campaignMessages.Add(new CampaignMessage
+                }
+                else
+                {
+                    if (!string.IsNullOrEmpty(voter.CellPhone))
                     {
-                        CampaignId = campaign.Id,
-                        VoterId = voter.LalVoterId,
-                        RecipientPhone = voter.CellPhone,
-                        Status = MessageStatus.Pending
-                    });
+                        // Skip if duplicate prevention is enabled and this voter already received the same message
+                        if (campaign.PreventDuplicateMessages && duplicateRecipients.Contains(voter.CellPhone))
+                        {
+                            _logger.LogDebug($"Skipping duplicate recipient: {voter.CellPhone}");
+                            continue;
+                        }
+                        
+                        campaignMessages.Add(new CampaignMessage
+                        {
+                            CampaignId = campaign.Id,
+                            VoterId = voter.LalVoterId,
+                            RecipientPhone = voter.CellPhone,
+                            Status = MessageStatus.Pending
+                        });
+                    }
                 }
             }
 
@@ -635,6 +663,63 @@ namespace HooverCanvassingApi.Services
                         }
                     }
                 }
+                else if (campaign.Type == CampaignType.Email)
+                {
+                    // Process email campaign
+                    var emailService = _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<IEmailService>();
+                    
+                    foreach (var message in pendingMessages)
+                    {
+                        try
+                        {
+                            // Get voter email
+                            var voter = await _context.Voters.FindAsync(message.VoterId);
+                            if (voter != null && !string.IsNullOrEmpty(voter.Email))
+                            {
+                                // Send email
+                                var success = await emailService.SendEmailAsync(
+                                    voter.Email,
+                                    campaign.EmailSubject ?? "Campaign Message",
+                                    campaign.EmailHtmlContent ?? campaign.Message,
+                                    campaign.EmailPlainTextContent ?? campaign.Message
+                                );
+                                
+                                if (success)
+                                {
+                                    successfulDeliveries++;
+                                    message.Status = MessageStatus.Sent;
+                                    message.SentAt = DateTime.UtcNow;
+                                    // Update voter campaign tracking statistics
+                                    await UpdateVoterCampaignStatsAsync(message.VoterId, campaign.Id, campaign.Type);
+                                }
+                                else
+                                {
+                                    failedDeliveries++;
+                                    message.Status = MessageStatus.Failed;
+                                }
+                            }
+                            else
+                            {
+                                failedDeliveries++;
+                                message.Status = MessageStatus.Failed;
+                                message.ErrorMessage = "No email address available";
+                            }
+                            
+                            await _context.SaveChangesAsync();
+                            
+                            // Add small delay to avoid overwhelming email service
+                            await Task.Delay(100);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, $"Failed to send email for message {message.Id}");
+                            failedDeliveries++;
+                            message.Status = MessageStatus.Failed;
+                            message.ErrorMessage = ex.Message;
+                            await _context.SaveChangesAsync();
+                        }
+                    }
+                }
                 else
                 {
                     // Keep individual processing for robo calls
@@ -716,6 +801,11 @@ namespace HooverCanvassingApi.Services
                 voter.LastCallAt = now;
                 voter.LastCallCampaignId = campaignId;
                 voter.CallCount++;
+            }
+            else if (campaignType == CampaignType.Email)
+            {
+                // Track email campaign stats (we might need to add these fields to Voter model later)
+                // For now, just track in general campaign stats
             }
 
             await _context.SaveChangesAsync();
@@ -981,6 +1071,11 @@ namespace HooverCanvassingApi.Services
                 voter.LastCallAt = now;
                 voter.LastCallCampaignId = campaignId;
                 voter.CallCount++;
+            }
+            else if (campaignType == CampaignType.Email)
+            {
+                // Track email campaign stats (we might need to add these fields to Voter model later)
+                // For now, just track in general campaign stats
             }
         }
         
@@ -1387,7 +1482,9 @@ namespace HooverCanvassingApi.Services
 
                 // Calculate recipients for the duplicated campaign
                 var recipients = await GetFilteredVotersAsync(duplicatedCampaign);
-                duplicatedCampaign.TotalRecipients = recipients.Count(v => !string.IsNullOrEmpty(v.CellPhone));
+                duplicatedCampaign.TotalRecipients = duplicatedCampaign.Type == CampaignType.Email 
+                    ? recipients.Count(v => !string.IsNullOrEmpty(v.Email))
+                    : recipients.Count(v => !string.IsNullOrEmpty(v.CellPhone));
                 _logger.LogInformation($"Calculated {duplicatedCampaign.TotalRecipients} recipients for duplicated campaign");
                 
                 await _context.SaveChangesAsync();

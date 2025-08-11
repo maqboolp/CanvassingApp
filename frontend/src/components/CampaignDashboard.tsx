@@ -62,7 +62,7 @@ interface Campaign {
   id: number;
   name: string;
   message: string;
-  type: number | string; // 0 = SMS, 1 = RoboCall (or 'SMS', 'RoboCall')
+  type: number | string; // 0 = SMS, 1 = RoboCall, 2 = Email (or 'SMS', 'RoboCall', 'Email')
   status: number | string; // 0 = Draft, 1 = Scheduled, etc. (or 'Draft', 'Scheduled', etc.)
   scheduledTime?: string;
   createdAt: string;
@@ -74,6 +74,9 @@ interface Campaign {
   pendingDeliveries: number;
   voiceUrl?: string;
   voiceRecordingId?: number;
+  emailSubject?: string;
+  emailHtmlContent?: string;
+  emailPlainTextContent?: string;
   filterZipCodes?: string;
   filterVoteFrequency?: number;
   filterMinAge?: number;
@@ -101,6 +104,7 @@ const getCampaignTypeEnum = (value: string): number => {
   switch (value) {
     case 'SMS': return 0;
     case 'RoboCall': return 1;
+    case 'Email': return 2;
     default: return 0;
   }
 };
@@ -112,6 +116,7 @@ const getCampaignTypeString = (type: number | string): string => {
   switch (type) {
     case 0: return 'SMS';
     case 1: return 'RoboCall';
+    case 2: return 'Email';
     default: return 'SMS';
   }
 };
@@ -169,9 +174,12 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
   const [newCampaign, setNewCampaign] = useState({
     name: '',
     message: '',
-    type: 'SMS' as 'SMS' | 'RoboCall',
+    type: 'SMS' as 'SMS' | 'RoboCall' | 'Email',
     voiceUrl: '',
     voiceRecordingId: null as number | null,
+    emailSubject: '',
+    emailHtmlContent: '',
+    emailPlainTextContent: '',
     selectedZipCodes: [] as string[],
     selectedTagIds: [] as number[],
     // Calling hours settings
@@ -363,6 +371,15 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
       }
     }
     
+    if (newCampaign.type === 'Email') {
+      if (!newCampaign.emailSubject?.trim()) {
+        errors.emailSubject = 'Email subject is required';
+      }
+      if (!newCampaign.emailHtmlContent?.trim()) {
+        errors.emailContent = 'Email content is required';
+      }
+    }
+    
     if (newCampaign.type === 'RoboCall' && voiceType === 'recording' && !newCampaign.voiceRecordingId) {
       errors.voiceRecording = 'Please select a voice recording';
     }
@@ -388,6 +405,9 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
         type: getCampaignTypeEnum(newCampaign.type),
         voiceUrl: newCampaign.voiceUrl || null,
         voiceRecordingId: newCampaign.voiceRecordingId || null,
+        emailSubject: newCampaign.type === 'Email' ? newCampaign.emailSubject : null,
+        emailHtmlContent: newCampaign.type === 'Email' ? newCampaign.emailHtmlContent : null,
+        emailPlainTextContent: newCampaign.type === 'Email' ? newCampaign.emailPlainTextContent : null,
         filterZipCodes: newCampaign.selectedZipCodes.length > 0 ? JSON.stringify(newCampaign.selectedZipCodes) : null,
         filterVoteFrequency: null,
         filterMinAge: null,
@@ -445,6 +465,9 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
         type: 'SMS', 
         voiceUrl: '',
         voiceRecordingId: null,
+        emailSubject: '',
+        emailHtmlContent: '',
+        emailPlainTextContent: '',
         selectedZipCodes: [],
         selectedTagIds: [],
         enforceCallingHours: true,
@@ -601,9 +624,12 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
     setNewCampaign({
       name: campaign.name,
       message: campaign.message,
-      type: getCampaignTypeString(campaign.type) as 'SMS' | 'RoboCall',
+      type: getCampaignTypeString(campaign.type) as 'SMS' | 'RoboCall' | 'Email',
       voiceUrl: campaign.voiceUrl || '',
       voiceRecordingId: campaign.voiceRecordingId || null,
+      emailSubject: campaign.emailSubject || '',
+      emailHtmlContent: campaign.emailHtmlContent || '',
+      emailPlainTextContent: campaign.emailPlainTextContent || '',
       selectedZipCodes,
       selectedTagIds,
       // Calling hours settings (use defaults if not present)
@@ -644,6 +670,9 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
         message: newCampaign.message,
         voiceUrl: newCampaign.voiceUrl || null,
         voiceRecordingId: newCampaign.voiceRecordingId || null,
+        emailSubject: newCampaign.type === 'Email' ? newCampaign.emailSubject : null,
+        emailHtmlContent: newCampaign.type === 'Email' ? newCampaign.emailHtmlContent : null,
+        emailPlainTextContent: newCampaign.type === 'Email' ? newCampaign.emailPlainTextContent : null,
         filterZipCodes: newCampaign.selectedZipCodes.length > 0 ? JSON.stringify(newCampaign.selectedZipCodes) : null,
         filterVoteFrequency: null,
         filterMinAge: null,
@@ -680,6 +709,9 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
         type: 'SMS', 
         voiceUrl: '',
         voiceRecordingId: null,
+        emailSubject: '',
+        emailHtmlContent: '',
+        emailPlainTextContent: '',
         selectedZipCodes: [],
         selectedTagIds: [],
         enforceCallingHours: true,
@@ -1375,10 +1407,11 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                 <Select
                   value={newCampaign.type}
                   label="Campaign Type"
-                  onChange={(e) => setNewCampaign({ ...newCampaign, type: e.target.value as 'SMS' | 'RoboCall' })}
+                  onChange={(e) => setNewCampaign({ ...newCampaign, type: e.target.value as 'SMS' | 'RoboCall' | 'Email' })}
                 >
                   <MenuItem value="SMS">SMS</MenuItem>
                   <MenuItem value="RoboCall">Robo Call</MenuItem>
+                  <MenuItem value="Email">Email</MenuItem>
                 </Select>
               </FormControl>
             </Box>
@@ -1395,6 +1428,42 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                 error={!!validationErrors.message}
                 helperText={validationErrors.message || `${newCampaign.message.length}/1600 characters`}
               />
+            )}
+
+            {newCampaign.type === 'Email' && (
+              <>
+                <TextField
+                  label="Email Subject"
+                  fullWidth
+                  required
+                  value={newCampaign.emailSubject}
+                  onChange={(e) => setNewCampaign({ ...newCampaign, emailSubject: e.target.value })}
+                  error={!!validationErrors.emailSubject}
+                  helperText={validationErrors.emailSubject}
+                  sx={{ mb: 2 }}
+                />
+                <TextField
+                  label="Email Content (HTML)"
+                  fullWidth
+                  required
+                  multiline
+                  rows={6}
+                  value={newCampaign.emailHtmlContent}
+                  onChange={(e) => setNewCampaign({ ...newCampaign, emailHtmlContent: e.target.value })}
+                  error={!!validationErrors.emailContent}
+                  helperText={validationErrors.emailContent || 'You can use HTML tags for formatting'}
+                  sx={{ mb: 2 }}
+                />
+                <TextField
+                  label="Plain Text Content (Optional)"
+                  fullWidth
+                  multiline
+                  rows={4}
+                  value={newCampaign.emailPlainTextContent}
+                  onChange={(e) => setNewCampaign({ ...newCampaign, emailPlainTextContent: e.target.value })}
+                  helperText="Fallback for email clients that don't support HTML"
+                />
+              </>
             )}
 
             {newCampaign.type === 'RoboCall' && (
@@ -1784,6 +1853,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                 >
                   <MenuItem value="SMS">SMS</MenuItem>
                   <MenuItem value="RoboCall">Robo Call</MenuItem>
+                  <MenuItem value="Email">Email</MenuItem>
                 </Select>
               </FormControl>
             </Box>
@@ -1800,6 +1870,42 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                 error={!!validationErrors.message}
                 helperText={validationErrors.message || `${newCampaign.message.length}/1600 characters`}
               />
+            )}
+
+            {newCampaign.type === 'Email' && (
+              <>
+                <TextField
+                  label="Email Subject"
+                  fullWidth
+                  required
+                  value={newCampaign.emailSubject}
+                  onChange={(e) => setNewCampaign({ ...newCampaign, emailSubject: e.target.value })}
+                  error={!!validationErrors.emailSubject}
+                  helperText={validationErrors.emailSubject}
+                  sx={{ mb: 2 }}
+                />
+                <TextField
+                  label="Email Content (HTML)"
+                  fullWidth
+                  required
+                  multiline
+                  rows={6}
+                  value={newCampaign.emailHtmlContent}
+                  onChange={(e) => setNewCampaign({ ...newCampaign, emailHtmlContent: e.target.value })}
+                  error={!!validationErrors.emailContent}
+                  helperText={validationErrors.emailContent || 'You can use HTML tags for formatting'}
+                  sx={{ mb: 2 }}
+                />
+                <TextField
+                  label="Plain Text Content (Optional)"
+                  fullWidth
+                  multiline
+                  rows={4}
+                  value={newCampaign.emailPlainTextContent}
+                  onChange={(e) => setNewCampaign({ ...newCampaign, emailPlainTextContent: e.target.value })}
+                  helperText="Fallback for email clients that don't support HTML"
+                />
+              </>
             )}
 
             {newCampaign.type === 'RoboCall' && (

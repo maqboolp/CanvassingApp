@@ -55,6 +55,10 @@ namespace HooverCanvassingApi.Controllers
                 CreatedById = userId,
                 VoiceUrl = request.VoiceUrl,
                 VoiceRecordingId = request.VoiceRecordingId,
+                // Email campaign fields
+                EmailSubject = request.EmailSubject,
+                EmailHtmlContent = request.EmailHtmlContent,
+                EmailPlainTextContent = request.EmailPlainTextContent,
                 FilterZipCodes = request.FilterZipCodes,
                 FilterVoteFrequency = request.FilterVoteFrequency,
                 FilterMinAge = request.FilterMinAge,
@@ -122,6 +126,12 @@ namespace HooverCanvassingApi.Controllers
             campaign.Message = request.Message ?? string.Empty;
             campaign.VoiceUrl = request.VoiceUrl;
             campaign.VoiceRecordingId = request.VoiceRecordingId;
+            
+            // Update email campaign fields
+            campaign.EmailSubject = request.EmailSubject;
+            campaign.EmailHtmlContent = request.EmailHtmlContent;
+            campaign.EmailPlainTextContent = request.EmailPlainTextContent;
+            
             campaign.FilterZipCodes = request.FilterZipCodes;
             campaign.FilterVoteFrequency = request.FilterVoteFrequency;
             campaign.FilterMinAge = request.FilterMinAge;
@@ -453,6 +463,12 @@ namespace HooverCanvassingApi.Controllers
         public CampaignType Type { get; set; }
         public string? VoiceUrl { get; set; }
         public int? VoiceRecordingId { get; set; }
+        
+        // Email campaign fields
+        public string? EmailSubject { get; set; }
+        public string? EmailHtmlContent { get; set; }
+        public string? EmailPlainTextContent { get; set; }
+        
         public string? FilterZipCodes { get; set; }
         public VoteFrequency? FilterVoteFrequency { get; set; }
         public int? FilterMinAge { get; set; }
@@ -476,6 +492,12 @@ namespace HooverCanvassingApi.Controllers
         public string? Message { get; set; }
         public string? VoiceUrl { get; set; }
         public int? VoiceRecordingId { get; set; }
+        
+        // Email campaign fields
+        public string? EmailSubject { get; set; }
+        public string? EmailHtmlContent { get; set; }
+        public string? EmailPlainTextContent { get; set; }
+        
         public string? FilterZipCodes { get; set; }
         public VoteFrequency? FilterVoteFrequency { get; set; }
         public int? FilterMinAge { get; set; }

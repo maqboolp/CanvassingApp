@@ -21,6 +21,11 @@ namespace HooverCanvassingApi.Models
         public int? VoiceRecordingId { get; set; }
         public VoiceRecording? VoiceRecording { get; set; }
         
+        // Email campaign fields
+        public string? EmailSubject { get; set; } // Subject line for email campaigns
+        public string? EmailHtmlContent { get; set; } // HTML content for email campaigns
+        public string? EmailPlainTextContent { get; set; } // Plain text fallback for email campaigns
+        
         // Filtering criteria
         public string? FilterZipCodes { get; set; } // JSON array of zip codes
         public VoteFrequency? FilterVoteFrequency { get; set; }
@@ -50,7 +55,8 @@ namespace HooverCanvassingApi.Models
     public enum CampaignType
     {
         SMS,
-        RoboCall
+        RoboCall,
+        Email
     }
 
     public enum CampaignStatus
