@@ -199,15 +199,10 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
     fetchVoiceRecordings();
   }, []);
 
-  // Debug: Log when campaigns state actually changes
+  // Monitor campaigns state changes
   useEffect(() => {
-    console.log('Campaigns state updated:', campaigns.length, 'campaigns');
-    campaigns.forEach((campaign) => {
-      if (campaign.name?.includes('(Copy)')) {
-        console.log(`State update - ${campaign.name}: status=${campaign.status} (type: ${typeof campaign.status}), totalRecipients=${campaign.totalRecipients}, createdById=${campaign.createdById}, userId=${user.id}`);
-      }
-    });
-  }, [campaigns, user.id]);
+    // State updates logged - remove this after debugging is complete
+  }, [campaigns]);
 
   // Auto-refresh when there are campaigns in "Sending" state
   useEffect(() => {
@@ -242,21 +237,6 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
       const data = await ApiErrorHandler.makeAuthenticatedRequest(
         `${API_BASE_URL}/api/campaigns`
       );
-      console.log('Campaigns data from API:', data);
-      // Log details of any duplicated campaigns
-      data.forEach((campaign: Campaign) => {
-        if (campaign.name?.includes('(Copy)')) {
-          console.log('Duplicated campaign details:', {
-            id: campaign.id,
-            name: campaign.name,
-            createdById: campaign.createdById,
-            status: campaign.status,
-            totalRecipients: campaign.totalRecipients,
-            successfulDeliveries: campaign.successfulDeliveries,
-            failedDeliveries: campaign.failedDeliveries
-          });
-        }
-      });
       // Force a complete state update by creating a new array
       setCampaigns([...data]);
       
@@ -579,7 +559,6 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
         }
       );
 
-      console.log('Duplicated campaign response:', duplicatedCampaign);
       setSuccess(`Campaign duplicated as "${duplicatedCampaign.name}"`);
       // Add a small delay to ensure backend has fully saved the campaign
       setTimeout(() => {
@@ -789,17 +768,6 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
       return false;
     }
     
-    // Debug logging for permission issues
-    if (campaign.name?.includes('(Copy)')) {
-      console.log('Checking edit permission for duplicated campaign:', {
-        campaignName: campaign.name,
-        campaignCreatedById: campaign.createdById,
-        userId: user.id,
-        userRole: user.role,
-        userEmail: user.email,
-        match: campaign.createdById === user.id
-      });
-    }
     
     // SuperAdmins can edit any campaign
     if (user.role === 'superadmin') return true;
@@ -807,7 +775,6 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
     // For duplicated campaigns created in the current session, always allow edit
     // This handles the case where user IDs might be out of sync
     if (campaign.name?.includes('(Copy)') && campaign.totalRecipients === 0) {
-      console.log('Allowing edit for fresh duplicate with 0 recipients');
       return true;
     }
     
@@ -1020,22 +987,16 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                       Send Now
                     </Button>
                   )}
-                  {(() => {
-                    const canEdit = canEditCampaign(campaign);
-                    if (campaign.name?.includes('(Copy)')) {
-                      console.log(`Card view - Rendering edit button for ${campaign.name}: canEdit=${canEdit}`);
-                    }
-                    return canEdit ? (
-                      <Button
-                        size="small"
-                        startIcon={<EditIcon />}
-                        onClick={() => editCampaign(campaign)}
-                        variant="outlined"
-                      >
-                        Edit
-                      </Button>
-                    ) : null;
-                  })()}
+                  {canEditCampaign(campaign) && (
+                    <Button
+                      size="small"
+                      startIcon={<EditIcon />}
+                      onClick={() => editCampaign(campaign)}
+                      variant="outlined"
+                    >
+                      Edit
+                    </Button>
+                  )}
                   <Button
                     size="small"
                     startIcon={<CopyIcon />}
@@ -1300,21 +1261,15 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                               <SendIcon />
                             </IconButton>
                           )}
-                          {(() => {
-                            const canEdit = canEditCampaign(campaign);
-                            if (campaign.name?.includes('(Copy)')) {
-                              console.log(`Rendering edit button for ${campaign.name}: canEdit=${canEdit}`);
-                            }
-                            return canEdit ? (
-                              <IconButton
-                                size="small"
-                                onClick={() => editCampaign(campaign)}
-                                title="Edit Campaign"
-                              >
-                                <EditIcon />
-                              </IconButton>
-                            ) : null;
-                          })()}
+                          {canEditCampaign(campaign) && (
+                            <IconButton
+                              size="small"
+                              onClick={() => editCampaign(campaign)}
+                              title="Edit Campaign"
+                            >
+                              <EditIcon />
+                            </IconButton>
+                          )}
                         </>
                       )}
                       {/* Resume button for stuck campaigns */}
