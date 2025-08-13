@@ -17,6 +17,7 @@ import PrivacyPolicy from './components/PrivacyPolicy';
 import TermsOfService from './components/TermsOfService';
 import PhoneBanking from './components/PhoneBanking';
 import PhoneContactsList from './components/PhoneContactsList';
+import Unsubscribe from './pages/Unsubscribe';
 import ErrorBoundary from './components/ErrorBoundary';
 import ErrorNotification from './components/ErrorNotification';
 import ErrorDebugPanel from './components/ErrorDebugPanel';
@@ -243,6 +244,11 @@ function App() {
           <Route
             path="/terms"
             element={<TermsOfService />}
+          />
+
+          <Route
+            path="/unsubscribe/:token"
+            element={<Unsubscribe />}
           />
 
           {/* Protected routes */}

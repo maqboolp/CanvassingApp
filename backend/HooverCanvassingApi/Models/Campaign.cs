@@ -25,6 +25,14 @@ namespace HooverCanvassingApi.Models
         public string? EmailSubject { get; set; } // Subject line for email campaigns
         public string? EmailHtmlContent { get; set; } // HTML content for email campaigns
         public string? EmailPlainTextContent { get; set; } // Plain text fallback for email campaigns
+        public string? CallToActionUrl { get; set; } // CTA button URL
+        public string? CallToActionText { get; set; } // CTA button text
+        public string? ImportantDates { get; set; } // Important dates/deadlines HTML
+        public bool ShowSocialLinks { get; set; } = false; // Whether to show social media links
+        public string? FacebookUrl { get; set; }
+        public string? TwitterUrl { get; set; }
+        public string? InstagramUrl { get; set; }
+        public string? WebsiteUrl { get; set; }
         
         // Filtering criteria
         public string? FilterZipCodes { get; set; } // JSON array of zip codes

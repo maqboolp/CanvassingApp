@@ -27,6 +27,7 @@ namespace HooverCanvassingApi.Data
         public DbSet<TwilioPhoneNumber> TwilioPhoneNumbers { get; set; }
         public DbSet<TwilioConfiguration> TwilioConfigurations { get; set; }
         public DbSet<OptOutRecord> OptOutRecords { get; set; }
+        public DbSet<EmailUnsubscribe> EmailUnsubscribes { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -303,6 +304,33 @@ namespace HooverCanvassingApi.Data
                 .HasOne(rl => rl.UpdatedBy)
                 .WithMany()
                 .HasForeignKey(rl => rl.UpdatedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+            
+            // Configure EmailUnsubscribe entity
+            builder.Entity<EmailUnsubscribe>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Email).IsRequired().HasMaxLength(255);
+                entity.Property(e => e.UnsubscribeToken).HasMaxLength(255);
+                entity.Property(e => e.Reason).HasMaxLength(500);
+                entity.Property(e => e.IpAddress).HasMaxLength(45);
+                entity.Property(e => e.UserAgent).HasMaxLength(500);
+                entity.HasIndex(e => e.Email);
+                entity.HasIndex(e => e.UnsubscribeToken);
+                entity.HasIndex(e => e.UnsubscribedAt);
+            });
+            
+            // Configure EmailUnsubscribe relationships
+            builder.Entity<EmailUnsubscribe>()
+                .HasOne(e => e.Voter)
+                .WithMany()
+                .HasForeignKey(e => e.VoterId)
+                .OnDelete(DeleteBehavior.SetNull);
+            
+            builder.Entity<EmailUnsubscribe>()
+                .HasOne(e => e.Campaign)
+                .WithMany()
+                .HasForeignKey(e => e.CampaignId)
                 .OnDelete(DeleteBehavior.SetNull);
         }
     }

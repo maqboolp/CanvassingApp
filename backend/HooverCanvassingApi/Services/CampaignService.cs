@@ -1,6 +1,8 @@
 using HooverCanvassingApi.Data;
 using HooverCanvassingApi.Models;
 using HooverCanvassingApi.Configuration;
+using HooverCanvassingApi.Controllers;
+using HooverCanvassingApi.Services.EmailTemplates;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using System.Text.Json;
@@ -665,23 +667,92 @@ namespace HooverCanvassingApi.Services
                 }
                 else if (campaign.Type == CampaignType.Email)
                 {
-                    // Process email campaign
-                    var emailService = _serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<IEmailService>();
+                    // Process email campaign with unsubscribe functionality
+                    var scope = _serviceScopeFactory.CreateScope();
+                    var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
+                    var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+                    var campaignSettings = scope.ServiceProvider.GetRequiredService<IOptions<CampaignSettings>>().Value;
+                    
+                    var baseUrl = configuration["EmailSettings:FrontendBaseUrl"] ?? configuration["Frontend:BaseUrl"] ?? "http://localhost:3000";
+                    var unsubscribeKey = configuration["Security:UnsubscribeKey"] ?? "default-unsubscribe-key";
                     
                     foreach (var message in pendingMessages)
                     {
                         try
                         {
-                            // Get voter email
+                            // Check if voter is unsubscribed
+                            var isUnsubscribed = await _context.EmailUnsubscribes
+                                .AnyAsync(u => u.Email == message.RecipientPhone || u.VoterId == message.VoterId);
+                                
+                            if (isUnsubscribed)
+                            {
+                                _logger.LogInformation($"Skipping email to {message.RecipientPhone} - unsubscribed");
+                                message.Status = MessageStatus.Failed;
+                                message.ErrorMessage = "Recipient has unsubscribed";
+                                failedDeliveries++;
+                                await _context.SaveChangesAsync();
+                                continue;
+                            }
+                            
+                            // Get voter details
                             var voter = await _context.Voters.FindAsync(message.VoterId);
                             if (voter != null && !string.IsNullOrEmpty(voter.Email))
                             {
+                                // Check if voter has opted out
+                                if (voter.EmailOptOut)
+                                {
+                                    _logger.LogInformation($"Skipping email to {voter.Email} - opted out");
+                                    message.Status = MessageStatus.Failed;
+                                    message.ErrorMessage = "Voter has opted out";
+                                    failedDeliveries++;
+                                    await _context.SaveChangesAsync();
+                                    continue;
+                                }
+                                
+                                // Generate unsubscribe token
+                                var unsubscribeToken = UnsubscribeController.GenerateUnsubscribeToken(
+                                    voter.Email, 
+                                    campaign.Id, 
+                                    voter.LalVoterId,
+                                    unsubscribeKey
+                                );
+                                var unsubscribeUrl = $"{baseUrl}/unsubscribe/{unsubscribeToken}";
+                                
+                                // Prepare email model
+                                var emailModel = new CampaignEmailModel
+                                {
+                                    Subject = campaign.EmailSubject ?? "Campaign Update",
+                                    CampaignName = campaignSettings.CampaignName,
+                                    CampaignTitle = campaignSettings.CampaignTitle,
+                                    RecipientName = $"{voter.FirstName} {voter.LastName}",
+                                    RecipientEmail = voter.Email,
+                                    HtmlContent = campaign.EmailHtmlContent ?? campaign.Message,
+                                    CallToActionUrl = campaign.CallToActionUrl,
+                                    CallToActionText = campaign.CallToActionText,
+                                    ImportantDates = campaign.ImportantDates,
+                                    ShowSocialLinks = campaign.ShowSocialLinks,
+                                    FacebookUrl = campaign.FacebookUrl,
+                                    TwitterUrl = campaign.TwitterUrl,
+                                    InstagramUrl = campaign.InstagramUrl,
+                                    WebsiteUrl = campaign.WebsiteUrl,
+                                    ElectionDate = campaignSettings.ElectionDate,
+                                    PaidForBy = campaignSettings.PaidForBy,
+                                    CampaignAddress = campaignSettings.CampaignAddress
+                                };
+                                
+                                // Generate email content with template
+                                var (subject, htmlContent, plainTextContent) = CampaignEmailTemplate.GenerateCampaignEmail(
+                                    emailModel, 
+                                    unsubscribeUrl,
+                                    baseUrl
+                                );
+                                
                                 // Send email
                                 var success = await emailService.SendEmailAsync(
                                     voter.Email,
-                                    campaign.EmailSubject ?? "Campaign Message",
-                                    campaign.EmailHtmlContent ?? campaign.Message,
-                                    campaign.EmailPlainTextContent ?? campaign.Message
+                                    subject,
+                                    htmlContent,
+                                    plainTextContent
                                 );
                                 
                                 if (success)
