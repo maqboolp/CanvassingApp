@@ -62,6 +62,8 @@ namespace HooverCanvassingApi.Controllers
                 string authToken = null;
                 string fromPhone = null;
                 string appSid = null;
+                string apiKeySid = null;
+                string apiKeySecret = null;
 
                 if (twilioConfig != null)
                 {
@@ -78,6 +80,10 @@ namespace HooverCanvassingApi.Controllers
                     authToken = _configuration["Twilio:AuthToken"];
                     fromPhone = _configuration["Twilio:FromPhoneNumber"];
                 }
+                
+                // Check for API Key configuration (for JWT signing)
+                apiKeySid = _configuration["Twilio:ApiKeySid"];
+                apiKeySecret = _configuration["Twilio:ApiKeySecret"];
 
                 if (string.IsNullOrEmpty(accountSid) || string.IsNullOrEmpty(authToken))
                 {
@@ -129,12 +135,29 @@ namespace HooverCanvassingApi.Controllers
                 var grants = new HashSet<IGrant> { voiceGrant };
                 
                 // Create access token with Twilio's JWT library
-                // Using Account SID as the signing key for simplicity
-                // In production, you should create API Keys in Twilio Console
+                // Use API Keys if available, otherwise fall back to Account SID/Auth Token
+                string signingKeySid;
+                string signingKeySecret;
+                
+                if (!string.IsNullOrEmpty(apiKeySid) && !string.IsNullOrEmpty(apiKeySecret))
+                {
+                    // Use API Keys for signing (recommended)
+                    signingKeySid = apiKeySid;
+                    signingKeySecret = apiKeySecret;
+                    _logger.LogInformation("Using API Keys for JWT token generation");
+                }
+                else
+                {
+                    // Fall back to using Account SID (less secure, may not work)
+                    signingKeySid = accountSid;
+                    signingKeySecret = authToken;
+                    _logger.LogWarning("API Keys not configured. Using Account SID for JWT signing (this may not work). Please configure Twilio API Keys.");
+                }
+                
                 var token = new Token(
                     accountSid,
-                    accountSid,  // Use Account SID as signing key SID
-                    authToken,   // Use Auth Token as secret
+                    signingKeySid,
+                    signingKeySecret,
                     identity,
                     expiration: DateTime.UtcNow.AddHours(4),
                     nbf: DateTime.UtcNow,
