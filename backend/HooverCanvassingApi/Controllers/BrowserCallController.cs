@@ -268,6 +268,19 @@ namespace HooverCanvassingApi.Controllers
                 // Connect the call
                 response.Say($"Connecting you to {voterName}. Please wait.");
                 
+                // Use TwilioService to format the phone number properly
+                var formattedNumber = _twilioService.FormatPhoneNumber(phoneNumber);
+                _logger.LogInformation($"Original number: {phoneNumber}, Formatted number: {formattedNumber}");
+                
+                // Validate the formatted number
+                if (!await _twilioService.ValidatePhoneNumberAsync(formattedNumber))
+                {
+                    _logger.LogWarning($"Phone number validation failed for: {formattedNumber}");
+                    response.Say("Invalid phone number. Please verify the number and try again.");
+                    response.Hangup();
+                    return Content(response.ToString(), "application/xml");
+                }
+                
                 var dial = new Dial(
                     callerId: fromPhoneNumber,
                     record: Dial.RecordEnum.RecordFromAnswerDual,
@@ -277,14 +290,7 @@ namespace HooverCanvassingApi.Controllers
                     method: Twilio.Http.HttpMethod.Post
                 );
                 
-                // Ensure phone number is properly formatted with country code
-                var formattedNumber = phoneNumber;
-                if (!formattedNumber.StartsWith("+"))
-                {
-                    formattedNumber = "+1" + formattedNumber.Replace("+", "").Replace("-", "").Replace("(", "").Replace(")", "").Replace(" ", "");
-                }
-                
-                _logger.LogInformation($"Dialing formatted number: {formattedNumber}");
+                _logger.LogInformation($"Dialing formatted number: {formattedNumber} with caller ID: {fromPhoneNumber}");
                 dial.Number(formattedNumber);
                 response.Append(dial);
 
@@ -307,15 +313,40 @@ namespace HooverCanvassingApi.Controllers
         /// </summary>
         [HttpPost("dial-callback")]
         [AllowAnonymous]
-        public IActionResult DialCallback()
+        public async Task<IActionResult> DialCallback()
         {
             try
             {
                 var dialCallStatus = Request.Form["DialCallStatus"].ToString();
                 var dialCallDuration = Request.Form["DialCallDuration"].ToString();
                 var callSid = Request.Form["CallSid"].ToString();
+                var dialCallSid = Request.Form["DialCallSid"].ToString();
+                var recordingUrl = Request.Form["RecordingUrl"].ToString();
                 
-                _logger.LogInformation($"Dial callback - CallSid: {callSid}, Status: {dialCallStatus}, Duration: {dialCallDuration}");
+                // Log all form data for debugging
+                _logger.LogInformation($"Dial callback - CallSid: {callSid}, DialCallSid: {dialCallSid}, Status: {dialCallStatus}, Duration: {dialCallDuration}");
+                foreach (var key in Request.Form.Keys)
+                {
+                    _logger.LogDebug($"Form[{key}] = {Request.Form[key]}");
+                }
+                
+                // Update phone banking call record
+                if (!string.IsNullOrEmpty(callSid))
+                {
+                    var callRecord = await _context.PhoneBankingCalls
+                        .FirstOrDefaultAsync(c => c.TwilioCallSid == callSid);
+                    
+                    if (callRecord != null)
+                    {
+                        callRecord.Status = dialCallStatus?.ToLower() ?? "unknown";
+                        // Store duration in TwimlContent temporarily as we don't have a DurationSeconds field
+                        if (!string.IsNullOrEmpty(dialCallDuration))
+                        {
+                            callRecord.TwimlContent = $"Duration: {dialCallDuration} seconds";
+                        }
+                        await _context.SaveChangesAsync();
+                    }
+                }
                 
                 var response = new VoiceResponse();
                 
@@ -333,12 +364,14 @@ namespace HooverCanvassingApi.Controllers
                         break;
                     case "failed":
                         response.Say("The call could not be connected. Please check the number and try again.");
+                        _logger.LogWarning($"Call failed - CallSid: {callSid}, DialCallSid: {dialCallSid}");
                         break;
                     case "canceled":
                         response.Say("The call was canceled.");
                         break;
                     default:
                         response.Say("The call ended.");
+                        _logger.LogDebug($"Call ended with status: {dialCallStatus}");
                         break;
                 }
                 

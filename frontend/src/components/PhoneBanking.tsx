@@ -59,7 +59,6 @@ const PhoneBanking: React.FC<PhoneBankingProps> = ({ user }) => {
     todayVoicemails: 0
   });
   const [contactModalOpen, setContactModalOpen] = useState(false);
-  const [currentCallDuration, setCurrentCallDuration] = useState<number>(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [noMoreVoters, setNoMoreVoters] = useState(false);
   const [phoneSystemAvailable, setPhoneSystemAvailable] = useState(true);
@@ -139,6 +138,7 @@ const PhoneBanking: React.FC<PhoneBankingProps> = ({ user }) => {
     if (specificVoterId) {
       window.history.replaceState({}, document.title);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const checkPhoneSystem = async () => {
