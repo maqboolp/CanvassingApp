@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Device, Call } from '@twilio/voice-sdk';
 import {
   Box,
   Card,
@@ -26,14 +25,42 @@ import {
 import { API_BASE_URL } from '../config';
 import { ApiErrorHandler } from '../utils/apiErrorHandler';
 
+// Conditional import for Twilio Voice SDK
+let Device: any;
+let Call: any;
+
+try {
+  const twilioSDK = require('@twilio/voice-sdk');
+  Device = twilioSDK.Device;
+  Call = twilioSDK.Call;
+} catch (e) {
+  console.warn('Twilio Voice SDK not available. Phone features will be disabled.');
+  // Create mock classes to prevent runtime errors
+  class MockCall {
+    on() {}
+    disconnect() {}
+    mute() {}
+  }
+  
+  Device = class MockDevice {
+    constructor() {}
+    on() {}
+    register() { return Promise.resolve(); }
+    connect() { return Promise.resolve(new MockCall()); }
+    destroy() {}
+  };
+  
+  Call = MockCall;
+}
+
 interface WebRTCPhoneProps {
   voter: any;
   onCallComplete: () => void;
 }
 
 const WebRTCPhone: React.FC<WebRTCPhoneProps> = ({ voter, onCallComplete }) => {
-  const [device, setDevice] = useState<Device | null>(null);
-  const [currentCall, setCurrentCall] = useState<Call | null>(null);
+  const [device, setDevice] = useState<any>(null);
+  const [currentCall, setCurrentCall] = useState<any>(null);
   const [deviceState, setDeviceState] = useState<'offline' | 'ready' | 'busy'>('offline');
   const [callDuration, setCallDuration] = useState<number>(0);
   const [isMuted, setIsMuted] = useState(false);
@@ -76,6 +103,10 @@ const WebRTCPhone: React.FC<WebRTCPhoneProps> = ({ voter, onCallComplete }) => {
       }
 
       // Create new Device with the token
+      if (!Device) {
+        throw new Error('Twilio Voice SDK is not available');
+      }
+      
       const newDevice = new Device(response.token, {
         logLevel: 1,
         // codecPreferences are optional, using defaults
@@ -89,13 +120,13 @@ const WebRTCPhone: React.FC<WebRTCPhoneProps> = ({ voter, onCallComplete }) => {
         setIsInitializing(false);
       });
 
-      newDevice.on('error', (error) => {
+      newDevice.on('error', (error: any) => {
         console.error('Device error:', error);
         setError(`Connection error: ${error.message}`);
         setDeviceState('offline');
       });
 
-      newDevice.on('incoming', (call) => {
+      newDevice.on('incoming', (call: any) => {
         // We don't expect incoming calls in this use case
         console.log('Unexpected incoming call');
         call.reject();
