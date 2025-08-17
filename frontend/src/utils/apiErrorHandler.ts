@@ -23,6 +23,9 @@ export class ApiErrorHandler {
       }
     }
 
+    // Log error details for debugging
+    console.error(`API Error: ${response.status} ${response.statusText} - URL: ${response.url}`);
+
     // Handle authentication errors
     if (response.status === 401) {
       this.handleAuthError();
