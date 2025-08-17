@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Table,
   TableBody,
@@ -63,6 +64,7 @@ interface VoterListProps {
 }
 
 const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user, mode = 'door-to-door' }) => {
+  const navigate = useNavigate();
   const isMobile = useMediaQuery('(max-width:480px)');
   
   const [voters, setVoters] = useState<Voter[]>([]);
@@ -1019,15 +1021,9 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user, mode = 'doo
                             {voter.cellPhone && (
                               <Typography 
                                 variant="caption" 
-                                component="a"
-                                href={`tel:${voter.cellPhone}`}
                                 sx={{ 
                                   display: 'block',
-                                  color: 'primary.main',
-                                  textDecoration: 'none',
-                                  '&:hover': {
-                                    textDecoration: 'underline'
-                                  }
+                                  color: 'primary.main'
                                 }}
                               >
                                 📞 {voter.cellPhone}
@@ -1174,14 +1170,8 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user, mode = 'doo
                             <Phone fontSize="small" color="action" />
                             <Typography 
                               variant="caption"
-                              component="a"
-                              href={`tel:${voter.cellPhone}`}
                               sx={{ 
-                                color: 'primary.main', 
-                                textDecoration: 'none',
-                                '&:hover': {
-                                  textDecoration: 'underline'
-                                }
+                                color: 'primary.main'
                               }}
                             >
                               {voter.cellPhone}
@@ -1209,9 +1199,8 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user, mode = 'doo
                             size="small"
                             startIcon={isMobile ? undefined : <Phone />}
                             onClick={() => {
-                              if (voter.cellPhone) {
-                                window.location.href = `tel:${voter.cellPhone}`;
-                              }
+                              // Navigate to phone banking page for browser-based calling
+                              navigate('/phone-banking');
                             }}
                             disabled={loading || !voter.cellPhone}
                             sx={{ minWidth: isMobile ? '60px' : 'auto' }}
