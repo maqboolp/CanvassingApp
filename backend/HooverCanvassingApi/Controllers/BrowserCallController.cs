@@ -90,8 +90,16 @@ namespace HooverCanvassingApi.Controllers
                 // Create or get TwiML App if needed
                 if (string.IsNullOrEmpty(appSid))
                 {
+                    // Get the base URL, ensuring it's absolute
+                    var baseUrl = _configuration["AppSettings:BaseUrl"];
+                    if (string.IsNullOrEmpty(baseUrl))
+                    {
+                        // Fallback to the request URL if BaseUrl is not configured
+                        baseUrl = $"{Request.Scheme}://{Request.Host}";
+                    }
+                    
                     var app = await ApplicationResource.CreateAsync(
-                        voiceUrl: new Uri($"{_configuration["AppSettings:BaseUrl"]}/api/browser-call/voice"),
+                        voiceUrl: new Uri($"{baseUrl}/api/browser-call/voice"),
                         voiceMethod: Twilio.Http.HttpMethod.Post,
                         friendlyName: "Phone Banking Browser App"
                     );
@@ -128,7 +136,8 @@ namespace HooverCanvassingApi.Controllers
                     identity,
                     expiration: DateTime.UtcNow.AddHours(4),
                     nbf: DateTime.UtcNow,
-                    grants: grants
+                    grants: grants,
+                    region: null
                 );
 
                 return Ok(new
