@@ -245,6 +245,8 @@ namespace HooverCanvassingApi.Controllers
                     phoneNumber = _twilioService.FormatPhoneNumber(voter.CellPhone);
                     voterName = $"{voter.FirstName} {voter.LastName}";
                     
+                    _logger.LogInformation($"Calling voter {voterId}: {voterName} at {phoneNumber}");
+                    
                     // Log the call
                     var callRecord = new PhoneBankingCall
                     {
@@ -269,9 +271,21 @@ namespace HooverCanvassingApi.Controllers
                 var dial = new Dial(
                     callerId: fromPhoneNumber,
                     record: Dial.RecordEnum.RecordFromAnswerDual,
-                    recordingStatusCallback: new Uri($"{_configuration["AppSettings:BaseUrl"]}/api/browser-call/recording-callback")
+                    recordingStatusCallback: new Uri($"{_configuration["AppSettings:BaseUrl"]}/api/browser-call/recording-callback"),
+                    timeout: 30,  // Wait 30 seconds for answer
+                    action: new Uri($"{_configuration["AppSettings:BaseUrl"]}/api/browser-call/dial-callback"),  // Callback after dial completes
+                    method: Twilio.Http.HttpMethod.Post
                 );
-                dial.Number(phoneNumber);
+                
+                // Ensure phone number is properly formatted with country code
+                var formattedNumber = phoneNumber;
+                if (!formattedNumber.StartsWith("+"))
+                {
+                    formattedNumber = "+1" + formattedNumber.Replace("+", "").Replace("-", "").Replace("(", "").Replace(")", "").Replace(" ", "");
+                }
+                
+                _logger.LogInformation($"Dialing formatted number: {formattedNumber}");
+                dial.Number(formattedNumber);
                 response.Append(dial);
 
                 response.Say("The call has ended. Thank you.");
@@ -288,6 +302,58 @@ namespace HooverCanvassingApi.Controllers
             }
         }
 
+        /// <summary>
+        /// Callback after dial completes to handle the result
+        /// </summary>
+        [HttpPost("dial-callback")]
+        [AllowAnonymous]
+        public IActionResult DialCallback()
+        {
+            try
+            {
+                var dialCallStatus = Request.Form["DialCallStatus"].ToString();
+                var dialCallDuration = Request.Form["DialCallDuration"].ToString();
+                var callSid = Request.Form["CallSid"].ToString();
+                
+                _logger.LogInformation($"Dial callback - CallSid: {callSid}, Status: {dialCallStatus}, Duration: {dialCallDuration}");
+                
+                var response = new VoiceResponse();
+                
+                // Provide feedback based on call result
+                switch (dialCallStatus?.ToLower())
+                {
+                    case "completed":
+                        response.Say("Call completed successfully.");
+                        break;
+                    case "busy":
+                        response.Say("The line is busy. Please try again later.");
+                        break;
+                    case "no-answer":
+                        response.Say("No answer. Please try again later.");
+                        break;
+                    case "failed":
+                        response.Say("The call could not be connected. Please check the number and try again.");
+                        break;
+                    case "canceled":
+                        response.Say("The call was canceled.");
+                        break;
+                    default:
+                        response.Say("The call ended.");
+                        break;
+                }
+                
+                response.Hangup();
+                return Content(response.ToString(), "application/xml");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in dial callback");
+                var errorResponse = new VoiceResponse();
+                errorResponse.Hangup();
+                return Content(errorResponse.ToString(), "application/xml");
+            }
+        }
+        
         /// <summary>
         /// Callback for recording completion
         /// </summary>
