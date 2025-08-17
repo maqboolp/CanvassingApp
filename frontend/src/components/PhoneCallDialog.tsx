@@ -6,11 +6,13 @@ import {
   IconButton,
   Box,
   Typography,
-  Divider
+  Divider,
+  Paper
 } from '@mui/material';
-import { Close } from '@mui/icons-material';
+import { Close, Phone, Script } from '@mui/icons-material';
 import WebRTCPhone from './WebRTCPhone';
 import { Voter } from '../types';
+import { campaignConfig } from '../config/customerConfig';
 
 interface PhoneCallDialogProps {
   open: boolean;
@@ -39,12 +41,13 @@ const PhoneCallDialog: React.FC<PhoneCallDialogProps> = ({
     <Dialog 
       open={open} 
       onClose={onClose}
-      maxWidth="sm"
+      maxWidth="md"
       fullWidth
       PaperProps={{
         sx: {
           borderRadius: 2,
-          minHeight: '400px'
+          minHeight: '600px',
+          maxHeight: '90vh'
         }
       }}
     >
@@ -80,6 +83,50 @@ const PhoneCallDialog: React.FC<PhoneCallDialogProps> = ({
       </DialogTitle>
       
       <DialogContent sx={{ p: 0 }}>
+        {/* Call Script & Tips - Moved to top for visibility */}
+        <Paper 
+          elevation={0}
+          sx={{ 
+            p: 2, 
+            bgcolor: 'info.lighter',
+            borderBottom: 2,
+            borderColor: 'info.main',
+            borderRadius: 0
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+            <Script fontSize="small" color="info" />
+            <Typography variant="subtitle2" fontWeight="bold" color="info.main">
+              Phone Script & Quick Tips
+            </Typography>
+          </Box>
+          
+          <Box sx={{ 
+            p: 1.5, 
+            bgcolor: 'background.paper', 
+            borderRadius: 1,
+            border: 1,
+            borderColor: 'divider',
+            mb: 1 
+          }}>
+            <Typography variant="body2" color="text.primary" sx={{ fontStyle: 'italic' }}>
+              "Hello, is this {voter.firstName}? My name is [YOUR NAME] and I'm a volunteer with {campaignConfig.campaignName || 'the campaign'}. 
+              We're reaching out to voters in your area about the upcoming election. Do you have just a moment to talk?"
+            </Typography>
+          </Box>
+          
+          <Typography variant="caption" fontWeight="medium" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+            Key Points to Cover:
+          </Typography>
+          <Typography variant="caption" color="text.secondary" component="ul" sx={{ m: 0, pl: 2, lineHeight: 1.8 }}>
+            <li>✓ Confirm you're speaking with the right person</li>
+            <li>✓ Ask if they plan to vote in the upcoming election</li>
+            <li>✓ Gauge their support level (Strong Yes / Leaning Yes / Undecided / Leaning No / Strong No)</li>
+            <li>✓ Answer any questions they have about voting</li>
+            <li>✓ Thank them for their time</li>
+          </Typography>
+        </Paper>
+
         {/* Voter Info Header */}
         <Box sx={{ 
           p: 2, 
@@ -108,25 +155,6 @@ const PhoneCallDialog: React.FC<PhoneCallDialogProps> = ({
             voter={voter} 
             onCallComplete={handleCallComplete}
           />
-        </Box>
-
-        {/* Call Tips */}
-        <Box sx={{ 
-          p: 2, 
-          bgcolor: 'info.lighter',
-          borderTop: 1,
-          borderColor: 'divider',
-          mt: 'auto'
-        }}>
-          <Typography variant="caption" color="text.secondary" component="div">
-            <strong>Quick Tips:</strong>
-          </Typography>
-          <Typography variant="caption" color="text.secondary" component="ul" sx={{ m: 0, pl: 2 }}>
-            <li>Introduce yourself and the campaign</li>
-            <li>Ask if they plan to vote</li>
-            <li>Note their support level</li>
-            <li>Thank them for their time</li>
-          </Typography>
         </Box>
       </DialogContent>
     </Dialog>
