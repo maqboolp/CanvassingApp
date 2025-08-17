@@ -171,6 +171,13 @@ const WebRTCPhone: React.FC<WebRTCPhoneProps> = ({ voter, onCallComplete }) => {
       setError(null);
       setDeviceState('busy');
 
+      // Log the voter details for debugging
+      console.log('Making call to voter:', {
+        name: `${voter.firstName} ${voter.lastName}`,
+        phone: voter.cellPhone,
+        voterId: voter.lalVoterId
+      });
+
       // Make the call with voter ID
       // The backend will look up the actual phone number
       const params = {
