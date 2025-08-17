@@ -23,6 +23,15 @@ namespace HooverCanvassingApi.Models
         [MaxLength(100)]
         public string? MessagingServiceSid { get; set; }
         
+        [MaxLength(100)]
+        public string? AppSid { get; set; }
+        
+        [MaxLength(100)]
+        public string? ApiKeySid { get; set; }
+        
+        [MaxLength(100)]
+        public string? ApiKeySecret { get; set; }
+        
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

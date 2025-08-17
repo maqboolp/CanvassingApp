@@ -410,6 +410,45 @@ namespace HooverCanvassingApi.Controllers
             }
         }
 
+        [HttpPost("{voterId}/unlock")]
+        public async Task<IActionResult> UnlockVoter(string voterId)
+        {
+            var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            
+            var voterLock = await _context.VoterLocks
+                .Where(l => l.VoterId == voterId && l.UserId == currentUserId && l.IsActive)
+                .FirstOrDefaultAsync();
+
+            if (voterLock != null)
+            {
+                voterLock.IsActive = false;
+                await _context.SaveChangesAsync();
+                _logger.LogInformation("Unlocked voter {VoterId} for user {UserId}", voterId, currentUserId);
+            }
+
+            return Ok(new { message = "Voter unlocked" });
+        }
+
+        [HttpGet("locked-voters")]
+        [Authorize(Roles = "Admin,SuperAdmin")]
+        public async Task<ActionResult<IEnumerable<object>>> GetLockedVoters()
+        {
+            var lockedVoters = await _context.VoterLocks
+                .Where(l => l.IsActive && l.ExpiresAt > DateTime.UtcNow)
+                .Include(l => l.Voter)
+                .Select(l => new
+                {
+                    voterId = l.VoterId,
+                    voterName = l.Voter != null ? $"{l.Voter.FirstName} {l.Voter.LastName}" : "Unknown",
+                    lockedBy = l.UserName,
+                    lockedAt = l.LockedAt,
+                    expiresAt = l.ExpiresAt
+                })
+                .ToListAsync();
+
+            return Ok(lockedVoters);
+        }
+
         [HttpGet("{id}")]
         public async Task<ActionResult<VoterDto>> GetVoter(string id)
         {
@@ -469,14 +508,32 @@ namespace HooverCanvassingApi.Controllers
         public async Task<ActionResult<VoterDto>> GetNextVoterToCall([FromQuery] string? zip = null)
         {
             var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var currentUser = await _context.Volunteers.FindAsync(currentUserId);
             _logger.LogInformation("Getting next voter to call for user {UserId}, ZIP: {Zip}", currentUserId, zip);
 
             try
             {
-                // Get voters with phone numbers who haven't been called yet
+                // First, release any expired locks
+                var expiredLocks = await _context.VoterLocks
+                    .Where(l => l.IsActive && l.ExpiresAt < DateTime.UtcNow)
+                    .ToListAsync();
+                
+                foreach (var expiredLock in expiredLocks)
+                {
+                    expiredLock.IsActive = false;
+                }
+                
+                // Get currently locked voter IDs
+                var lockedVoterIds = await _context.VoterLocks
+                    .Where(l => l.IsActive && l.ExpiresAt > DateTime.UtcNow)
+                    .Select(l => l.VoterId)
+                    .ToListAsync();
+
+                // Get voters with phone numbers who haven't been called yet and aren't locked
                 var query = _context.Voters
                     .Where(v => !string.IsNullOrEmpty(v.CellPhone))
-                    .Where(v => !v.IsContacted || v.LastContactStatus == ContactStatus.NotHome);
+                    .Where(v => !v.IsContacted || v.LastContactStatus == ContactStatus.NotHome)
+                    .Where(v => !lockedVoterIds.Contains(v.LalVoterId));
 
                 // Filter by ZIP if provided
                 if (!string.IsNullOrEmpty(zip))
@@ -495,6 +552,22 @@ namespace HooverCanvassingApi.Controllers
                     _logger.LogInformation("No voters available to call");
                     return NotFound(new { message = "No voters available to call" });
                 }
+
+                // Create a lock for this voter
+                var voterLock = new VoterLock
+                {
+                    VoterId = voter.LalVoterId,
+                    UserId = currentUserId ?? "",
+                    UserName = currentUser != null ? $"{currentUser.FirstName} {currentUser.LastName}" : "Unknown",
+                    LockedAt = DateTime.UtcNow,
+                    ExpiresAt = DateTime.UtcNow.AddMinutes(30),
+                    IsActive = true
+                };
+
+                _context.VoterLocks.Add(voterLock);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Locked voter {VoterId} for user {UserId}", voter.LalVoterId, currentUserId);
 
                 var voterDto = new VoterDto
                 {

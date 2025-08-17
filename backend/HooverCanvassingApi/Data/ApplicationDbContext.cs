@@ -28,6 +28,8 @@ namespace HooverCanvassingApi.Data
         public DbSet<TwilioConfiguration> TwilioConfigurations { get; set; }
         public DbSet<OptOutRecord> OptOutRecords { get; set; }
         public DbSet<EmailUnsubscribe> EmailUnsubscribes { get; set; }
+        public DbSet<PhoneBankingCall> PhoneBankingCalls { get; set; }
+        public DbSet<VoterLock> VoterLocks { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

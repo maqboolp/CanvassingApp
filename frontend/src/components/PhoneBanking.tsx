@@ -38,6 +38,7 @@ import { Voter, AuthUser } from '../types';
 import { API_BASE_URL } from '../config';
 import { ApiErrorHandler } from '../utils/apiErrorHandler';
 import PhoneContactModal, { PhoneContactStatus } from './PhoneContactModal';
+import WebRTCPhone from './WebRTCPhone';
 import dayjs from 'dayjs';
 import { customerConfig } from '../config/customerConfig';
 
@@ -57,6 +58,7 @@ const PhoneBanking: React.FC<PhoneBankingProps> = ({ user }) => {
     todayVoicemails: 0
   });
   const [contactModalOpen, setContactModalOpen] = useState(false);
+  const [currentCallDuration, setCurrentCallDuration] = useState<number>(0);
   const [searchZip, setSearchZip] = useState('');
   const [noMoreVoters, setNoMoreVoters] = useState(false);
 
@@ -143,6 +145,16 @@ const PhoneBanking: React.FC<PhoneBankingProps> = ({ user }) => {
         })
       });
 
+      // Unlock the voter after recording contact
+      try {
+        await ApiErrorHandler.makeAuthenticatedRequest(
+          `${API_BASE_URL}/api/voters/${currentVoter.lalVoterId}/unlock`,
+          { method: 'POST' }
+        );
+      } catch (err) {
+        console.error('Error unlocking voter:', err);
+      }
+
       // Refresh stats and get next voter
       await fetchStats();
       await fetchNextVoter();
@@ -152,7 +164,18 @@ const PhoneBanking: React.FC<PhoneBankingProps> = ({ user }) => {
     }
   };
 
-  const skipVoter = () => {
+  const skipVoter = async () => {
+    // Unlock the current voter before getting the next one
+    if (currentVoter) {
+      try {
+        await ApiErrorHandler.makeAuthenticatedRequest(
+          `${API_BASE_URL}/api/voters/${currentVoter.lalVoterId}/unlock`,
+          { method: 'POST' }
+        );
+      } catch (err) {
+        console.error('Error unlocking voter:', err);
+      }
+    }
     fetchNextVoter();
   };
 
@@ -163,6 +186,11 @@ const PhoneBanking: React.FC<PhoneBankingProps> = ({ user }) => {
       return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
     }
     return phone;
+  };
+
+  const handleCallComplete = () => {
+    // Automatically open contact modal after call ends
+    setContactModalOpen(true);
   };
 
   return (
@@ -355,31 +383,18 @@ const PhoneBanking: React.FC<PhoneBankingProps> = ({ user }) => {
                 )}
               </Box>
 
-              <Box sx={{ flex: '1 1 300px' }}>
-                <Box display="flex" flexDirection="column" gap={2}>
-                  <Button
-                    variant="contained"
-                    size="large"
-                    startIcon={<Phone />}
-                    onClick={() => {
-                      // Initiate phone call
-                      if (currentVoter.cellPhone) {
-                        window.location.href = `tel:${currentVoter.cellPhone}`;
-                      }
-                    }}
-                    fullWidth
-                    sx={{ py: 2 }}
-                    disabled={!currentVoter.cellPhone}
-                  >
-                    Call {formatPhoneNumber(currentVoter.cellPhone)}
-                  </Button>
-                  
+              <Box sx={{ flex: '1 1 400px' }}>
+                {/* WebRTC Browser Phone Component */}
+                <WebRTCPhone 
+                  voter={currentVoter}
+                  onCallComplete={handleCallComplete}
+                />
+                
+                <Box display="flex" gap={2} mt={2}>
                   <Button
                     variant="outlined"
-                    size="large"
                     onClick={() => setContactModalOpen(true)}
                     fullWidth
-                    sx={{ py: 1 }}
                   >
                     Record Contact
                   </Button>
@@ -458,6 +473,7 @@ const PhoneBanking: React.FC<PhoneBankingProps> = ({ user }) => {
           onSubmit={handleContactSubmit}
           user={user}
         />
+
       </Container>
     </Box>
   );
