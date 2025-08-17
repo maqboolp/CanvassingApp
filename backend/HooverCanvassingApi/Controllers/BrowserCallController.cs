@@ -6,12 +6,11 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using System.Text;
-using System.IdentityModel.Tokens.Jwt;
-using Microsoft.IdentityModel.Tokens;
 using Twilio;
 using Twilio.Rest.Api.V2010.Account;
 using Twilio.TwiML;
 using Twilio.TwiML.Voice;
+using Twilio.Jwt.AccessToken;
 
 namespace HooverCanvassingApi.Controllers
 {
@@ -109,36 +108,33 @@ namespace HooverCanvassingApi.Controllers
                     _logger.LogInformation($"Created TwiML App: {app.Sid}");
                 }
 
-                // Generate a simple JWT token for the Twilio Voice SDK
-                // This is a simplified version - in production, use Twilio's helper libraries
-                var tokenHandler = new JwtSecurityTokenHandler();
-                var key = Encoding.ASCII.GetBytes(authToken);
+                // Generate a proper Twilio Access Token using the SDK
+                var identity = $"volunteer_{userId}";
                 
-                var claims = new List<System.Security.Claims.Claim>
+                // Create Voice grant with outgoing application
+                var voiceGrant = new VoiceGrant
                 {
-                    new System.Security.Claims.Claim("scope", $"scope:client:outgoing?appSid={appSid}"),
-                    new System.Security.Claims.Claim("scope", $"scope:client:incoming?clientName=volunteer_{userId}")
+                    OutgoingApplicationSid = appSid,
+                    IncomingAllow = true
                 };
 
-                var tokenDescriptor = new SecurityTokenDescriptor
-                {
-                    Subject = new ClaimsIdentity(claims),
-                    Expires = DateTime.UtcNow.AddHours(4),
-                    Issuer = accountSid,
-                    SigningCredentials = new SigningCredentials(
-                        new SymmetricSecurityKey(key), 
-                        SecurityAlgorithms.HmacSha256Signature)
-                };
+                var grants = new HashSet<IGrant> { voiceGrant };
+                
+                // Create access token with Twilio's JWT library
+                var token = new Token(
+                    accountSid,
+                    Guid.NewGuid().ToString(), // Generate unique signing key SID
+                    authToken,
+                    identity,
+                    expiration: DateTime.UtcNow.AddHours(4),
+                    nbf: DateTime.UtcNow,
+                    grants: grants
+                );
 
-                var token = tokenHandler.CreateToken(tokenDescriptor);
-                var tokenString = tokenHandler.WriteToken(token);
-
-                // For now, return a simple token structure
-                // The Twilio SDK will validate this on connection
                 return Ok(new
                 {
-                    token = tokenString,
-                    identity = $"volunteer_{userId}"
+                    token = token.ToJwt(),
+                    identity = identity
                 });
             }
             catch (Exception ex)
