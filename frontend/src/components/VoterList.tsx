@@ -51,10 +51,11 @@ import {
   List as ListIcon,
   Map as MapIcon
 } from '@mui/icons-material';
-import { Voter, VoterFilter, VoterListResponse, ContactStatus, VoterSupport, AuthUser, VoterTag } from '../types';
+import { Voter, VoterFilter, VoterListResponse, AuthUser, VoterTag, ContactStatus, VoterSupport } from '../types';
 import ContactModal from './ContactModal';
 import VoterMapViewWrapper from './VoterMapViewWrapper';
 import AddVoterDialogWrapper from './AddVoterDialogWrapper';
+import PhoneCallDialog from './PhoneCallDialog';
 import { API_BASE_URL } from '../config';
 
 interface VoterListProps {
@@ -98,6 +99,8 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user, mode = 'doo
   const [uncontactLoading, setUncontactLoading] = useState(false);
   const [addVoterDialogOpen, setAddVoterDialogOpen] = useState(false);
   const [currentView, setCurrentView] = useState<'list' | 'map'>('list');
+  const [phoneCallDialogOpen, setPhoneCallDialogOpen] = useState(false);
+  const [voterToCall, setVoterToCall] = useState<Voter | null>(null);
 
   const [filterInputs, setFilterInputs] = useState({
     voteFrequency: '',
@@ -1199,8 +1202,9 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user, mode = 'doo
                             size="small"
                             startIcon={isMobile ? undefined : <Phone />}
                             onClick={() => {
-                              // Navigate to phone banking page with specific voter ID
-                              navigate('/phone-banking', { state: { voterId: voter.lalVoterId } });
+                              // Open phone call dialog instead of navigating
+                              setVoterToCall(voter);
+                              setPhoneCallDialogOpen(true);
                             }}
                             disabled={loading || !voter.cellPhone}
                             sx={{ minWidth: isMobile ? '60px' : 'auto' }}
@@ -1469,6 +1473,31 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user, mode = 'doo
         onSuccess={() => {
           fetchVoters();
           setAddVoterDialogOpen(false);
+        }}
+      />
+      
+      {/* Phone Call Dialog for Phone Banking */}
+      <PhoneCallDialog
+        open={phoneCallDialogOpen}
+        onClose={() => {
+          setPhoneCallDialogOpen(false);
+          setVoterToCall(null);
+        }}
+        voter={voterToCall}
+        onCallComplete={() => {
+          // Mark voter as contacted after call
+          if (voterToCall) {
+            // Set the selected voter for the contact submission
+            setSelectedVoter(voterToCall);
+            // Submit the contact with phone call details
+            handleContactSubmit(
+              'reached', 
+              'Called via browser phone system',
+              'Undecided'
+            );
+          }
+          setSuccessMessage('Call completed successfully!');
+          setTimeout(() => setSuccessMessage(null), 3000);
         }}
       />
     </Paper>
