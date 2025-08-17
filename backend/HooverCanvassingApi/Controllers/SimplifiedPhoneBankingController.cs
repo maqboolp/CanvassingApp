@@ -57,9 +57,13 @@ namespace HooverCanvassingApi.Controllers
                     .Where(c => c.IsActive)
                     .FirstOrDefaultAsync();
 
-                if (twilioConfig == null)
+                if (twilioConfig == null || string.IsNullOrEmpty(twilioConfig.AccountSid) || string.IsNullOrEmpty(twilioConfig.AuthToken))
                 {
-                    return BadRequest("Twilio is not configured. Please contact an administrator.");
+                    return BadRequest(new { 
+                        error = "Twilio is not configured",
+                        message = "The phone system is not set up yet. Please contact an administrator to configure Twilio settings.",
+                        isConfigured = false
+                    });
                 }
 
                 // For browser-based calling, we'll return configuration

@@ -27,12 +27,10 @@ import { ApiErrorHandler } from '../utils/apiErrorHandler';
 
 // Conditional import for Twilio Voice SDK
 let Device: any;
-let Call: any;
 
 try {
   const twilioSDK = require('@twilio/voice-sdk');
   Device = twilioSDK.Device;
-  Call = twilioSDK.Call;
 } catch (e) {
   console.warn('Twilio Voice SDK not available. Phone features will be disabled.');
   // Create mock classes to prevent runtime errors
@@ -43,14 +41,11 @@ try {
   }
   
   Device = class MockDevice {
-    constructor() {}
     on() {}
     register() { return Promise.resolve(); }
     connect() { return Promise.resolve(new MockCall()); }
     destroy() {}
   };
-  
-  Call = MockCall;
 }
 
 interface WebRTCPhoneProps {
@@ -76,6 +71,7 @@ const WebRTCPhone: React.FC<WebRTCPhoneProps> = ({ voter, onCallComplete }) => {
     return () => {
       cleanup();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const cleanup = () => {
@@ -92,21 +88,41 @@ const WebRTCPhone: React.FC<WebRTCPhoneProps> = ({ voter, onCallComplete }) => {
       setIsInitializing(true);
       setError(null);
 
-      // Get Twilio access token
-      const response = await ApiErrorHandler.makeAuthenticatedRequest(
-        `${API_BASE_URL}/api/browser-call/token`,
-        { method: 'GET' }
-      );
+      // Check if we have a mock Device (SDK not available)
+      if (!Device || Device.name === 'MockDevice') {
+        console.warn('Twilio Voice SDK not available - using fallback mode');
+        setError('Phone system is not available. Please use the standard calling feature.');
+        setDeviceState('offline');
+        setIsInitializing(false);
+        return;
+      }
 
-      if (!response.token) {
-        throw new Error('Failed to get access token');
+      // Get Twilio access token
+      let response;
+      try {
+        response = await ApiErrorHandler.makeAuthenticatedRequest(
+          `${API_BASE_URL}/api/browser-call/token`,
+          { method: 'GET' }
+        );
+      } catch (apiError: any) {
+        console.error('Failed to get token from API:', apiError);
+        
+        // Try the simplified endpoint as fallback
+        try {
+          response = await ApiErrorHandler.makeAuthenticatedRequest(
+            `${API_BASE_URL}/api/phonebanking/token`,
+            { method: 'GET' }
+          );
+        } catch (fallbackError: any) {
+          throw new Error('Phone service is temporarily unavailable. Please try again later.');
+        }
+      }
+
+      if (!response || !response.token) {
+        throw new Error('Failed to get access token from server');
       }
 
       // Create new Device with the token
-      if (!Device) {
-        throw new Error('Twilio Voice SDK is not available');
-      }
-      
       const newDevice = new Device(response.token, {
         logLevel: 1,
         // codecPreferences are optional, using defaults
@@ -138,7 +154,8 @@ const WebRTCPhone: React.FC<WebRTCPhoneProps> = ({ voter, onCallComplete }) => {
 
     } catch (err: any) {
       console.error('Failed to initialize device:', err);
-      setError('Failed to initialize phone system. Please refresh the page.');
+      const errorMessage = err.message || 'Failed to initialize phone system. Please refresh the page.';
+      setError(errorMessage);
       setIsInitializing(false);
       setDeviceState('offline');
     }

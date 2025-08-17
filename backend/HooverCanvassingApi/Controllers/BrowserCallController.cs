@@ -271,21 +271,36 @@ namespace HooverCanvassingApi.Controllers
                     .Where(c => c.IsActive)
                     .FirstOrDefaultAsync();
 
+                // Return false if no config exists
                 if (twilioConfig == null)
                 {
-                    return BadRequest("Twilio is not configured");
+                    return Ok(new
+                    {
+                        isConfigured = false,
+                        hasAppSid = false
+                    });
                 }
+
+                // Check if properly configured
+                bool isConfigured = !string.IsNullOrEmpty(twilioConfig.AccountSid) 
+                    && !string.IsNullOrEmpty(twilioConfig.AuthToken)
+                    && !string.IsNullOrEmpty(twilioConfig.FromPhoneNumber);
 
                 return Ok(new
                 {
-                    isConfigured = !string.IsNullOrEmpty(twilioConfig.AccountSid),
+                    isConfigured = isConfigured,
                     hasAppSid = !string.IsNullOrEmpty(twilioConfig.AppSid)
                 });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting config");
-                return StatusCode(500, new { error = "Failed to get configuration" });
+                // Return false configuration instead of error
+                return Ok(new
+                {
+                    isConfigured = false,
+                    hasAppSid = false
+                });
             }
         }
     }

@@ -39,6 +39,7 @@ import { API_BASE_URL } from '../config';
 import { ApiErrorHandler } from '../utils/apiErrorHandler';
 import PhoneContactModal, { PhoneContactStatus } from './PhoneContactModal';
 import WebRTCPhone from './WebRTCPhone';
+import FallbackPhone from './FallbackPhone';
 import dayjs from 'dayjs';
 import { customerConfig } from '../config/customerConfig';
 
@@ -61,6 +62,7 @@ const PhoneBanking: React.FC<PhoneBankingProps> = ({ user }) => {
   const [currentCallDuration, setCurrentCallDuration] = useState<number>(0);
   const [searchZip, setSearchZip] = useState('');
   const [noMoreVoters, setNoMoreVoters] = useState(false);
+  const [phoneSystemAvailable, setPhoneSystemAvailable] = useState(true);
 
   const fetchNextVoter = async () => {
     setLoading(true);
@@ -118,7 +120,21 @@ const PhoneBanking: React.FC<PhoneBankingProps> = ({ user }) => {
   useEffect(() => {
     fetchNextVoter();
     fetchStats();
+    checkPhoneSystem();
   }, []);
+
+  const checkPhoneSystem = async () => {
+    try {
+      const response = await ApiErrorHandler.makeAuthenticatedRequest(
+        `${API_BASE_URL}/api/browser-call/config`,
+        { method: 'GET' }
+      );
+      setPhoneSystemAvailable(response?.isConfigured || false);
+    } catch (err) {
+      console.log('Phone system check failed, using fallback');
+      setPhoneSystemAvailable(false);
+    }
+  };
 
   const handleContactSubmit = async (
     status: PhoneContactStatus, 
@@ -384,11 +400,18 @@ const PhoneBanking: React.FC<PhoneBankingProps> = ({ user }) => {
               </Box>
 
               <Box sx={{ flex: '1 1 400px' }}>
-                {/* WebRTC Browser Phone Component */}
-                <WebRTCPhone 
-                  voter={currentVoter}
-                  onCallComplete={handleCallComplete}
-                />
+                {/* Phone Component - WebRTC or Fallback */}
+                {phoneSystemAvailable ? (
+                  <WebRTCPhone 
+                    voter={currentVoter}
+                    onCallComplete={handleCallComplete}
+                  />
+                ) : (
+                  <FallbackPhone 
+                    voter={currentVoter}
+                    isAdmin={user.role === 'admin' || user.role === 'superadmin'}
+                  />
+                )}
                 
                 <Box display="flex" gap={2} mt={2}>
                   <Button
