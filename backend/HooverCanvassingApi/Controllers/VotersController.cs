@@ -523,13 +523,13 @@ namespace HooverCanvassingApi.Controllers
                     expiredLock.IsActive = false;
                 }
                 
-                // Get currently locked voter IDs
+                // Get currently locked voter IDs (excluding those locked by current user)
                 var lockedVoterIds = await _context.VoterLocks
-                    .Where(l => l.IsActive && l.ExpiresAt > DateTime.UtcNow)
+                    .Where(l => l.IsActive && l.ExpiresAt > DateTime.UtcNow && l.UserId != currentUserId)
                     .Select(l => l.VoterId)
                     .ToListAsync();
 
-                // Get voters with phone numbers who haven't been called yet and aren't locked
+                // Get voters with phone numbers who haven't been called yet and aren't locked (by other users)
                 var query = _context.Voters
                     .Where(v => !string.IsNullOrEmpty(v.CellPhone))
                     .Where(v => !v.IsContacted || v.LastContactStatus == ContactStatus.NotHome)
@@ -566,18 +566,36 @@ namespace HooverCanvassingApi.Controllers
                     return NotFound(new { message = "No voters available to call" });
                 }
 
-                // Create a lock for this voter
-                var voterLock = new VoterLock
-                {
-                    VoterId = voter.LalVoterId,
-                    UserId = currentUserId ?? "",
-                    UserName = currentUser != null ? $"{currentUser.FirstName} {currentUser.LastName}" : "Unknown",
-                    LockedAt = DateTime.UtcNow,
-                    ExpiresAt = DateTime.UtcNow.AddMinutes(30),
-                    IsActive = true
-                };
+                // Check if user already has a lock on this voter
+                var existingLock = await _context.VoterLocks
+                    .FirstOrDefaultAsync(l => l.VoterId == voter.LalVoterId && 
+                                             l.UserId == currentUserId && 
+                                             l.IsActive && 
+                                             l.ExpiresAt > DateTime.UtcNow);
 
-                _context.VoterLocks.Add(voterLock);
+                if (existingLock != null)
+                {
+                    // Extend the existing lock
+                    existingLock.ExpiresAt = DateTime.UtcNow.AddMinutes(30);
+                    _logger.LogInformation("Extended existing lock on voter {VoterId} for user {UserId}", voter.LalVoterId, currentUserId);
+                }
+                else
+                {
+                    // Create a new lock for this voter
+                    var voterLock = new VoterLock
+                    {
+                        VoterId = voter.LalVoterId,
+                        UserId = currentUserId ?? "",
+                        UserName = currentUser != null ? $"{currentUser.FirstName} {currentUser.LastName}" : "Unknown",
+                        LockedAt = DateTime.UtcNow,
+                        ExpiresAt = DateTime.UtcNow.AddMinutes(30),
+                        IsActive = true
+                    };
+
+                    _context.VoterLocks.Add(voterLock);
+                    _logger.LogInformation("Created new lock on voter {VoterId} for user {UserId}", voter.LalVoterId, currentUserId);
+                }
+                
                 await _context.SaveChangesAsync();
 
                 _logger.LogInformation("Locked voter {VoterId} for user {UserId}", voter.LalVoterId, currentUserId);
