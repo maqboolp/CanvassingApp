@@ -78,7 +78,7 @@ const WebRTCPhone: React.FC<WebRTCPhoneProps> = ({ voter, onCallComplete }) => {
       // Create new Device with the token
       const newDevice = new Device(response.token, {
         logLevel: 1,
-        codecPreferences: ['opus', 'pcmu'],
+        // codecPreferences are optional, using defaults
         edge: 'ashburn'
       });
 

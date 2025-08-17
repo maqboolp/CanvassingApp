@@ -16,7 +16,8 @@
       "Bash(doctl databases:*)",
       "Bash(doctl apps:*)",
       "Bash(mv:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(dotnet ef migrations add:*)"
     ],
     "deny": []
   }
