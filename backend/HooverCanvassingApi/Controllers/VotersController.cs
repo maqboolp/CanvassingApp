@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using HooverCanvassingApi.Data;
 using HooverCanvassingApi.Models;
 using HooverCanvassingApi.Middleware;
@@ -18,12 +19,14 @@ namespace HooverCanvassingApi.Controllers
         private readonly ApplicationDbContext _context;
         private readonly ILogger<VotersController> _logger;
         private readonly IGoogleMapsService _googleMapsService;
+        private readonly IMemoryCache _cache;
 
-        public VotersController(ApplicationDbContext context, ILogger<VotersController> logger, IGoogleMapsService googleMapsService)
+        public VotersController(ApplicationDbContext context, ILogger<VotersController> logger, IGoogleMapsService googleMapsService, IMemoryCache cache)
         {
             _context = context;
             _logger = logger;
             _googleMapsService = googleMapsService;
+            _cache = cache;
         }
 
         [HttpGet]
@@ -165,17 +168,52 @@ namespace HooverCanvassingApi.Controllers
 
                 _logger.LogInformation("Executing query to fetch voters...");
                 
-                var voters = await query
-                    .Include(v => v.TagAssignments)
-                        .ThenInclude(ta => ta.Tag)
-                    .ToListAsync();
+                // Get total count before pagination for proper pagination metadata
+                // Use cache for simple count queries to improve performance
+                int totalCount;
+                var cacheKey = $"voter_count_{zipCode ?? "all"}_{contactStatus ?? "all"}_{voteFrequency ?? "all"}_{hasPhoneNumber}";
                 
-                _logger.LogInformation("Query executed successfully. Found {VoterCount} voters", voters.Count);
-
-                // Apply distance filtering and sorting in memory if location is provided
+                // Only cache simple queries without complex filters
+                bool canCache = string.IsNullOrEmpty(searchName) && 
+                               string.IsNullOrEmpty(ageGroup) && 
+                               !assignedToMe && 
+                               (tagIds == null || !tagIds.Any()) &&
+                               string.IsNullOrEmpty(partyAffiliation) &&
+                               !latitude.HasValue && !longitude.HasValue;
+                
+                if (canCache && _cache.TryGetValue(cacheKey, out int cachedCount))
+                {
+                    totalCount = cachedCount;
+                    _logger.LogInformation("Using cached count: {TotalCount} for key: {CacheKey}", totalCount, cacheKey);
+                }
+                else
+                {
+                    totalCount = await query.CountAsync();
+                    _logger.LogInformation("Total voters matching filters (before pagination): {TotalCount}", totalCount);
+                    
+                    // Cache the count for 5 minutes for simple queries
+                    if (canCache)
+                    {
+                        _cache.Set(cacheKey, totalCount, TimeSpan.FromMinutes(5));
+                        _logger.LogDebug("Cached count for key: {CacheKey}", cacheKey);
+                    }
+                }
+                
+                // For location-based queries, we need to handle differently
+                List<Voter> voters;
                 List<(Voter Voter, double Distance, bool IsStraightLine)> votersWithDistance = null;
+                
                 if (latitude.HasValue && longitude.HasValue)
                 {
+                    // For location-based queries, we need to load all matching voters to calculate distances
+                    // Then apply pagination after sorting by distance
+                    var allVoters = await query
+                        .Include(v => v.TagAssignments)
+                            .ThenInclude(ta => ta.Tag)
+                        .ToListAsync();
+                    
+                    _logger.LogInformation("Loaded {VoterCount} voters for distance calculation", allVoters.Count);
+                    
                     if (useTravelDistance)
                     {
                         // Use Google Maps for travel distance
@@ -188,7 +226,7 @@ namespace HooverCanvassingApi.Controllers
                         
                         _logger.LogInformation("Pre-filtering voters with radius {RadiusKm}km, using buffer of {PreFilterRadiusKm}km", 
                             radiusKm, preFilterRadiusKm);
-                        var preFilteredVoters = voters
+                        var preFilteredVoters = allVoters
                             .Where(v => v.Latitude.HasValue && v.Longitude.HasValue)
                             .Select(v => new {
                                 Voter = v,
@@ -200,7 +238,7 @@ namespace HooverCanvassingApi.Controllers
                             .ToList();
                         
                         _logger.LogInformation("Pre-filtered from {TotalCount} to {FilteredCount} voters using straight-line distance", 
-                            voters.Count(v => v.Latitude.HasValue && v.Longitude.HasValue), 
+                            allVoters.Count(v => v.Latitude.HasValue && v.Longitude.HasValue), 
                             preFilteredVoters.Count);
                         
                         // Log the user's location for debugging
@@ -323,7 +361,7 @@ namespace HooverCanvassingApi.Controllers
                     else
                     {
                         // Use straight-line distance (existing code)
-                        votersWithDistance = voters
+                        votersWithDistance = allVoters
                             .Where(v => v.Latitude.HasValue && v.Longitude.HasValue)
                             .Select(v => (
                                 Voter: v,
@@ -336,15 +374,33 @@ namespace HooverCanvassingApi.Controllers
                         
                         voters = votersWithDistance.Select(vd => vd.Voter).ToList();
                     }
+                    
+                    // Update total count for location-based queries
+                    totalCount = voters.Count;
+                }
+                else
+                {
+                    // Non-location based query - apply pagination at database level for better performance
+                    voters = await query
+                        .Include(v => v.TagAssignments)
+                            .ThenInclude(ta => ta.Tag)
+                        .Skip((page - 1) * limit)
+                        .Take(limit)
+                        .ToListAsync();
+                    
+                    _logger.LogInformation("Query executed successfully. Retrieved page {Page} with {VoterCount} voters", page, voters.Count);
                 }
 
-                var total = voters.Count;
+                var total = totalCount;
                 
-                // Apply pagination after filtering
-                voters = voters
-                    .Skip((page - 1) * limit)
-                    .Take(limit)
-                    .ToList();
+                // Apply pagination for location-based queries (already applied for non-location queries)
+                if (latitude.HasValue && longitude.HasValue)
+                {
+                    voters = voters
+                        .Skip((page - 1) * limit)
+                        .Take(limit)
+                        .ToList();
+                }
 
                 var response = new VoterListResponse
                 {
