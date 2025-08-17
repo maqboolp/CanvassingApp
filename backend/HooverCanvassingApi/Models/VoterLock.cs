@@ -18,7 +18,7 @@ namespace HooverCanvassingApi.Models
         
         public DateTime LockedAt { get; set; } = DateTime.UtcNow;
         
-        public DateTime ExpiresAt { get; set; } = DateTime.UtcNow.AddMinutes(30); // Auto-expire after 30 minutes
+        public DateTime ExpiresAt { get; set; } = DateTime.UtcNow.AddMinutes(5); // Auto-expire after 5 minutes
         
         public bool IsActive { get; set; } = true;
         

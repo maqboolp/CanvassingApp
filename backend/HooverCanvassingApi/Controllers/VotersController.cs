@@ -576,7 +576,7 @@ namespace HooverCanvassingApi.Controllers
                 if (existingLock != null)
                 {
                     // Extend the existing lock
-                    existingLock.ExpiresAt = DateTime.UtcNow.AddMinutes(30);
+                    existingLock.ExpiresAt = DateTime.UtcNow.AddMinutes(5);
                     _logger.LogInformation("Extended existing lock on voter {VoterId} for user {UserId}", voter.LalVoterId, currentUserId);
                 }
                 else
@@ -588,7 +588,7 @@ namespace HooverCanvassingApi.Controllers
                         UserId = currentUserId ?? "",
                         UserName = currentUser != null ? $"{currentUser.FirstName} {currentUser.LastName}" : "Unknown",
                         LockedAt = DateTime.UtcNow,
-                        ExpiresAt = DateTime.UtcNow.AddMinutes(30),
+                        ExpiresAt = DateTime.UtcNow.AddMinutes(5),
                         IsActive = true
                     };
 
