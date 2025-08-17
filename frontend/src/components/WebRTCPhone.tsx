@@ -106,16 +106,7 @@ const WebRTCPhone: React.FC<WebRTCPhoneProps> = ({ voter, onCallComplete }) => {
         );
       } catch (apiError: any) {
         console.error('Failed to get token from API:', apiError);
-        
-        // Try the simplified endpoint as fallback
-        try {
-          response = await ApiErrorHandler.makeAuthenticatedRequest(
-            `${API_BASE_URL}/api/phonebanking/token`,
-            { method: 'GET' }
-          );
-        } catch (fallbackError: any) {
-          throw new Error('Phone service is temporarily unavailable. Please try again later.');
-        }
+        throw new Error('Phone service is temporarily unavailable. Please try again later.');
       }
 
       if (!response || !response.token) {
