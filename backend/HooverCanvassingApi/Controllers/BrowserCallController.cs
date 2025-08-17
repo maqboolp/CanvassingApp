@@ -129,10 +129,12 @@ namespace HooverCanvassingApi.Controllers
                 var grants = new HashSet<IGrant> { voiceGrant };
                 
                 // Create access token with Twilio's JWT library
+                // Using Account SID as the signing key for simplicity
+                // In production, you should create API Keys in Twilio Console
                 var token = new Token(
                     accountSid,
-                    Guid.NewGuid().ToString(), // Generate unique signing key SID
-                    authToken,
+                    accountSid,  // Use Account SID as signing key SID
+                    authToken,   // Use Auth Token as secret
                     identity,
                     expiration: DateTime.UtcNow.AddHours(4),
                     nbf: DateTime.UtcNow,
