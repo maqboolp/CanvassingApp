@@ -52,12 +52,24 @@ namespace HooverCanvassingApi.Controllers
                     return NotFound("User not found");
                 }
 
-                // Get Twilio configuration
+                // Get Twilio configuration from database or environment
                 var twilioConfig = await _context.TwilioConfigurations
                     .Where(c => c.IsActive)
                     .FirstOrDefaultAsync();
 
-                if (twilioConfig == null || string.IsNullOrEmpty(twilioConfig.AccountSid) || string.IsNullOrEmpty(twilioConfig.AuthToken))
+                string accountSid = twilioConfig?.AccountSid;
+                string authToken = twilioConfig?.AuthToken;
+                string fromPhoneNumber = twilioConfig?.FromPhoneNumber;
+
+                // Fall back to environment variables if not in database
+                if (string.IsNullOrEmpty(accountSid) || string.IsNullOrEmpty(authToken))
+                {
+                    accountSid = _configuration["Twilio:AccountSid"];
+                    authToken = _configuration["Twilio:AuthToken"];
+                    fromPhoneNumber = _configuration["Twilio:FromPhoneNumber"];
+                }
+
+                if (string.IsNullOrEmpty(accountSid) || string.IsNullOrEmpty(authToken))
                 {
                     return BadRequest(new { 
                         error = "Twilio is not configured",
@@ -70,8 +82,8 @@ namespace HooverCanvassingApi.Controllers
                 // The actual implementation would use Twilio's Voice SDK
                 return Ok(new
                 {
-                    twilioAccountSid = twilioConfig.AccountSid,
-                    twilioNumber = twilioConfig.FromPhoneNumber,
+                    twilioAccountSid = accountSid,
+                    twilioNumber = fromPhoneNumber,
                     userId = userId,
                     userName = $"{user.FirstName} {user.LastName}",
                     // In production, generate a proper JWT token here
