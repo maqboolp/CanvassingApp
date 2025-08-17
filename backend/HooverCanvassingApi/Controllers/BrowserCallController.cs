@@ -269,6 +269,7 @@ namespace HooverCanvassingApi.Controllers
 
                 // Connect the call
                 response.Say($"Connecting you to {voterName}. Please wait.");
+                response.Pause(1); // Add 1 second pause before dialing
                 
                 // Use TwilioService to format the phone number properly
                 var formattedNumber = _twilioService.FormatPhoneNumber(phoneNumber);
@@ -289,7 +290,8 @@ namespace HooverCanvassingApi.Controllers
                     recordingStatusCallback: new Uri($"{_configuration["AppSettings:BaseUrl"]}/api/browser-call/recording-callback"),
                     timeout: 30,  // Wait 30 seconds for answer
                     action: new Uri($"{_configuration["AppSettings:BaseUrl"]}/api/browser-call/dial-callback"),  // Callback after dial completes
-                    method: Twilio.Http.HttpMethod.Post
+                    method: Twilio.Http.HttpMethod.Post,
+                    answerOnBridge: true  // Answer immediately when call connects
                 );
                 
                 _logger.LogInformation($"Dialing formatted number: {formattedNumber} with caller ID: {fromPhoneNumber}");
