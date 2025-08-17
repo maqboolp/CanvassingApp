@@ -54,21 +54,42 @@ namespace HooverCanvassingApi.Controllers
                     return NotFound("User not found");
                 }
 
-                // Get Twilio configuration
+                // Get Twilio configuration from database or environment
                 var twilioConfig = await _context.TwilioConfigurations
                     .Where(c => c.IsActive)
                     .FirstOrDefaultAsync();
 
-                if (twilioConfig == null)
+                string accountSid = null;
+                string authToken = null;
+                string fromPhone = null;
+                string appSid = null;
+
+                if (twilioConfig != null)
+                {
+                    accountSid = twilioConfig.AccountSid;
+                    authToken = twilioConfig.AuthToken;
+                    fromPhone = twilioConfig.FromPhoneNumber;
+                    appSid = twilioConfig.AppSid;
+                }
+
+                // Fall back to environment variables if not in database
+                if (string.IsNullOrEmpty(accountSid))
+                {
+                    accountSid = _configuration["Twilio:AccountSid"];
+                    authToken = _configuration["Twilio:AuthToken"];
+                    fromPhone = _configuration["Twilio:FromPhoneNumber"];
+                }
+
+                if (string.IsNullOrEmpty(accountSid) || string.IsNullOrEmpty(authToken))
                 {
                     return BadRequest("Twilio is not configured. Please contact an administrator.");
                 }
 
                 // Initialize Twilio
-                TwilioClient.Init(twilioConfig.AccountSid, twilioConfig.AuthToken);
+                TwilioClient.Init(accountSid, authToken);
 
-                // Create or get TwiML App
-                if (string.IsNullOrEmpty(twilioConfig.AppSid))
+                // Create or get TwiML App if needed
+                if (string.IsNullOrEmpty(appSid))
                 {
                     var app = await ApplicationResource.CreateAsync(
                         voiceUrl: new Uri($"{_configuration["AppSettings:BaseUrl"]}/api/browser-call/voice"),
@@ -76,8 +97,14 @@ namespace HooverCanvassingApi.Controllers
                         friendlyName: "Phone Banking Browser App"
                     );
                     
-                    twilioConfig.AppSid = app.Sid;
-                    await _context.SaveChangesAsync();
+                    appSid = app.Sid;
+                    
+                    // Save to database if we have a config record
+                    if (twilioConfig != null)
+                    {
+                        twilioConfig.AppSid = app.Sid;
+                        await _context.SaveChangesAsync();
+                    }
                     
                     _logger.LogInformation($"Created TwiML App: {app.Sid}");
                 }
@@ -85,11 +112,11 @@ namespace HooverCanvassingApi.Controllers
                 // Generate a simple JWT token for the Twilio Voice SDK
                 // This is a simplified version - in production, use Twilio's helper libraries
                 var tokenHandler = new JwtSecurityTokenHandler();
-                var key = Encoding.ASCII.GetBytes(twilioConfig.AuthToken);
+                var key = Encoding.ASCII.GetBytes(authToken);
                 
                 var claims = new List<System.Security.Claims.Claim>
                 {
-                    new System.Security.Claims.Claim("scope", $"scope:client:outgoing?appSid={twilioConfig.AppSid}"),
+                    new System.Security.Claims.Claim("scope", $"scope:client:outgoing?appSid={appSid}"),
                     new System.Security.Claims.Claim("scope", $"scope:client:incoming?clientName=volunteer_{userId}")
                 };
 
@@ -97,7 +124,7 @@ namespace HooverCanvassingApi.Controllers
                 {
                     Subject = new ClaimsIdentity(claims),
                     Expires = DateTime.UtcNow.AddHours(4),
-                    Issuer = twilioConfig.AccountSid,
+                    Issuer = accountSid,
                     SigningCredentials = new SigningCredentials(
                         new SymmetricSecurityKey(key), 
                         SecurityAlgorithms.HmacSha256Signature)
@@ -145,7 +172,15 @@ namespace HooverCanvassingApi.Controllers
                     .Where(c => c.IsActive)
                     .FirstOrDefaultAsync();
 
-                if (twilioConfig == null)
+                string fromPhoneNumber = twilioConfig?.FromPhoneNumber;
+                
+                // Fall back to environment variables if not in database
+                if (string.IsNullOrEmpty(fromPhoneNumber))
+                {
+                    fromPhoneNumber = _configuration["Twilio:FromPhoneNumber"];
+                }
+
+                if (string.IsNullOrEmpty(fromPhoneNumber))
                 {
                     response.Say("System configuration error. Please contact support.");
                     response.Hangup();
@@ -202,7 +237,7 @@ namespace HooverCanvassingApi.Controllers
                 response.Say($"Connecting you to {voterName}. Please wait.");
                 
                 var dial = new Dial(
-                    callerId: twilioConfig.FromPhoneNumber,
+                    callerId: fromPhoneNumber,
                     record: Dial.RecordEnum.RecordFromAnswerDual,
                     recordingStatusCallback: new Uri($"{_configuration["AppSettings:BaseUrl"]}/api/browser-call/recording-callback")
                 );
@@ -267,29 +302,39 @@ namespace HooverCanvassingApi.Controllers
         {
             try
             {
+                // First check database configuration
                 var twilioConfig = await _context.TwilioConfigurations
                     .Where(c => c.IsActive)
                     .FirstOrDefaultAsync();
 
-                // Return false if no config exists
-                if (twilioConfig == null)
+                bool isConfigured = false;
+                bool hasAppSid = false;
+
+                if (twilioConfig != null)
                 {
-                    return Ok(new
-                    {
-                        isConfigured = false,
-                        hasAppSid = false
-                    });
+                    // Check if properly configured in database
+                    isConfigured = !string.IsNullOrEmpty(twilioConfig.AccountSid) 
+                        && !string.IsNullOrEmpty(twilioConfig.AuthToken)
+                        && !string.IsNullOrEmpty(twilioConfig.FromPhoneNumber);
+                    hasAppSid = !string.IsNullOrEmpty(twilioConfig.AppSid);
                 }
 
-                // Check if properly configured
-                bool isConfigured = !string.IsNullOrEmpty(twilioConfig.AccountSid) 
-                    && !string.IsNullOrEmpty(twilioConfig.AuthToken)
-                    && !string.IsNullOrEmpty(twilioConfig.FromPhoneNumber);
+                // If not configured in database, check environment variables
+                if (!isConfigured)
+                {
+                    var envAccountSid = _configuration["Twilio:AccountSid"];
+                    var envAuthToken = _configuration["Twilio:AuthToken"];
+                    var envFromPhone = _configuration["Twilio:FromPhoneNumber"];
+
+                    isConfigured = !string.IsNullOrEmpty(envAccountSid) 
+                        && !string.IsNullOrEmpty(envAuthToken)
+                        && !string.IsNullOrEmpty(envFromPhone);
+                }
 
                 return Ok(new
                 {
                     isConfigured = isConfigured,
-                    hasAppSid = !string.IsNullOrEmpty(twilioConfig.AppSid)
+                    hasAppSid = hasAppSid
                 });
             }
             catch (Exception ex)
