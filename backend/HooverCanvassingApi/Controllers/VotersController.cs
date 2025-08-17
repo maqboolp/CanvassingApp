@@ -505,7 +505,7 @@ namespace HooverCanvassingApi.Controllers
         }
 
         [HttpGet("next-to-call")]
-        public async Task<ActionResult<VoterDto>> GetNextVoterToCall([FromQuery] string? zip = null)
+        public async Task<ActionResult<VoterDto>> GetNextVoterToCall([FromQuery] string? zip = null, [FromQuery] string? search = null)
         {
             var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var currentUser = await _context.Volunteers.FindAsync(currentUserId);
@@ -539,6 +539,19 @@ namespace HooverCanvassingApi.Controllers
                 if (!string.IsNullOrEmpty(zip))
                 {
                     query = query.Where(v => v.Zip == zip);
+                }
+                
+                // Filter by search query if provided (name or address)
+                if (!string.IsNullOrEmpty(search))
+                {
+                    var searchLower = search.ToLower();
+                    query = query.Where(v => 
+                        (v.FirstName != null && v.FirstName.ToLower().Contains(searchLower)) ||
+                        (v.LastName != null && v.LastName.ToLower().Contains(searchLower)) ||
+                        (v.AddressLine != null && v.AddressLine.ToLower().Contains(searchLower)) ||
+                        (v.City != null && v.City.ToLower().Contains(searchLower)) ||
+                        (v.Zip != null && v.Zip.Contains(search))
+                    );
                 }
 
                 // Order by those who have never been contacted first, then by age (older first)

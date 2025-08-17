@@ -13,7 +13,6 @@ import {
   TextField,
   InputAdornment,
   CircularProgress,
-  Tooltip,
   Paper,
   Divider,
   AppBar,
@@ -61,7 +60,7 @@ const PhoneBanking: React.FC<PhoneBankingProps> = ({ user }) => {
   });
   const [contactModalOpen, setContactModalOpen] = useState(false);
   const [currentCallDuration, setCurrentCallDuration] = useState<number>(0);
-  const [searchZip, setSearchZip] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [noMoreVoters, setNoMoreVoters] = useState(false);
   const [phoneSystemAvailable, setPhoneSystemAvailable] = useState(true);
 
@@ -77,10 +76,10 @@ const PhoneBanking: React.FC<PhoneBankingProps> = ({ user }) => {
       if (specificVoterId) {
         url = `${API_BASE_URL}/api/voters/${specificVoterId}`;
       } else {
-        // Otherwise fetch next available voter
+        // Otherwise fetch next available voter with search
         url = `${API_BASE_URL}/api/voters/next-to-call`;
-        if (searchZip) {
-          url += `?zip=${searchZip}`;
+        if (searchQuery) {
+          url += `?search=${encodeURIComponent(searchQuery)}`;
         }
       }
       
@@ -311,33 +310,54 @@ const PhoneBanking: React.FC<PhoneBankingProps> = ({ user }) => {
       </Box>
 
       {/* Search Box */}
-      <Box sx={{ mb: 3 }}>
+      <Box sx={{ mb: 3, display: 'flex', gap: 2, alignItems: 'center' }}>
         <TextField
-          placeholder="Search by ZIP code (optional)"
-          value={searchZip}
-          onChange={(e) => setSearchZip(e.target.value)}
+          placeholder="Search by name, address, or ZIP code"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
           onKeyPress={(e) => {
             if (e.key === 'Enter') {
               fetchNextVoter();
             }
           }}
           size="small"
-          sx={{ width: 300 }}
+          sx={{ width: 400 }}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
                 <Search />
               </InputAdornment>
             ),
-            endAdornment: searchZip && (
+            endAdornment: searchQuery && (
               <InputAdornment position="end">
-                <IconButton size="small" onClick={() => { setSearchZip(''); fetchNextVoter(); }}>
+                <IconButton size="small" onClick={() => { setSearchQuery(''); fetchNextVoter(); }}>
                   <Cancel />
                 </IconButton>
               </InputAdornment>
             ),
           }}
         />
+        <Button
+          variant="contained"
+          onClick={() => fetchNextVoter()}
+          startIcon={<Search />}
+          size="small"
+        >
+          Search
+        </Button>
+        {searchQuery && (
+          <Button
+            variant="outlined"
+            onClick={() => { 
+              setSearchQuery(''); 
+              fetchNextVoter(); 
+            }}
+            startIcon={<Refresh />}
+            size="small"
+          >
+            Clear & Get Next
+          </Button>
+        )}
       </Box>
 
       {/* Current Voter Card */}
@@ -355,18 +375,18 @@ const PhoneBanking: React.FC<PhoneBankingProps> = ({ user }) => {
         <Card>
           <CardContent sx={{ textAlign: 'center', py: 4 }}>
             <Typography variant="h6" gutterBottom>
-              No more voters to call
+              No voters found
             </Typography>
             <Typography color="textSecondary" gutterBottom>
-              {searchZip ? `No voters found in ZIP ${searchZip}` : 'All voters have been contacted'}
+              {searchQuery ? `No voters found matching "${searchQuery}"` : 'No more voters available to call'}
             </Typography>
             <Button
               startIcon={<Refresh />}
-              onClick={() => { setSearchZip(''); fetchNextVoter(); }}
+              onClick={() => { setSearchQuery(''); fetchNextVoter(); }}
               variant="outlined"
               sx={{ mt: 2 }}
             >
-              Reset Search
+              Clear Search & Get Next
             </Button>
           </CardContent>
         </Card>
