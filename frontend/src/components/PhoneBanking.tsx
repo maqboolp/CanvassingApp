@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Box,
   Container,
@@ -49,6 +49,7 @@ interface PhoneBankingProps {
 
 const PhoneBanking: React.FC<PhoneBankingProps> = ({ user }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentVoter, setCurrentVoter] = useState<Voter | null>(null);
@@ -64,15 +65,23 @@ const PhoneBanking: React.FC<PhoneBankingProps> = ({ user }) => {
   const [noMoreVoters, setNoMoreVoters] = useState(false);
   const [phoneSystemAvailable, setPhoneSystemAvailable] = useState(true);
 
-  const fetchNextVoter = async () => {
+  const fetchNextVoter = async (specificVoterId?: string) => {
     setLoading(true);
     setError(null);
     setNoMoreVoters(false);
     
     try {
-      let url = `${API_BASE_URL}/api/voters/next-to-call`;
-      if (searchZip) {
-        url += `?zip=${searchZip}`;
+      let url;
+      
+      // If specific voter ID provided, fetch that voter
+      if (specificVoterId) {
+        url = `${API_BASE_URL}/api/voters/${specificVoterId}`;
+      } else {
+        // Otherwise fetch next available voter
+        url = `${API_BASE_URL}/api/voters/next-to-call`;
+        if (searchZip) {
+          url += `?zip=${searchZip}`;
+        }
       }
       
       const response = await ApiErrorHandler.makeAuthenticatedRequest(url, {
@@ -88,8 +97,8 @@ const PhoneBanking: React.FC<PhoneBankingProps> = ({ user }) => {
       if (err.status === 404) {
         setNoMoreVoters(true);
       } else {
-        setError('Failed to fetch next voter');
-        console.error('Error fetching next voter:', err);
+        setError('Failed to fetch voter');
+        console.error('Error fetching voter:', err);
       }
     } finally {
       setLoading(false);
@@ -118,9 +127,19 @@ const PhoneBanking: React.FC<PhoneBankingProps> = ({ user }) => {
   };
 
   useEffect(() => {
-    fetchNextVoter();
+    // Check if we have a specific voter ID from navigation
+    const state = location.state as { voterId?: string } | null;
+    const specificVoterId = state?.voterId;
+    
+    // Fetch the specific voter or next available
+    fetchNextVoter(specificVoterId);
     fetchStats();
     checkPhoneSystem();
+    
+    // Clear the state so refreshing doesn't keep the same voter
+    if (specificVoterId) {
+      window.history.replaceState({}, document.title);
+    }
   }, []);
 
   const checkPhoneSystem = async () => {

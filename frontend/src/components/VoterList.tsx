@@ -1199,8 +1199,8 @@ const VoterList: React.FC<VoterListProps> = ({ onContactVoter, user, mode = 'doo
                             size="small"
                             startIcon={isMobile ? undefined : <Phone />}
                             onClick={() => {
-                              // Navigate to phone banking page for browser-based calling
-                              navigate('/phone-banking');
+                              // Navigate to phone banking page with specific voter ID
+                              navigate('/phone-banking', { state: { voterId: voter.lalVoterId } });
                             }}
                             disabled={loading || !voter.cellPhone}
                             sx={{ minWidth: isMobile ? '60px' : 'auto' }}
