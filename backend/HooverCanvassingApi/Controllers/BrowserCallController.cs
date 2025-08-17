@@ -96,12 +96,18 @@ namespace HooverCanvassingApi.Controllers
                 // Create or get TwiML App if needed
                 if (string.IsNullOrEmpty(appSid))
                 {
-                    // Get the base URL, ensuring it's absolute
+                    // Get the base URL, ensuring it's absolute and HTTPS
                     var baseUrl = _configuration["AppSettings:BaseUrl"];
                     if (string.IsNullOrEmpty(baseUrl))
                     {
                         // Fallback to the request URL if BaseUrl is not configured
-                        baseUrl = $"{Request.Scheme}://{Request.Host}";
+                        baseUrl = $"https://{Request.Host}";
+                    }
+                    
+                    // Ensure HTTPS for Twilio webhooks
+                    if (baseUrl.StartsWith("http://"))
+                    {
+                        baseUrl = baseUrl.Replace("http://", "https://");
                     }
                     
                     var app = await ApplicationResource.CreateAsync(
@@ -284,12 +290,23 @@ namespace HooverCanvassingApi.Controllers
                     return Content(response.ToString(), "application/xml");
                 }
                 
+                // Get base URL and ensure HTTPS
+                var callbackBaseUrl = _configuration["AppSettings:BaseUrl"];
+                if (string.IsNullOrEmpty(callbackBaseUrl))
+                {
+                    callbackBaseUrl = $"https://{Request.Host}";
+                }
+                if (callbackBaseUrl.StartsWith("http://"))
+                {
+                    callbackBaseUrl = callbackBaseUrl.Replace("http://", "https://");
+                }
+                
                 var dial = new Dial(
                     callerId: fromPhoneNumber,
                     record: Dial.RecordEnum.RecordFromAnswerDual,
-                    recordingStatusCallback: new Uri($"{_configuration["AppSettings:BaseUrl"]}/api/browser-call/recording-callback"),
+                    recordingStatusCallback: new Uri($"{callbackBaseUrl}/api/browser-call/recording-callback"),
                     timeout: 30,  // Wait 30 seconds for answer
-                    action: new Uri($"{_configuration["AppSettings:BaseUrl"]}/api/browser-call/dial-callback"),  // Callback after dial completes
+                    action: new Uri($"{callbackBaseUrl}/api/browser-call/dial-callback"),  // Callback after dial completes
                     method: Twilio.Http.HttpMethod.Post,
                     answerOnBridge: true  // Answer immediately when call connects
                 );
