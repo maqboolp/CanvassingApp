@@ -245,7 +245,9 @@ namespace HooverCanvassingApi.Controllers
                     phoneNumber = _twilioService.FormatPhoneNumber(voter.CellPhone);
                     voterName = $"{voter.FirstName} {voter.LastName}";
                     
-                    _logger.LogInformation($"Calling voter {voterId}: {voterName} at {phoneNumber}");
+                    _logger.LogInformation($"Calling voter {voterId}: {voterName}");
+                    _logger.LogInformation($"Raw phone from DB: {voter.CellPhone}");
+                    _logger.LogInformation($"Formatted phone: {phoneNumber}");
                     
                     // Log the call
                     var callRecord = new PhoneBankingCall
@@ -296,7 +298,11 @@ namespace HooverCanvassingApi.Controllers
 
                 response.Say("The call has ended. Thank you.");
 
-                return Content(response.ToString(), "application/xml");
+                // Log the TwiML response for debugging
+                var twimlResponse = response.ToString();
+                _logger.LogInformation($"TwiML Response: {twimlResponse}");
+
+                return Content(twimlResponse, "application/xml");
             }
             catch (Exception ex)
             {
