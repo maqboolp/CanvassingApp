@@ -939,7 +939,11 @@ namespace HooverCanvassingApi.Services
                 {
                     await ProcessSmsCampaignAsync(campaignId, pendingMessageIds, campaignMessage!, overrideOptIn);
                 }
-                else
+                else if (campaignType == CampaignType.Email)
+                {
+                    await ProcessEmailCampaignAsync(campaignId, pendingMessageIds);
+                }
+                else if (campaignType == CampaignType.RoboCall)
                 {
                     // Validate voice URL for robocalls
                     if (string.IsNullOrEmpty(voiceUrl))
@@ -1130,6 +1134,151 @@ namespace HooverCanvassingApi.Services
             
             await context.SaveChangesAsync();
             await UpdateCampaignFinalStatusAsync(campaignId, successes, failures);
+        }
+        
+        private async Task ProcessEmailCampaignAsync(int campaignId, List<int> messageIds)
+        {
+            using var scope = _serviceScopeFactory.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
+            var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+            var campaignSettings = scope.ServiceProvider.GetRequiredService<IOptions<CampaignSettings>>().Value;
+            
+            // Get campaign details
+            var campaign = await context.Campaigns.FindAsync(campaignId);
+            if (campaign == null)
+            {
+                _logger.LogError($"Campaign {campaignId} not found");
+                return;
+            }
+            
+            var baseUrl = configuration["EmailSettings:FrontendBaseUrl"] ?? configuration["Frontend:BaseUrl"] ?? "http://localhost:3000";
+            var unsubscribeKey = configuration["Security:UnsubscribeKey"] ?? "default-unsubscribe-key";
+            
+            // Load all messages
+            var messages = await context.CampaignMessages
+                .Include(m => m.Voter)
+                .Where(m => messageIds.Contains(m.Id))
+                .ToListAsync();
+            
+            var successes = 0;
+            var failures = 0;
+            
+            _logger.LogInformation($"Processing {messages.Count} emails for campaign {campaignId}");
+            
+            foreach (var message in messages)
+            {
+                try
+                {
+                    // Check if voter is unsubscribed
+                    var isUnsubscribed = await context.EmailUnsubscribes
+                        .AnyAsync(u => u.Email == message.Voter.Email || u.VoterId == message.VoterId);
+                        
+                    if (isUnsubscribed)
+                    {
+                        _logger.LogInformation($"Skipping email to {message.Voter.Email} - unsubscribed");
+                        message.Status = MessageStatus.Failed;
+                        message.ErrorMessage = "Recipient has unsubscribed";
+                        failures++;
+                        continue;
+                    }
+                    
+                    // Check if voter has opted out
+                    if (message.Voter.EmailOptOut)
+                    {
+                        _logger.LogInformation($"Skipping email to {message.Voter.Email} - opted out");
+                        message.Status = MessageStatus.Failed;
+                        message.ErrorMessage = "Voter has opted out";
+                        failures++;
+                        continue;
+                    }
+                    
+                    if (string.IsNullOrEmpty(message.Voter.Email))
+                    {
+                        message.Status = MessageStatus.Failed;
+                        message.ErrorMessage = "No email address available";
+                        failures++;
+                        continue;
+                    }
+                    
+                    // Generate unsubscribe token
+                    var unsubscribeToken = UnsubscribeController.GenerateUnsubscribeToken(
+                        message.Voter.Email, 
+                        campaign.Id, 
+                        message.Voter.LalVoterId,
+                        unsubscribeKey
+                    );
+                    var unsubscribeUrl = $"{baseUrl}/unsubscribe/{unsubscribeToken}";
+                    
+                    // Prepare email model
+                    var emailModel = new CampaignEmailModel
+                    {
+                        Subject = campaign.EmailSubject ?? "Campaign Update",
+                        CampaignName = campaignSettings.CampaignName,
+                        CampaignTitle = campaignSettings.CampaignTitle,
+                        RecipientName = $"{message.Voter.FirstName} {message.Voter.LastName}",
+                        RecipientEmail = message.Voter.Email,
+                        HtmlContent = campaign.EmailHtmlContent ?? campaign.Message,
+                        CallToActionUrl = campaign.CallToActionUrl,
+                        CallToActionText = campaign.CallToActionText,
+                        ImportantDates = campaign.ImportantDates,
+                        ShowSocialLinks = campaign.ShowSocialLinks,
+                        FacebookUrl = campaign.FacebookUrl,
+                        TwitterUrl = campaign.TwitterUrl,
+                        InstagramUrl = campaign.InstagramUrl,
+                        WebsiteUrl = campaign.WebsiteUrl,
+                        ElectionDate = campaignSettings.ElectionDate,
+                        PaidForBy = campaignSettings.PaidForBy,
+                        CampaignAddress = campaignSettings.CampaignAddress
+                    };
+                    
+                    // Generate email content with template
+                    var (subject, htmlContent, plainTextContent) = CampaignEmailTemplate.GenerateCampaignEmail(
+                        emailModel, 
+                        unsubscribeUrl,
+                        baseUrl
+                    );
+                    
+                    // Send email
+                    var success = await emailService.SendEmailAsync(
+                        message.Voter.Email,
+                        subject,
+                        htmlContent,
+                        plainTextContent
+                    );
+                    
+                    if (success)
+                    {
+                        successes++;
+                        message.Status = MessageStatus.Sent;
+                        message.SentAt = DateTime.UtcNow;
+                        
+                        // Update voter stats
+                        UpdateVoterCampaignStats(message.Voter, campaignId, CampaignType.Email);
+                    }
+                    else
+                    {
+                        failures++;
+                        message.Status = MessageStatus.Failed;
+                        message.ErrorMessage = "Email delivery failed";
+                    }
+                    
+                    // Add small delay to avoid overwhelming email service
+                    await Task.Delay(100);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, $"Failed to send email for message {message.Id}");
+                    failures++;
+                    message.Status = MessageStatus.Failed;
+                    message.ErrorMessage = ex.Message;
+                }
+            }
+            
+            await context.SaveChangesAsync();
+            await UpdateCampaignFinalStatusAsync(campaignId, successes, failures);
+            
+            _logger.LogInformation($"Email campaign {campaignId} completed: {successes} sent, {failures} failed");
         }
         
         private void UpdateVoterCampaignStats(Voter voter, int campaignId, CampaignType campaignType)
