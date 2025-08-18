@@ -571,37 +571,48 @@ namespace HooverCanvassingApi.Services
                 }
             }
 
-            // Only include voters with phone numbers
-            query = query.Where(v => !string.IsNullOrEmpty(v.CellPhone));
+            // Filter based on campaign type - email campaigns need email, others need phone
+            if (campaign.Type == CampaignType.Email)
+            {
+                query = query.Where(v => !string.IsNullOrEmpty(v.Email));
+            }
+            else
+            {
+                query = query.Where(v => !string.IsNullOrEmpty(v.CellPhone));
+            }
 
             // Get the initial list of voters
             var voters = await query.ToListAsync();
             
-            // Get opt-out records
-            var optOutType = campaign.Type == CampaignType.SMS ? OptOutType.SMS : OptOutType.RoboCalls;
-            var optedOutNumbers = await _context.OptOutRecords
-                .Where(o => o.Type == OptOutType.All || o.Type == optOutType)
-                .Select(o => o.PhoneNumber)
-                .ToListAsync();
-            
-            if (optedOutNumbers.Any())
+            // Apply opt-out filtering only for SMS and RoboCall campaigns (not email)
+            if (campaign.Type != CampaignType.Email)
             {
-                // Convert to HashSet for O(1) lookup performance
-                var optedOutSet = new HashSet<string>(optedOutNumbers);
+                // Get opt-out records
+                var optOutType = campaign.Type == CampaignType.SMS ? OptOutType.SMS : OptOutType.RoboCalls;
+                var optedOutNumbers = await _context.OptOutRecords
+                    .Where(o => o.Type == OptOutType.All || o.Type == optOutType)
+                    .Select(o => o.PhoneNumber)
+                    .ToListAsync();
                 
-                // Filter out voters whose normalized phone numbers are in the opt-out list
-                voters = voters.Where(v => 
+                if (optedOutNumbers.Any())
                 {
-                    var normalizedPhone = NormalizePhoneNumber(v.CellPhone);
-                    var isOptedOut = optedOutSet.Contains(normalizedPhone);
-                    if (isOptedOut)
+                    // Convert to HashSet for O(1) lookup performance
+                    var optedOutSet = new HashSet<string>(optedOutNumbers);
+                    
+                    // Filter out voters whose normalized phone numbers are in the opt-out list
+                    voters = voters.Where(v => 
                     {
-                        _logger.LogDebug($"Excluding opted-out number: {v.CellPhone} (normalized: {normalizedPhone})");
-                    }
-                    return !isOptedOut;
-                }).ToList();
-                
-                _logger.LogInformation($"Filtered out {optedOutNumbers.Count} opted-out phone numbers from campaign");
+                        var normalizedPhone = NormalizePhoneNumber(v.CellPhone);
+                        var isOptedOut = optedOutSet.Contains(normalizedPhone);
+                        if (isOptedOut)
+                        {
+                            _logger.LogDebug($"Excluding opted-out number: {v.CellPhone} (normalized: {normalizedPhone})");
+                        }
+                        return !isOptedOut;
+                    }).ToList();
+                    
+                    _logger.LogInformation($"Filtered out {optedOutNumbers.Count} opted-out phone numbers from campaign");
+                }
             }
 
             return voters;
