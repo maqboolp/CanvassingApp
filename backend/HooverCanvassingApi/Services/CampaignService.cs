@@ -228,8 +228,7 @@ namespace HooverCanvassingApi.Services
                         {
                             CampaignId = campaign.Id,
                             VoterId = voter.LalVoterId,
-                            RecipientPhone = string.Empty, // Phone not used for email campaigns
-                            RecipientEmail = voter.Email,
+                            RecipientPhone = "EMAIL", // Use placeholder for email campaigns
                             Status = MessageStatus.Pending
                         });
                     }
