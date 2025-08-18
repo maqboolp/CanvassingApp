@@ -9,6 +9,7 @@ namespace HooverCanvassingApi.Models
         public int CampaignId { get; set; }
         public string VoterId { get; set; } = string.Empty;
         public string RecipientPhone { get; set; } = string.Empty;
+        public string? RecipientEmail { get; set; } // For email campaigns
         public string? TwilioSid { get; set; }
         public MessageStatus Status { get; set; } = MessageStatus.Pending;
         public string? ErrorMessage { get; set; }
