@@ -182,7 +182,7 @@ namespace HooverCanvassingApi.Data
             builder.Entity<CampaignMessage>(entity =>
             {
                 entity.HasKey(cm => cm.Id);
-                entity.Property(cm => cm.RecipientPhone).IsRequired().HasMaxLength(20);
+                entity.Property(cm => cm.RecipientPhone).IsRequired().HasMaxLength(50);
                 entity.Property(cm => cm.Status).HasConversion<string>();
                 entity.HasIndex(cm => cm.Status);
                 entity.HasIndex(cm => cm.CreatedAt);
