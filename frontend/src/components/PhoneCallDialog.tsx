@@ -9,7 +9,7 @@ import {
   Divider,
   Paper
 } from '@mui/material';
-import { Close, Phone, Script } from '@mui/icons-material';
+import { Close, Phone, Description } from '@mui/icons-material';
 import WebRTCPhone from './WebRTCPhone';
 import { Voter } from '../types';
 import { campaignConfig } from '../config/customerConfig';
@@ -95,7 +95,7 @@ const PhoneCallDialog: React.FC<PhoneCallDialogProps> = ({
           }}
         >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-            <Script fontSize="small" color="info" />
+            <Description fontSize="small" color="info" />
             <Typography variant="subtitle2" fontWeight="bold" color="info.main">
               Phone Script & Quick Tips
             </Typography>
