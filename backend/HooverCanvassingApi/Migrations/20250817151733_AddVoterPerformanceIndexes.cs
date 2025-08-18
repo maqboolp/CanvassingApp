@@ -10,89 +10,32 @@ namespace HooverCanvassingApi.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            // Add composite index for common phone banking queries
-            migrationBuilder.CreateIndex(
-                name: "IX_Voters_IsContacted_Zip",
-                table: "Voters",
-                columns: new[] { "IsContacted", "Zip" });
-            
-            // Add index for ZIP code queries
-            migrationBuilder.CreateIndex(
-                name: "IX_Voters_Zip",
-                table: "Voters",
-                columns: new[] { "Zip" });
-            
-            // Add index for name searches
-            migrationBuilder.CreateIndex(
-                name: "IX_Voters_LastName_FirstName",
-                table: "Voters",
-                columns: new[] { "LastName", "FirstName" });
-            
-            // Add index for contact status queries
-            migrationBuilder.CreateIndex(
-                name: "IX_Voters_IsContacted",
-                table: "Voters",
-                columns: new[] { "IsContacted" });
-            
-            // Add index for location-based queries
-            migrationBuilder.CreateIndex(
-                name: "IX_Voters_Latitude_Longitude",
-                table: "Voters",
-                columns: new[] { "Latitude", "Longitude" });
-            
-            // Add index for vote frequency
-            migrationBuilder.CreateIndex(
-                name: "IX_Voters_VoteFrequency",
-                table: "Voters",
-                columns: new[] { "VoteFrequency" });
-            
-            // Add index for phone number existence checks
-            migrationBuilder.CreateIndex(
-                name: "IX_Voters_CellPhone",
-                table: "Voters",
-                columns: new[] { "CellPhone" });
-            
-            // Add composite index for phone banking next-to-call queries
-            migrationBuilder.CreateIndex(
-                name: "IX_Voters_CellPhone_IsContacted_LastContactStatus",
-                table: "Voters",
-                columns: new[] { "CellPhone", "IsContacted", "LastContactStatus" });
+            // Use raw SQL to check if indexes exist before creating them
+            migrationBuilder.Sql(@"
+                CREATE INDEX IF NOT EXISTS ""IX_Voters_IsContacted_Zip"" ON ""Voters"" (""IsContacted"", ""Zip"");
+                CREATE INDEX IF NOT EXISTS ""IX_Voters_Zip"" ON ""Voters"" (""Zip"");
+                CREATE INDEX IF NOT EXISTS ""IX_Voters_LastName_FirstName"" ON ""Voters"" (""LastName"", ""FirstName"");
+                CREATE INDEX IF NOT EXISTS ""IX_Voters_IsContacted"" ON ""Voters"" (""IsContacted"");
+                CREATE INDEX IF NOT EXISTS ""IX_Voters_Latitude_Longitude"" ON ""Voters"" (""Latitude"", ""Longitude"");
+                CREATE INDEX IF NOT EXISTS ""IX_Voters_VoteFrequency"" ON ""Voters"" (""VoteFrequency"");
+                CREATE INDEX IF NOT EXISTS ""IX_Voters_CellPhone"" ON ""Voters"" (""CellPhone"");
+                CREATE INDEX IF NOT EXISTS ""IX_Voters_CellPhone_IsContacted_LastContactStatus"" ON ""Voters"" (""CellPhone"", ""IsContacted"", ""LastContactStatus"");
+            ");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropIndex(
-                name: "IX_Voters_IsContacted_Zip",
-                table: "Voters");
-            
-            migrationBuilder.DropIndex(
-                name: "IX_Voters_Zip",
-                table: "Voters");
-            
-            migrationBuilder.DropIndex(
-                name: "IX_Voters_LastName_FirstName",
-                table: "Voters");
-            
-            migrationBuilder.DropIndex(
-                name: "IX_Voters_IsContacted",
-                table: "Voters");
-            
-            migrationBuilder.DropIndex(
-                name: "IX_Voters_Latitude_Longitude",
-                table: "Voters");
-            
-            migrationBuilder.DropIndex(
-                name: "IX_Voters_VoteFrequency",
-                table: "Voters");
-            
-            migrationBuilder.DropIndex(
-                name: "IX_Voters_CellPhone",
-                table: "Voters");
-            
-            migrationBuilder.DropIndex(
-                name: "IX_Voters_CellPhone_IsContacted_LastContactStatus",
-                table: "Voters");
+            migrationBuilder.Sql(@"
+                DROP INDEX IF EXISTS ""IX_Voters_IsContacted_Zip"";
+                DROP INDEX IF EXISTS ""IX_Voters_Zip"";
+                DROP INDEX IF EXISTS ""IX_Voters_LastName_FirstName"";
+                DROP INDEX IF EXISTS ""IX_Voters_IsContacted"";
+                DROP INDEX IF EXISTS ""IX_Voters_Latitude_Longitude"";
+                DROP INDEX IF EXISTS ""IX_Voters_VoteFrequency"";
+                DROP INDEX IF EXISTS ""IX_Voters_CellPhone"";
+                DROP INDEX IF EXISTS ""IX_Voters_CellPhone_IsContacted_LastContactStatus"";
+            ");
         }
     }
 }
