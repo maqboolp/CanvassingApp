@@ -38,7 +38,8 @@ namespace HooverCanvassingApi.Services
                         max_conn.setting::int as max_connections
                     FROM pg_stat_activity
                     CROSS JOIN (SELECT setting FROM pg_settings WHERE name = 'max_connections') max_conn
-                    WHERE datname = current_database()", connection);
+                    WHERE datname = current_database()
+                    GROUP BY max_conn.setting", connection);
 
                 using var reader = await statsCommand.ExecuteReaderAsync(cancellationToken);
                 if (await reader.ReadAsync(cancellationToken))
