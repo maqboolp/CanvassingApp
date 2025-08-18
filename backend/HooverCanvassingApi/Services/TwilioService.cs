@@ -93,6 +93,38 @@ namespace HooverCanvassingApi.Services
                 _logger.LogInformation($"Proceeding with SMS - Twilio will handle opt-out compliance");
                 _logger.LogInformation($"Formatted phone number: {formattedNumber}");
                 
+                // Construct the status callback URL for SMS
+                string statusCallbackUrl = null;
+                try
+                {
+                    // Get base URL from configuration
+                    var baseUrl = _configuration["AppSettings:BaseUrl"];
+                    if (string.IsNullOrEmpty(baseUrl))
+                    {
+                        // Try to get from environment variable
+                        baseUrl = Environment.GetEnvironmentVariable("BASE_URL");
+                    }
+                    
+                    if (!string.IsNullOrEmpty(baseUrl))
+                    {
+                        // Ensure HTTPS
+                        if (baseUrl.StartsWith("http://"))
+                        {
+                            baseUrl = baseUrl.Replace("http://", "https://");
+                        }
+                        statusCallbackUrl = $"{baseUrl}/api/TwilioWebhook/sms-status";
+                        _logger.LogInformation($"Setting SMS status callback URL: {statusCallbackUrl}");
+                    }
+                    else
+                    {
+                        _logger.LogWarning("No base URL configured - SMS status callbacks will not be received");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to construct status callback URL");
+                }
+                
                 MessageResource messageResource;
                 
                 // Use Messaging Service if available for better bulk performance
@@ -102,7 +134,8 @@ namespace HooverCanvassingApi.Services
                     messageResource = await MessageResource.CreateAsync(
                         body: message,
                         messagingServiceSid: _messagingServiceSid,
-                        to: new Twilio.Types.PhoneNumber(formattedNumber)
+                        to: new Twilio.Types.PhoneNumber(formattedNumber),
+                        statusCallback: !string.IsNullOrEmpty(statusCallbackUrl) ? new Uri(statusCallbackUrl) : null
                     );
                 }
                 else
@@ -113,7 +146,8 @@ namespace HooverCanvassingApi.Services
                     messageResource = await MessageResource.CreateAsync(
                         body: message,
                         from: new Twilio.Types.PhoneNumber(smsFromNumber),
-                        to: new Twilio.Types.PhoneNumber(formattedNumber)
+                        to: new Twilio.Types.PhoneNumber(formattedNumber),
+                        statusCallback: !string.IsNullOrEmpty(statusCallbackUrl) ? new Uri(statusCallbackUrl) : null
                     );
                 }
 
