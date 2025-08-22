@@ -1696,15 +1696,37 @@ namespace HooverCanvassingApi.Services
                     Status = CampaignStatus.Draft,
                     CreatedById = userId,
                     CreatedAt = DateTime.UtcNow,
+                    // Voice/RoboCall fields
                     VoiceUrl = originalCampaign.VoiceUrl,
                     RecordingUrl = originalCampaign.RecordingUrl,
                     VoiceRecordingId = originalCampaign.VoiceRecordingId,
+                    // Email campaign fields
+                    EmailSubject = originalCampaign.EmailSubject,
+                    EmailHtmlContent = originalCampaign.EmailHtmlContent,
+                    EmailPlainTextContent = originalCampaign.EmailPlainTextContent,
+                    CallToActionUrl = originalCampaign.CallToActionUrl,
+                    CallToActionText = originalCampaign.CallToActionText,
+                    ImportantDates = originalCampaign.ImportantDates,
+                    ShowSocialLinks = originalCampaign.ShowSocialLinks,
+                    FacebookUrl = originalCampaign.FacebookUrl,
+                    TwitterUrl = originalCampaign.TwitterUrl,
+                    InstagramUrl = originalCampaign.InstagramUrl,
+                    WebsiteUrl = originalCampaign.WebsiteUrl,
+                    // Filter criteria
                     FilterZipCodes = originalCampaign.FilterZipCodes,
                     FilterVoteFrequency = originalCampaign.FilterVoteFrequency,
                     FilterMinAge = originalCampaign.FilterMinAge,
                     FilterMaxAge = originalCampaign.FilterMaxAge,
                     FilterVoterSupport = originalCampaign.FilterVoterSupport,
                     FilterTags = originalCampaign.FilterTags,
+                    // Calling hours settings
+                    EnforceCallingHours = originalCampaign.EnforceCallingHours,
+                    StartHour = originalCampaign.StartHour,
+                    EndHour = originalCampaign.EndHour,
+                    IncludeWeekends = originalCampaign.IncludeWeekends,
+                    // Other settings
+                    PreventDuplicateMessages = originalCampaign.PreventDuplicateMessages,
+                    // Reset stats for new campaign
                     TotalRecipients = 0,
                     SuccessfulDeliveries = 0,
                     FailedDeliveries = 0,
