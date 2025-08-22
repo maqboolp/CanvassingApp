@@ -40,22 +40,6 @@ public class CampaignEmailTemplate
             margin: 0 auto;
             background-color: white;
         }
-        .header {
-            background: linear-gradient(135deg, #673ab7 0%, #512da8 100%);
-            color: white;
-            padding: 40px 30px;
-            text-align: center;
-        }
-        .header h1 {
-            margin: 0;
-            font-size: 28px;
-            font-weight: 600;
-        }
-        .header p {
-            margin: 10px 0 0 0;
-            font-size: 16px;
-            opacity: 0.95;
-        }
         .content {
             padding: 40px 30px;
             color: #333;
@@ -154,12 +138,6 @@ public class CampaignEmailTemplate
             margin: 30px 0;
         }
         @media only screen and (max-width: 600px) {
-            .header {
-                padding: 30px 20px;
-            }
-            .header h1 {
-                font-size: 24px;
-            }
             .content {
                 padding: 30px 20px;
             }
@@ -172,22 +150,11 @@ public class CampaignEmailTemplate
 </head>
 <body>
     <div class='container'>
-        <div class='header'>
-            <h1>").Append(model.CampaignName).Append(@"</h1>
-            <p>").Append(model.CampaignTitle).Append(@"</p>
-        </div>
-        
         <div class='content'>");
         
-        // Add greeting if recipient name is available
-        if (!string.IsNullOrEmpty(model.RecipientName))
-        {
-            sb.Append(@"
-            <p style='font-size: 18px;'>Dear ").Append(model.RecipientName).Append(@",</p>");
-        }
-        
-        // Add main content (supports HTML)
-        sb.Append(model.HtmlContent);
+        // Process placeholders in the HTML content
+        var processedContent = ReplacePlaceholders(model.HtmlContent, model);
+        sb.Append(processedContent);
         
         // Add call-to-action button if provided
         if (!string.IsNullOrEmpty(model.CallToActionUrl) && !string.IsNullOrEmpty(model.CallToActionText))
@@ -277,15 +244,9 @@ public class CampaignEmailTemplate
         sb.AppendLine(new string('=', 60));
         sb.AppendLine();
         
-        // Greeting
-        if (!string.IsNullOrEmpty(model.RecipientName))
-        {
-            sb.AppendLine($"Dear {model.RecipientName},");
-            sb.AppendLine();
-        }
-        
-        // Main content (strip HTML tags for plain text)
-        sb.AppendLine(StripHtmlTags(model.HtmlContent));
+        // Process placeholders and strip HTML tags for plain text
+        var processedContent = ReplacePlaceholders(model.HtmlContent, model);
+        sb.AppendLine(StripHtmlTags(processedContent));
         sb.AppendLine();
         
         // Call to action
@@ -349,6 +310,31 @@ public class CampaignEmailTemplate
         
         // Simple HTML tag removal (for production, consider using HtmlAgilityPack)
         return System.Text.RegularExpressions.Regex.Replace(html, "<.*?>", string.Empty);
+    }
+    
+    private static string ReplacePlaceholders(string content, CampaignEmailModel model)
+    {
+        if (string.IsNullOrEmpty(content))
+            return string.Empty;
+            
+        // Replace placeholders with actual values
+        // Using double curly braces as placeholders: {{PlaceholderName}}
+        var result = content
+            .Replace("{{RecipientName}}", model.RecipientName ?? "")
+            .Replace("{{RecipientEmail}}", model.RecipientEmail ?? "")
+            .Replace("{{CampaignName}}", model.CampaignName ?? "")
+            .Replace("{{CampaignTitle}}", model.CampaignTitle ?? "")
+            .Replace("{{CandidateName}}", model.CampaignName?.Replace(" for Hoover", "") ?? "")
+            .Replace("{{ElectionDate}}", model.ElectionDate ?? "")
+            .Replace("{{PaidForBy}}", model.PaidForBy ?? "")
+            .Replace("{{CampaignAddress}}", model.CampaignAddress ?? "")
+            .Replace("{{Subject}}", model.Subject ?? "")
+            .Replace("{{WebsiteUrl}}", model.WebsiteUrl ?? "")
+            .Replace("{{FacebookUrl}}", model.FacebookUrl ?? "")
+            .Replace("{{TwitterUrl}}", model.TwitterUrl ?? "")
+            .Replace("{{InstagramUrl}}", model.InstagramUrl ?? "");
+            
+        return result;
     }
 }
 
