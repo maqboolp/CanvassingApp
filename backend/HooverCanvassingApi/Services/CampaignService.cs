@@ -684,10 +684,9 @@ namespace HooverCanvassingApi.Services
                     var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
                     var campaignSettings = scope.ServiceProvider.GetRequiredService<IOptions<CampaignSettings>>().Value;
                     
-                    var baseUrl = configuration["EmailSettings:FrontendBaseUrl"] ?? 
+                    var baseUrl = Environment.GetEnvironmentVariable("FRONTEND_URL") ?? 
+                         configuration["EmailSettings:FrontendBaseUrl"] ?? 
                          configuration["Frontend:BaseUrl"] ?? 
-                         configuration["FRONTEND_URL"] ?? 
-                         Environment.GetEnvironmentVariable("FRONTEND_URL") ?? 
                          "https://www.t4happ.com";
                     var unsubscribeKey = configuration["Security:UnsubscribeKey"] ?? "default-unsubscribe-key";
                     
@@ -1156,10 +1155,9 @@ namespace HooverCanvassingApi.Services
                 return;
             }
             
-            var baseUrl = configuration["EmailSettings:FrontendBaseUrl"] ?? 
+            var baseUrl = Environment.GetEnvironmentVariable("FRONTEND_URL") ?? 
+                         configuration["EmailSettings:FrontendBaseUrl"] ?? 
                          configuration["Frontend:BaseUrl"] ?? 
-                         configuration["FRONTEND_URL"] ?? 
-                         Environment.GetEnvironmentVariable("FRONTEND_URL") ?? 
                          "https://www.t4happ.com";
             var unsubscribeKey = configuration["Security:UnsubscribeKey"] ?? "default-unsubscribe-key";
             
