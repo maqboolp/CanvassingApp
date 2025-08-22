@@ -218,10 +218,9 @@ public class CampaignEmailTemplate
             <p>").Append(model.PaidForBy).Append(@"</p>
             
             <div class='unsubscribe'>
-                <p>You received this email because you are subscribed to updates from ").Append(model.CampaignName).Append(@".</p>
                 <p>
                     <a href='").Append(unsubscribeUrl).Append(@"'>Unsubscribe from these emails</a> | 
-                    <a href='").Append(baseUrl).Append(@"/privacy'>Privacy Policy</a> | 
+                    <a href='").Append(baseUrl).Append(@"/privacy-policy'>Privacy Policy</a> | 
                     <a href='").Append(baseUrl).Append(@"/terms'>Terms of Service</a>
                 </p>
                 <p>").Append(model.CampaignAddress ?? "").Append(@"</p>
@@ -291,8 +290,6 @@ public class CampaignEmailTemplate
         sb.AppendLine();
         
         // Unsubscribe
-        sb.AppendLine($"You received this email because you are subscribed to updates from {model.CampaignName}.");
-        sb.AppendLine();
         sb.AppendLine("To unsubscribe from these emails, visit:");
         sb.AppendLine(unsubscribeUrl);
         sb.AppendLine();
