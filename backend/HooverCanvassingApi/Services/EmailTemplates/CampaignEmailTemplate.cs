@@ -219,9 +219,7 @@ public class CampaignEmailTemplate
             
             <div class='unsubscribe'>
                 <p>
-                    <a href='").Append(unsubscribeUrl).Append(@"'>Unsubscribe from these emails</a> | 
-                    <a href='").Append(baseUrl).Append(@"/privacy-policy'>Privacy Policy</a> | 
-                    <a href='").Append(baseUrl).Append(@"/terms'>Terms of Service</a>
+                    <a href='").Append(unsubscribeUrl).Append(@"'>Unsubscribe from these emails</a>
                 </p>
                 <p>").Append(model.CampaignAddress ?? "").Append(@"</p>
             </div>
