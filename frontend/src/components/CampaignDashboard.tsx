@@ -227,12 +227,15 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
 
   useEffect(() => {
     // Update audience count when ZIP codes, tags, or campaign type changes
-    if (newCampaign.selectedZipCodes.length > 0 || newCampaign.selectedTagIds.length > 0) {
-      previewAudienceCount();
-    } else {
-      setAudienceCount(0);
+    // Only calculate if either dialog is open
+    if (createDialogOpen || editDialogOpen) {
+      if (newCampaign.selectedZipCodes.length > 0 || newCampaign.selectedTagIds.length > 0) {
+        previewAudienceCount();
+      } else {
+        setAudienceCount(0);
+      }
     }
-  }, [newCampaign.selectedZipCodes, newCampaign.selectedTagIds, newCampaign.type]);
+  }, [newCampaign.selectedZipCodes, newCampaign.selectedTagIds, newCampaign.type, createDialogOpen, editDialogOpen]);
 
   const fetchCampaigns = async (isRefresh = false, showSuccess = true) => {
     try {
