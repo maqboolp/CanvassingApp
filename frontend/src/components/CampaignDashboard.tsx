@@ -226,13 +226,13 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
   }, [campaigns]);
 
   useEffect(() => {
-    // Update audience count when ZIP codes or tags change
+    // Update audience count when ZIP codes, tags, or campaign type changes
     if (newCampaign.selectedZipCodes.length > 0 || newCampaign.selectedTagIds.length > 0) {
       previewAudienceCount();
     } else {
       setAudienceCount(0);
     }
-  }, [newCampaign.selectedZipCodes, newCampaign.selectedTagIds]);
+  }, [newCampaign.selectedZipCodes, newCampaign.selectedTagIds, newCampaign.type]);
 
   const fetchCampaigns = async (isRefresh = false, showSuccess = true) => {
     try {
@@ -335,6 +335,9 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
     try {
       const queryParams = new URLSearchParams();
       
+      // Include campaign type to get accurate count (email vs SMS/RoboCall)
+      queryParams.append('campaignType', getCampaignTypeEnum(newCampaign.type).toString());
+      
       if (newCampaign.selectedZipCodes.length > 0) {
         queryParams.append('filterZipCodes', JSON.stringify(newCampaign.selectedZipCodes));
       }
@@ -348,7 +351,13 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
       const data = await ApiErrorHandler.makeAuthenticatedRequest(
         `${API_BASE_URL}/api/campaigns/recipient-count?${queryParams}`
       );
-      setAudienceCount(data);
+      
+      // If the response is an object with detailed counts, use the totalCount
+      if (typeof data === 'object' && data.totalCount !== undefined) {
+        setAudienceCount(data.totalCount);
+      } else {
+        setAudienceCount(data);
+      }
     } catch (error) {
       if (error instanceof ApiError && error.isAuthError) {
         return;
@@ -652,6 +661,9 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
     const campaignTags = availableTags.filter(tag => selectedTagIds.includes(tag.id));
     setSelectedTags(campaignTags);
     
+    // The audience count will be recalculated by the useEffect hook
+    // based on the selected filters and campaign type
+    
     setEditDialogOpen(true);
     // Fetch ZIP codes when dialog opens to ensure we have fresh data
     if (availableZipCodes.length === 0) {
@@ -911,6 +923,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
                 scheduledTime: ''
               });
               setSelectedTags([]); // Clear selected tags
+              setAudienceCount(0); // Reset audience count
               setCreateDialogOpen(true);
               // Fetch ZIP codes when dialog opens to ensure we have fresh data
               if (availableZipCodes.length === 0) {
