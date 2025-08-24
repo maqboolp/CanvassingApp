@@ -605,7 +605,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
     }
   };
 
-  const editCampaign = (campaign: Campaign) => {
+  const editCampaign = async (campaign: Campaign) => {
     setEditingCampaign(campaign);
     // Parse existing ZIP codes from JSON string
     let selectedZipCodes: string[] = [];
@@ -630,7 +630,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
     }
 
     // Populate form with existing campaign data
-    setNewCampaign({
+    const updatedCampaignData = {
       name: campaign.name,
       message: campaign.message,
       type: getCampaignTypeString(campaign.type) as 'SMS' | 'RoboCall' | 'Email',
@@ -652,7 +652,9 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
       sendNow: true,
       scheduledDate: '',
       scheduledTime: ''
-    });
+    };
+    
+    setNewCampaign(updatedCampaignData);
     
     // Set voice type based on whether a recording is selected
     setVoiceType(campaign.voiceRecordingId ? 'recording' : 'text');
@@ -661,8 +663,38 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
     const campaignTags = availableTags.filter(tag => selectedTagIds.includes(tag.id));
     setSelectedTags(campaignTags);
     
-    // The audience count will be recalculated by the useEffect hook
-    // based on the selected filters and campaign type
+    // Calculate audience count immediately if there are filters
+    if (selectedZipCodes.length > 0 || selectedTagIds.length > 0) {
+      try {
+        const queryParams = new URLSearchParams();
+        queryParams.append('campaignType', getCampaignTypeEnum(getCampaignTypeString(campaign.type)).toString());
+        
+        if (selectedZipCodes.length > 0) {
+          queryParams.append('filterZipCodes', JSON.stringify(selectedZipCodes));
+        }
+        
+        if (selectedTagIds.length > 0) {
+          selectedTagIds.forEach(tagId => {
+            queryParams.append('filterTagIds', tagId.toString());
+          });
+        }
+        
+        const data = await ApiErrorHandler.makeAuthenticatedRequest(
+          `${API_BASE_URL}/api/campaigns/recipient-count?${queryParams}`
+        );
+        
+        if (typeof data === 'object' && data.totalCount !== undefined) {
+          setAudienceCount(data.totalCount);
+        } else {
+          setAudienceCount(data);
+        }
+      } catch (error) {
+        console.error('Failed to get audience count:', error);
+        setAudienceCount(0);
+      }
+    } else {
+      setAudienceCount(0);
+    }
     
     setEditDialogOpen(true);
     // Fetch ZIP codes when dialog opens to ensure we have fresh data
