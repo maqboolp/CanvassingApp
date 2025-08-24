@@ -138,6 +138,16 @@ namespace HooverCanvassingApi.Controllers
             campaign.FilterMaxAge = request.FilterMaxAge;
             campaign.FilterVoterSupport = request.FilterVoterSupport;
             
+            // Update tag filters - Convert list to JSON string
+            if (request.FilterTagIds != null && request.FilterTagIds.Count > 0)
+            {
+                campaign.FilterTags = System.Text.Json.JsonSerializer.Serialize(request.FilterTagIds);
+            }
+            else
+            {
+                campaign.FilterTags = null; // Clear tags if empty list is provided
+            }
+            
             // Update calling hours settings
             campaign.EnforceCallingHours = request.EnforceCallingHours;
             campaign.StartHour = request.StartHour;

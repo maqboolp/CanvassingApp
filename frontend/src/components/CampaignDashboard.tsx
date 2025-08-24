@@ -413,7 +413,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
         filterMinAge: null,
         filterMaxAge: null,
         filterVoterSupport: null,
-        filterTagIds: newCampaign.selectedTagIds.length > 0 ? newCampaign.selectedTagIds : null,
+        filterTagIds: newCampaign.selectedTagIds.length > 0 ? newCampaign.selectedTagIds : [],
         // Add calling hours settings for robocalls
         enforceCallingHours: newCampaign.type === 'RoboCall' ? newCampaign.enforceCallingHours : false,
         startHour: newCampaign.type === 'RoboCall' ? newCampaign.startHour : 9,
@@ -678,7 +678,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
         filterMinAge: null,
         filterMaxAge: null,
         filterVoterSupport: null,
-        filterTagIds: newCampaign.selectedTagIds.length > 0 ? newCampaign.selectedTagIds : null,
+        filterTagIds: newCampaign.selectedTagIds.length > 0 ? newCampaign.selectedTagIds : [],
         // Add calling hours settings for RoboCall campaigns
         ...(newCampaign.type === 'RoboCall' ? {
           enforceCallingHours: newCampaign.enforceCallingHours,
@@ -889,6 +889,28 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
             variant="contained"
             startIcon={<AddIcon />}
             onClick={() => {
+              // Reset the form completely when opening create dialog
+              setNewCampaign({
+                name: '', 
+                message: '', 
+                type: 'SMS', 
+                voiceUrl: '',
+                voiceRecordingId: null,
+                emailSubject: '',
+                emailHtmlContent: '',
+                emailPlainTextContent: '',
+                selectedZipCodes: [],
+                selectedTagIds: [],
+                enforceCallingHours: true,
+                startHour: 9,
+                endHour: 20,
+                includeWeekends: false,
+                preventDuplicateMessages: false,
+                sendNow: true,
+                scheduledDate: '',
+                scheduledTime: ''
+              });
+              setSelectedTags([]); // Clear selected tags
               setCreateDialogOpen(true);
               // Fetch ZIP codes when dialog opens to ensure we have fresh data
               if (availableZipCodes.length === 0) {
@@ -1387,6 +1409,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
       <Dialog open={createDialogOpen} onClose={() => {
         setCreateDialogOpen(false);
         setValidationErrors({});
+        setSelectedTags([]); // Clear selected tags when closing
       }} maxWidth="md" fullWidth>
         <DialogTitle>Create New Campaign</DialogTitle>
         <DialogContent>
@@ -1814,6 +1837,7 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
           <Button onClick={() => {
             setCreateDialogOpen(false);
             setValidationErrors({});
+            setSelectedTags([]); // Clear selected tags when canceling
           }}>Cancel</Button>
           <Button 
             onClick={createCampaign} 
