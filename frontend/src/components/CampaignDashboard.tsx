@@ -358,8 +358,12 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
       // Handle different response formats from the API
       let count = 0;
       if (typeof data === 'object' && data !== null) {
+        // RecipientCountResult from backend has eligible property (after opt-outs)
+        if (data.eligible !== undefined) {
+          count = Number(data.eligible) || 0;
+        }
         // If it's an object with totalCount property
-        if (data.totalCount !== undefined) {
+        else if (data.totalCount !== undefined) {
           count = Number(data.totalCount) || 0;
         } 
         // If it's an object with count property
@@ -709,7 +713,10 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
         // Handle different response formats from the API
         let count = 0;
         if (typeof data === 'object' && data !== null) {
-          if (data.totalCount !== undefined) {
+          // RecipientCountResult from backend has eligible property (after opt-outs)
+          if (data.eligible !== undefined) {
+            count = Number(data.eligible) || 0;
+          } else if (data.totalCount !== undefined) {
             count = Number(data.totalCount) || 0;
           } else if (data.count !== undefined) {
             count = Number(data.count) || 0;
