@@ -369,14 +369,33 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
       
       console.log('Received audience count response:', data);
       
-      // If the response is an object with detailed counts, use the totalCount
-      if (typeof data === 'object' && data.totalCount !== undefined) {
-        console.log('Setting audience count to:', data.totalCount);
-        setAudienceCount(data.totalCount);
-      } else {
-        console.log('Setting audience count to:', data);
-        setAudienceCount(data);
+      // Handle different response formats from the API
+      let count = 0;
+      if (typeof data === 'object' && data !== null) {
+        // If it's an object with totalCount property
+        if (data.totalCount !== undefined) {
+          count = Number(data.totalCount) || 0;
+        } 
+        // If it's an object with count property
+        else if (data.count !== undefined) {
+          count = Number(data.count) || 0;
+        }
+        // If it's an object with total property
+        else if (data.total !== undefined) {
+          count = Number(data.total) || 0;
+        }
+        // If the object itself is the count (backward compatibility)
+        else if (!isNaN(Number(data))) {
+          count = Number(data) || 0;
+        }
+      } else if (typeof data === 'number') {
+        count = data;
+      } else if (typeof data === 'string' && !isNaN(Number(data))) {
+        count = Number(data);
       }
+      
+      console.log('Setting audience count to:', count);
+      setAudienceCount(count);
     } catch (error) {
       if (error instanceof ApiError && error.isAuthError) {
         return;
@@ -702,11 +721,25 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
           `${API_BASE_URL}/api/campaigns/recipient-count?${queryParams}`
         );
         
-        if (typeof data === 'object' && data.totalCount !== undefined) {
-          setAudienceCount(data.totalCount);
-        } else {
-          setAudienceCount(data);
+        // Handle different response formats from the API
+        let count = 0;
+        if (typeof data === 'object' && data !== null) {
+          if (data.totalCount !== undefined) {
+            count = Number(data.totalCount) || 0;
+          } else if (data.count !== undefined) {
+            count = Number(data.count) || 0;
+          } else if (data.total !== undefined) {
+            count = Number(data.total) || 0;
+          } else if (!isNaN(Number(data))) {
+            count = Number(data) || 0;
+          }
+        } else if (typeof data === 'number') {
+          count = data;
+        } else if (typeof data === 'string' && !isNaN(Number(data))) {
+          count = Number(data);
         }
+        
+        setAudienceCount(count);
       } catch (error) {
         console.error('Failed to get audience count:', error);
         setAudienceCount(0);
