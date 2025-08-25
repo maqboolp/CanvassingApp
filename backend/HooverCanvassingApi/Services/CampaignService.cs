@@ -463,32 +463,49 @@ namespace HooverCanvassingApi.Services
                 query = query.Where(v => v.TagAssignments.Any(ta => filterTagIds.Contains(ta.TagId)));
             }
 
-            // Only count voters with valid cell phone numbers
-            query = query.Where(v => !string.IsNullOrEmpty(v.CellPhone));
+            // Filter by contact method based on campaign type
+            if (campaignType == CampaignType.Email)
+            {
+                // For email campaigns, only count voters with email addresses
+                query = query.Where(v => !string.IsNullOrEmpty(v.Email));
+            }
+            else
+            {
+                // For SMS and RoboCall campaigns, only count voters with cell phone numbers
+                query = query.Where(v => !string.IsNullOrEmpty(v.CellPhone));
+            }
             
             // Get total matching before opt-out filtering
             var totalMatching = await query.CountAsync();
             
             // Get voters to check for opt-outs
-            var voters = await query.Select(v => v.CellPhone).ToListAsync();
+            var voters = campaignType == CampaignType.Email 
+                ? await query.Select(v => v.Email).ToListAsync()
+                : await query.Select(v => v.CellPhone).ToListAsync();
             
-            // Get opt-out records
-            var optOutType = campaignType == CampaignType.SMS ? OptOutType.SMS : OptOutType.RoboCalls;
-            var optedOutNumbers = await _context.OptOutRecords
-                .Where(o => o.Type == OptOutType.All || o.Type == optOutType)
-                .Select(o => o.PhoneNumber)
-                .ToListAsync();
-            
-            var optedOutSet = new HashSet<string>(optedOutNumbers);
             var optedOutCount = 0;
             
-            // Count how many of our matching voters are opted out
-            foreach (var phone in voters)
+            // Only check opt-outs for SMS and RoboCall campaigns
+            // Email campaigns don't currently have opt-out tracking
+            if (campaignType != CampaignType.Email)
             {
-                var normalizedPhone = NormalizePhoneNumber(phone);
-                if (optedOutSet.Contains(normalizedPhone))
+                // Get opt-out records
+                var optOutType = campaignType == CampaignType.SMS ? OptOutType.SMS : OptOutType.RoboCalls;
+                var optedOutNumbers = await _context.OptOutRecords
+                    .Where(o => o.Type == OptOutType.All || o.Type == optOutType)
+                    .Select(o => o.PhoneNumber)
+                    .ToListAsync();
+                
+                var optedOutSet = new HashSet<string>(optedOutNumbers);
+                
+                // Count how many of our matching voters are opted out
+                foreach (var phone in voters)
                 {
-                    optedOutCount++;
+                    var normalizedPhone = NormalizePhoneNumber(phone);
+                    if (optedOutSet.Contains(normalizedPhone))
+                    {
+                        optedOutCount++;
+                    }
                 }
             }
             
