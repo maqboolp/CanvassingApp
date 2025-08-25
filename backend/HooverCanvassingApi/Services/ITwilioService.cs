@@ -12,5 +12,9 @@ namespace HooverCanvassingApi.Services
         Task<bool> ValidatePhoneNumberAsync(string phoneNumber);
         string FormatPhoneNumber(string phoneNumber);
         Task<bool> CheckOptInStatusAsync(string phoneNumber); // Check if phone is opted in
+        
+        // New batch methods for better performance
+        Task<(bool success, string? twilioSid, string? error)> MakeRoboCallWithoutDbUpdateAsync(string toPhoneNumber, string voiceUrl);
+        Task<List<(bool success, int campaignMessageId, string? twilioSid, string? error)>> SendBulkSmsWithBatchUpdateAsync(List<(string phoneNumber, string message, int campaignMessageId)> messages, bool overrideOptIn = false);
     }
 }

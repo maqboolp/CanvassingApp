@@ -176,6 +176,95 @@ namespace HooverCanvassingApi.Services
             }
         }
 
+        // New method that returns call result without database updates
+        public async Task<(bool success, string? twilioSid, string? error)> MakeRoboCallWithoutDbUpdateAsync(string toPhoneNumber, string voiceUrl)
+        {
+            TwilioPhoneNumber? phoneNumber = null;
+            bool callInitiated = false;
+            try
+            {
+                _logger.LogInformation($"Starting robo call to {toPhoneNumber}");
+                var formattedNumber = FormatPhoneNumber(toPhoneNumber);
+                
+                // Get an available phone number from the pool
+                phoneNumber = await _phoneNumberPool.GetNextAvailableNumberAsync();
+                if (phoneNumber == null)
+                {
+                    _logger.LogError("No available phone numbers in pool");
+                    return (false, null, "No phone numbers available in the pool");
+                }
+                
+                _logger.LogInformation($"Using phone number {phoneNumber.Number} from pool for call to {formattedNumber}");
+                
+                // Construct the status callback URL
+                string? statusCallbackUrl = null;
+                try 
+                {
+                    var uri = new Uri(voiceUrl);
+                    var baseUrl = $"https://{uri.Host}";
+                    if (uri.Port != 80 && uri.Port != 443)
+                    {
+                        baseUrl += $":{uri.Port}";
+                    }
+                    statusCallbackUrl = $"{baseUrl}/api/TwilioWebhook/call-status";
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, $"Failed to construct status callback URL from voice URL: {voiceUrl}");
+                }
+                
+                CallResource poolCall;
+                if (!string.IsNullOrEmpty(statusCallbackUrl))
+                {
+                    poolCall = await CallResource.CreateAsync(
+                        url: new Uri(voiceUrl),
+                        to: new Twilio.Types.PhoneNumber(formattedNumber),
+                        from: new Twilio.Types.PhoneNumber(phoneNumber.Number),
+                        timeout: 60,
+                        record: false,
+                        statusCallback: new Uri(statusCallbackUrl),
+                        statusCallbackEvent: new List<string> { "initiated", "ringing", "answered", "completed" }
+                    );
+                }
+                else
+                {
+                    poolCall = await CallResource.CreateAsync(
+                        url: new Uri(voiceUrl),
+                        to: new Twilio.Types.PhoneNumber(formattedNumber),
+                        from: new Twilio.Types.PhoneNumber(phoneNumber.Number),
+                        timeout: 60,
+                        record: false
+                    );
+                }
+                
+                // Release the phone number immediately
+                await _phoneNumberPool.ReleaseNumberAsync(phoneNumber.Id);
+                _logger.LogInformation($"Robo call initiated to {formattedNumber}, SID: {poolCall.Sid}");
+                callInitiated = true;
+                return (true, poolCall.Sid, null);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Failed to make robo call to {toPhoneNumber}");
+                
+                if (phoneNumber != null)
+                {
+                    await _phoneNumberPool.IncrementCallCountAsync(phoneNumber.Id, false);
+                    if (!callInitiated)
+                    {
+                        try
+                        {
+                            await _phoneNumberPool.ReleaseNumberAsync(phoneNumber.Id);
+                        }
+                        catch { }
+                    }
+                }
+                
+                return (false, null, ex.Message);
+            }
+        }
+        
+        // Original method kept for backwards compatibility
         public async Task<bool> MakeRoboCallAsync(string toPhoneNumber, string voiceUrl, int campaignMessageId)
         {
             TwilioPhoneNumber? phoneNumber = null;
@@ -250,7 +339,15 @@ namespace HooverCanvassingApi.Services
                     );
                 }
 
-                await UpdateCampaignMessageWithCall(campaignMessageId, poolCall);
+                // Store the Twilio SID for batch update later
+                _logger.LogDebug($"Call initiated with SID {poolCall.Sid} for campaign message {campaignMessageId}");
+                
+                // Only update in database for single calls (not bulk operations)
+                // For bulk operations, the caller will handle batch updates
+                if (campaignMessageId > 0) // Only update if valid campaign message ID
+                {
+                    await UpdateCampaignMessageWithCall(campaignMessageId, poolCall);
+                }
                 
                 // Release the phone number immediately after initiating the call
                 // Twilio will handle queueing if the number is busy
@@ -427,6 +524,81 @@ namespace HooverCanvassingApi.Services
             };
         }
 
+        // New batch SMS method that returns results without individual DB updates
+        public async Task<List<(bool success, int campaignMessageId, string? twilioSid, string? error)>> SendBulkSmsWithBatchUpdateAsync(
+            List<(string phoneNumber, string message, int campaignMessageId)> messages, 
+            bool overrideOptIn = false)
+        {
+            _logger.LogInformation($"Starting bulk SMS for {messages.Count} messages with batch updates");
+            
+            var results = new List<(bool success, int campaignMessageId, string? twilioSid, string? error)>();
+            var semaphore = new SemaphoreSlim(10, 10); // Limit concurrent requests to 10
+            var tasks = new List<Task<(bool success, int campaignMessageId, string? twilioSid, string? error)>>();
+
+            foreach (var (phoneNumber, message, campaignMessageId) in messages)
+            {
+                tasks.Add(SendSmsForBatchAsync(phoneNumber, message, campaignMessageId, semaphore, overrideOptIn));
+            }
+
+            var taskResults = await Task.WhenAll(tasks);
+            results.AddRange(taskResults);
+
+            _logger.LogInformation($"Bulk SMS completed: {results.Count(r => r.success)} successful, {results.Count(r => !r.success)} failed");
+            return results;
+        }
+        
+        private async Task<(bool success, int campaignMessageId, string? twilioSid, string? error)> SendSmsForBatchAsync(
+            string phoneNumber, string message, int campaignMessageId, SemaphoreSlim semaphore, bool overrideOptIn = false)
+        {
+            await semaphore.WaitAsync();
+            try
+            {
+                await Task.Delay(100); // Small delay to avoid rate limits
+                
+                var formattedNumber = FormatPhoneNumber(phoneNumber);
+                
+                // Check opt-in status unless override is specified
+                if (!overrideOptIn && !await CheckOptInStatusAsync(formattedNumber))
+                {
+                    _logger.LogWarning($"Cannot send SMS to {formattedNumber} - user is not opted in");
+                    return (false, campaignMessageId, null, "Recipient has not opted in to receive SMS messages");
+                }
+                
+                MessageResource messageResource;
+                
+                if (!string.IsNullOrEmpty(_messagingServiceSid))
+                {
+                    messageResource = await MessageResource.CreateAsync(
+                        body: message,
+                        messagingServiceSid: _messagingServiceSid,
+                        to: new Twilio.Types.PhoneNumber(formattedNumber)
+                    );
+                }
+                else
+                {
+                    var smsFromNumber = !string.IsNullOrEmpty(_smsPhoneNumber) ? _smsPhoneNumber : _fromPhoneNumber;
+                    messageResource = await MessageResource.CreateAsync(
+                        body: message,
+                        from: new Twilio.Types.PhoneNumber(smsFromNumber),
+                        to: new Twilio.Types.PhoneNumber(formattedNumber)
+                    );
+                }
+                
+                _logger.LogDebug($"SMS sent to {formattedNumber}, SID: {messageResource.Sid}");
+                return (true, campaignMessageId, messageResource.Sid, null);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Failed to send SMS to {phoneNumber}");
+                return (false, campaignMessageId, null, ex.Message);
+            }
+            finally
+            {
+                semaphore.Release();
+            }
+        }
+        
+        // Original method kept for backwards compatibility
         public async Task<List<bool>> SendBulkSmsAsync(List<(string phoneNumber, string message, int campaignMessageId)> messages, bool overrideOptIn = false)
         {
             _logger.LogInformation($"Starting bulk SMS for {messages.Count} messages with overrideOptIn={overrideOptIn}");
