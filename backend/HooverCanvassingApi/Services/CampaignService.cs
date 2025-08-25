@@ -682,11 +682,11 @@ namespace HooverCanvassingApi.Services
             
             _logger.LogInformation($"Processing {messages.Count} robocalls for campaign {campaignId}");
             
-            // Process calls concurrently - Twilio can handle 1000+ concurrent calls
-            // We'll use 50 concurrent calls to be conservative but still fast
-            var maxConcurrency = 50;
+            // Process calls concurrently with reduced connection usage
+            // Reduced from 50 to 20 for better stability
+            var maxConcurrency = 20;
             var semaphore = new SemaphoreSlim(maxConcurrency, maxConcurrency);
-            var tasks = new List<Task<(bool success, CampaignMessage message, Exception? error)>>();
+            var tasks = new List<Task<(bool success, CampaignMessage message, string? twilioSid, string? error)>>();
             
             // Check calling hours BEFORE processing any messages
             var campaign = await context.Campaigns.FindAsync(campaignId);
@@ -715,20 +715,21 @@ namespace HooverCanvassingApi.Services
                     }
                 }
                 
-                tasks.Add(ProcessSingleRobocallWithSemaphoreAsync(message, voiceUrl, twilioService, semaphore));
+                tasks.Add(ProcessSingleRobocallBatchAsync(message, voiceUrl, twilioService, semaphore));
             }
             
             // Wait for all calls to complete
             var results = await Task.WhenAll(tasks);
             
-            // Process results
-            foreach (var (success, message, error) in results)
+            // Process results and update in memory
+            foreach (var (success, message, twilioSid, error) in results)
             {
                 if (success)
                 {
                     successes++;
                     message.Status = MessageStatus.Sent;
                     message.SentAt = DateTime.UtcNow;
+                    message.TwilioSid = twilioSid;
                     
                     if (message.Voter != null)
                     {
@@ -739,21 +740,22 @@ namespace HooverCanvassingApi.Services
                 {
                     failures++;
                     message.Status = MessageStatus.Failed;
-                    if (error != null)
-                    {
-                        message.ErrorMessage = error.Message;
-                    }
+                    message.ErrorMessage = error ?? "Unknown error";
+                    message.FailedAt = DateTime.UtcNow;
                 }
             }
             
-            // Save all changes
+            // Single batch save for all changes
+            _logger.LogInformation($"Saving {messages.Count} message updates to database in single batch");
             await context.SaveChangesAsync();
+            
+            // Update campaign final status
             await UpdateCampaignFinalStatusAsync(campaignId, successes, failures);
             
             _logger.LogInformation($"Robocall campaign {campaignId} completed: {successes} successful, {failures} failed");
         }
         
-        private async Task<(bool success, CampaignMessage message, Exception? error)> ProcessSingleRobocallWithSemaphoreAsync(
+        private async Task<(bool success, CampaignMessage message, string? twilioSid, string? error)> ProcessSingleRobocallBatchAsync(
             CampaignMessage message,
             string voiceUrl,
             ITwilioService twilioService,
@@ -762,20 +764,18 @@ namespace HooverCanvassingApi.Services
             await semaphore.WaitAsync();
             try
             {
-                // Small delay to prevent thundering herd - 20ms between calls
-                // This gives us up to 50 calls per second
-                await Task.Delay(20);
+                // Increased delay to 50ms to reduce load (20 calls per second max)
+                await Task.Delay(50);
                 
-                var success = await twilioService.MakeRoboCallAsync(
+                var (success, twilioSid, error) = await twilioService.MakeRoboCallWithoutDbUpdateAsync(
                     message.RecipientPhone,
-                    voiceUrl,
-                    message.Id);
+                    voiceUrl);
                     
-                return (success, message, null);
+                return (success, message, twilioSid, error);
             }
             catch (Exception ex)
             {
-                return (false, message, ex);
+                return (false, message, null, ex.Message);
             }
             finally
             {
@@ -801,34 +801,48 @@ namespace HooverCanvassingApi.Services
                 .Select(m => (m.RecipientPhone, campaignMessage, m.Id))
                 .ToList();
 
-            var results = await twilioService.SendBulkSmsAsync(smsMessages, overrideOptIn);
+            // Use new batch method that doesn't update DB individually
+            var results = await twilioService.SendBulkSmsWithBatchUpdateAsync(smsMessages, overrideOptIn);
             
             var successes = 0;
             var failures = 0;
             
-            // Process results and update voter stats
-            for (int i = 0; i < results.Count; i++)
+            // Create lookup dictionary for faster access
+            var messageDict = messages.ToDictionary(m => m.Id);
+            
+            // Process results and update in memory
+            foreach (var (success, campaignMessageId, twilioSid, error) in results)
             {
-                if (results[i])
+                if (messageDict.TryGetValue(campaignMessageId, out var message))
                 {
-                    successes++;
-                    messages[i].Status = MessageStatus.Sent;
-                    messages[i].SentAt = DateTime.UtcNow;
-                    
-                    // Update voter stats
-                    if (messages[i].Voter != null)
+                    if (success)
                     {
-                        UpdateVoterCampaignStats(messages[i].Voter, campaignId, CampaignType.SMS);
+                        successes++;
+                        message.Status = MessageStatus.Sent;
+                        message.SentAt = DateTime.UtcNow;
+                        message.TwilioSid = twilioSid;
+                        
+                        // Update voter stats
+                        if (message.Voter != null)
+                        {
+                            UpdateVoterCampaignStats(message.Voter, campaignId, CampaignType.SMS);
+                        }
                     }
-                }
-                else
-                {
-                    failures++;
-                    messages[i].Status = MessageStatus.Failed;
+                    else
+                    {
+                        failures++;
+                        message.Status = MessageStatus.Failed;
+                        message.ErrorMessage = error ?? "Unknown error";
+                        message.FailedAt = DateTime.UtcNow;
+                    }
                 }
             }
             
+            // Single batch save for all changes
+            _logger.LogInformation($"Saving {messages.Count} SMS updates to database in single batch");
             await context.SaveChangesAsync();
+            
+            // Update campaign final status
             await UpdateCampaignFinalStatusAsync(campaignId, successes, failures);
         }
         
