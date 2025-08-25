@@ -192,6 +192,94 @@ namespace HooverCanvassingApi.Services
             }
         }
 
+        // New method that returns call result without database updates
+        public async Task<(bool success, string? twilioSid, string? error)> MakeRoboCallWithoutDbUpdateAsync(string toPhoneNumber, string voiceUrl)
+        {
+            TwilioPhoneNumber? phoneNumber = null;
+            bool callInitiated = false;
+            try
+            {
+                _logger.LogInformation($"Starting robo call to {toPhoneNumber}");
+                var formattedNumber = FormatPhoneNumber(toPhoneNumber);
+                
+                // Get an available phone number from the pool
+                phoneNumber = await _phoneNumberPool.GetNextAvailableNumberAsync();
+                if (phoneNumber == null)
+                {
+                    _logger.LogError("No available phone numbers in pool");
+                    return (false, null, "No phone numbers available in the pool");
+                }
+                
+                _logger.LogInformation($"Using phone number {phoneNumber.Number} from pool for call to {formattedNumber}");
+                
+                // Construct the status callback URL
+                string? statusCallbackUrl = null;
+                try 
+                {
+                    var uri = new Uri(voiceUrl);
+                    var baseUrl = $"https://{uri.Host}";
+                    if (uri.Port != 80 && uri.Port != 443)
+                    {
+                        baseUrl += $":{uri.Port}";
+                    }
+                    statusCallbackUrl = $"{baseUrl}/api/TwilioWebhook/call-status";
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, $"Failed to construct status callback URL from voice URL: {voiceUrl}");
+                }
+                
+                CallResource poolCall;
+                if (!string.IsNullOrEmpty(statusCallbackUrl))
+                {
+                    poolCall = await CallResource.CreateAsync(
+                        url: new Uri(voiceUrl),
+                        to: new Twilio.Types.PhoneNumber(formattedNumber),
+                        from: new Twilio.Types.PhoneNumber(phoneNumber.Number),
+                        timeout: 60,
+                        record: false,
+                        statusCallback: new Uri(statusCallbackUrl),
+                        statusCallbackEvent: new List<string> { "initiated", "ringing", "answered", "completed" }
+                    );
+                }
+                else
+                {
+                    poolCall = await CallResource.CreateAsync(
+                        url: new Uri(voiceUrl),
+                        to: new Twilio.Types.PhoneNumber(formattedNumber),
+                        from: new Twilio.Types.PhoneNumber(phoneNumber.Number),
+                        timeout: 60,
+                        record: false
+                    );
+                }
+                
+                // Release the phone number immediately
+                await _phoneNumberPool.ReleaseNumberAsync(phoneNumber.Id);
+                _logger.LogInformation($"Robo call initiated to {formattedNumber}, SID: {poolCall.Sid}");
+                callInitiated = true;
+                return (true, poolCall.Sid, null);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Failed to make robo call to {toPhoneNumber}");
+                
+                if (phoneNumber != null)
+                {
+                    await _phoneNumberPool.IncrementCallCountAsync(phoneNumber.Id, false);
+                    if (!callInitiated)
+                    {
+                        try
+                        {
+                            await _phoneNumberPool.ReleaseNumberAsync(phoneNumber.Id);
+                        }
+                        catch { }
+                    }
+                }
+                
+                return (false, null, ex.Message);
+            }
+        }
+
         public async Task<bool> MakeRoboCallAsync(string toPhoneNumber, string voiceUrl, int campaignMessageId)
         {
             TwilioPhoneNumber? phoneNumber = null;
