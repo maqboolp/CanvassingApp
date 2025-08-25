@@ -228,10 +228,20 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
   useEffect(() => {
     // Update audience count when ZIP codes, tags, or campaign type changes
     // Only calculate if either dialog is open
+    console.log('Audience count useEffect triggered:', {
+      createDialogOpen,
+      editDialogOpen,
+      zipCodes: newCampaign.selectedZipCodes,
+      tagIds: newCampaign.selectedTagIds,
+      type: newCampaign.type
+    });
+    
     if (createDialogOpen || editDialogOpen) {
       if (newCampaign.selectedZipCodes.length > 0 || newCampaign.selectedTagIds.length > 0) {
+        console.log('Calling previewAudienceCount...');
         previewAudienceCount();
       } else {
+        console.log('No filters selected, setting count to 0');
         setAudienceCount(0);
       }
     }
@@ -351,14 +361,20 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
         });
       }
       
+      console.log('Fetching recipient count with query:', queryParams.toString());
+      
       const data = await ApiErrorHandler.makeAuthenticatedRequest(
         `${API_BASE_URL}/api/campaigns/recipient-count?${queryParams}`
       );
       
+      console.log('Received audience count response:', data);
+      
       // If the response is an object with detailed counts, use the totalCount
       if (typeof data === 'object' && data.totalCount !== undefined) {
+        console.log('Setting audience count to:', data.totalCount);
         setAudienceCount(data.totalCount);
       } else {
+        console.log('Setting audience count to:', data);
         setAudienceCount(data);
       }
     } catch (error) {
@@ -1874,11 +1890,14 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
               </Alert>
             )}
 
-            {audienceCount > 0 && (
-              <Alert severity="info" sx={{ mt: 2 }}>
-                <strong>{audienceCount}</strong> voters will receive this campaign
-              </Alert>
-            )}
+            {/* Debug: Always show audience count */}
+            <Alert severity={audienceCount > 0 ? "info" : "warning"} sx={{ mt: 2 }}>
+              {audienceCount > 0 ? (
+                <><strong>{audienceCount}</strong> voters will receive this campaign</>
+              ) : (
+                <>No voters selected yet (count: {audienceCount})</>
+              )}
+            </Alert>
           </Stack>
         </DialogContent>
         <DialogActions>
@@ -2245,11 +2264,14 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
               </>
             )}
 
-            {audienceCount > 0 && (
-              <Alert severity="info">
-                <strong>{audienceCount}</strong> voters will receive this campaign
-              </Alert>
-            )}
+            {/* Debug: Always show audience count */}
+            <Alert severity={audienceCount > 0 ? "info" : "warning"}>
+              {audienceCount > 0 ? (
+                <><strong>{audienceCount}</strong> voters will receive this campaign</>
+              ) : (
+                <>No voters selected yet (count: {audienceCount})</>
+              )}
+            </Alert>
           </Stack>
         </DialogContent>
         <DialogActions>
