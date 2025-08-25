@@ -228,20 +228,10 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
   useEffect(() => {
     // Update audience count when ZIP codes, tags, or campaign type changes
     // Only calculate if either dialog is open
-    console.log('Audience count useEffect triggered:', {
-      createDialogOpen,
-      editDialogOpen,
-      zipCodes: newCampaign.selectedZipCodes,
-      tagIds: newCampaign.selectedTagIds,
-      type: newCampaign.type
-    });
-    
     if (createDialogOpen || editDialogOpen) {
       if (newCampaign.selectedZipCodes.length > 0 || newCampaign.selectedTagIds.length > 0) {
-        console.log('Calling previewAudienceCount...');
         previewAudienceCount();
       } else {
-        console.log('No filters selected, setting count to 0');
         setAudienceCount(0);
       }
     }
@@ -361,13 +351,9 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
         });
       }
       
-      console.log('Fetching recipient count with query:', queryParams.toString());
-      
       const data = await ApiErrorHandler.makeAuthenticatedRequest(
         `${API_BASE_URL}/api/campaigns/recipient-count?${queryParams}`
       );
-      
-      console.log('Received audience count response:', data);
       
       // Handle different response formats from the API
       let count = 0;
@@ -394,7 +380,6 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
         count = Number(data);
       }
       
-      console.log('Setting audience count to:', count);
       setAudienceCount(count);
     } catch (error) {
       if (error instanceof ApiError && error.isAuthError) {
@@ -1923,14 +1908,15 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
               </Alert>
             )}
 
-            {/* Debug: Always show audience count */}
-            <Alert severity={audienceCount > 0 ? "info" : "warning"} sx={{ mt: 2 }}>
-              {audienceCount > 0 ? (
-                <><strong>{audienceCount}</strong> voters will receive this campaign</>
-              ) : (
-                <>No voters selected yet (count: {audienceCount})</>
-              )}
-            </Alert>
+            {(audienceCount > 0 || (newCampaign.selectedZipCodes.length > 0 || newCampaign.selectedTagIds.length > 0)) && (
+              <Alert severity={audienceCount > 0 ? "info" : "warning"} sx={{ mt: 2 }}>
+                {audienceCount > 0 ? (
+                  <><strong>{audienceCount.toLocaleString()}</strong> {newCampaign.type === 'Email' ? 'voters with email addresses' : 'voters with phone numbers'} will receive this campaign</>
+                ) : (
+                  <>No {newCampaign.type === 'Email' ? 'voters with email addresses' : 'voters with phone numbers'} found in selected filters</>
+                )}
+              </Alert>
+            )}
           </Stack>
         </DialogContent>
         <DialogActions>
@@ -2297,14 +2283,15 @@ const CampaignDashboard: React.FC<CampaignDashboardProps> = ({ user }) => {
               </>
             )}
 
-            {/* Debug: Always show audience count */}
-            <Alert severity={audienceCount > 0 ? "info" : "warning"}>
-              {audienceCount > 0 ? (
-                <><strong>{audienceCount}</strong> voters will receive this campaign</>
-              ) : (
-                <>No voters selected yet (count: {audienceCount})</>
-              )}
-            </Alert>
+            {(audienceCount > 0 || (newCampaign.selectedZipCodes.length > 0 || newCampaign.selectedTagIds.length > 0)) && (
+              <Alert severity={audienceCount > 0 ? "info" : "warning"}>
+                {audienceCount > 0 ? (
+                  <><strong>{audienceCount.toLocaleString()}</strong> {newCampaign.type === 'Email' ? 'voters with email addresses' : 'voters with phone numbers'} will receive this campaign</>
+                ) : (
+                  <>No {newCampaign.type === 'Email' ? 'voters with email addresses' : 'voters with phone numbers'} found in selected filters</>
+                )}
+              </Alert>
+            )}
           </Stack>
         </DialogContent>
         <DialogActions>
